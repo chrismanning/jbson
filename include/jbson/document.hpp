@@ -68,15 +68,15 @@ struct document_iter
 };
 } // namespace detail
 
-template <class Container> class basic_document {
+template <class Container, class ElementContainer = Container> class basic_document {
     template <class, class> friend struct detail::document_iter;
     using container_type = Container;
     using allocator_type = typename container_type::allocator_type;
 
   public:
-    using element = basic_element<container_type>;
-    using iterator = typename detail::document_iter<element, typename container_type::iterator>;
-    using const_iterator = typename detail::document_iter<const element, typename container_type::const_iterator>;
+    using element_type = basic_element<ElementContainer>;
+    using iterator = typename detail::document_iter<element_type, typename container_type::iterator>;
+    using const_iterator = typename detail::document_iter<const element_type, typename container_type::const_iterator>;
 
     basic_document() = default;
 

@@ -14,6 +14,7 @@
 #include <boost/predef/other/endian.h>
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
+#include <boost/optional.hpp>
 
 namespace jbson {
 
@@ -47,6 +48,7 @@ template <typename Container> struct basic_element;
 
 namespace detail {
 template <typename T, typename ForwardIterator> T little_endian_to_native(ForwardIterator, ForwardIterator);
+template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T&&);
 
 namespace mpl = boost::mpl;
 
@@ -84,9 +86,8 @@ template <element_type EType, typename ReturnT, typename Enable = void> struct g
 } // namespace detail
 
 template <class Container> struct basic_element {
-    static_assert(std::is_same<typename Container::value_type, char>::value, "");
-
-    using container_type = Container;
+    using container_type = typename std::decay<Container>::type;
+    static_assert(std::is_same<typename container_type::value_type, char>::value, "");
 
     basic_element() = default;
 
@@ -96,19 +97,53 @@ template <class Container> struct basic_element {
     basic_element(basic_element&&) = default;
     basic_element& operator=(basic_element&&) = default;
 
+    basic_element(container_type&& c) : m_data(std::move(c)) {}
+    basic_element(const container_type& c) : m_data(c) {}
+
+    template <typename ForwardRange> basic_element(const ForwardRange&);
     template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
 
+    template <typename T>
+    basic_element(const std::string& name, element_type type, T&& val)
+        : basic_element(name, type) {
+        value(type, std::forward<T>(val));
+    }
     template <typename ForwardIterator>
     basic_element(const std::string&, element_type, ForwardIterator, ForwardIterator);
     basic_element(const std::string&, element_type);
 
     // field name
     const std::string& name() const { return m_name; }
-
     // size in bytes
     size_t size() const;
 
     element_type type() const { return m_type; }
+    void type(element_type type) { m_type = type; }
+
+    template <typename T> boost::optional<T> value() const;
+
+    template <typename T>
+    void value(T&& val, typename std::enable_if_t<std::is_pod<typename std::decay<T>::type>::value>* = nullptr) {
+        auto arr = detail::native_to_little_endian(std::forward<T>(val));
+        m_data.assign(arr.begin(), arr.end());
+    }
+
+    void value(std::string str) {
+        assert(valid_type<typename std::decay<std::string>::type>(type()));
+        m_data.assign(str.begin(), str.end());
+    }
+
+    template <element_type EType, typename T> void value(T&& val) noexcept {
+        using T2 = ElementTypeMap<EType>;
+        static_assert(std::is_convertible<typename std::decay<T>::type, T2>::value, "");
+        value(EType, std::forward<T2>(val));
+    }
+
+    template <typename T> void value(element_type type, T&& val) {
+        assert(valid_type<typename std::decay<T>::type>(type));
+        this->type(type);
+        value(std::forward<T>(val));
+    }
 
     explicit operator bool() const { return !m_data.empty(); }
 
@@ -123,10 +158,19 @@ template <class Container> struct basic_element {
     element_type m_type;
     container_type m_data;
 
+    template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
     template <typename ForwardIterator> static size_t detect_size(element_type, ForwardIterator, ForwardIterator);
+    template <typename T> static bool valid_type(element_type);
 
     template <element_type EType, typename ReturnT, typename> friend struct detail::get_impl;
 };
+
+using element = basic_element<std::vector<char>>;
+
+template <class Container>
+template <typename ForwardRange>
+basic_element<Container>::basic_element(const ForwardRange& range)
+    : basic_element(std::begin(range), std::end(range)) {}
 
 template <class Container>
 template <typename ForwardIterator>
@@ -181,7 +225,7 @@ size_t basic_element<Container>::detect_size(element_type e, ForwardIterator fir
     case element_type::boolean_element:
         return sizeof(bool);
     case element_type::date_element:
-        return sizeof(detail::ElementTypeMap<element_type::date_element, Container>);
+        return sizeof(ElementTypeMap<element_type::date_element>);
     case element_type::null_element:
         break;
     case element_type::regex_element:
@@ -211,6 +255,53 @@ size_t basic_element<Container>::detect_size(element_type e, ForwardIterator fir
     return 0;
 }
 
+template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
+    switch(type) {
+    case element_type::double_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::string_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::document_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::array_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::binary_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::undefined_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::oid_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::boolean_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::date_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::null_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::regex_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::db_pointer_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::javascript_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::symbol_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::scoped_javascript_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::int32_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::timestamp_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::int64_element:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::min_key:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    case element_type::max_key:
+        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+    default:
+        assert(false);
+    };
+}
+
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
 
@@ -229,8 +320,8 @@ struct get_impl<EType, ReturnT, std::enable_if_t<std::is_same<ReturnT, std::stri
     static_assert(std::is_same<ReturnT, std::string>::value, "return type not string");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         auto first = elem.m_data.begin(), last = elem.m_data.end();
-        const auto size = detail::little_endian_to_native<int32_t>(first, last);
-        last = std::find(first += sizeof(size), last, '\0');
+        std::advance(first, sizeof(int32_t));
+        last = std::find(first, last, '\0');
         return ReturnT{first, last};
     }
 };
@@ -272,6 +363,29 @@ template <typename T, typename ForwardIterator> T little_endian_to_native(Forwar
 #error "unsupported endianness"
 #else
     return source.u;
+#endif
+}
+
+template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T&& val) {
+    using T2 = typename std::decay<T>::type;
+    static_assert(std::is_pod<T2>::value, "Can only byte swap POD types");
+
+    union {
+        T2 u;
+        std::array<char, sizeof(T2)> u8;
+    } source;
+
+    source.u = val;
+
+#if BOOST_ENDIAN_BIG_BYTE
+    decltype(source) dest;
+    for(size_t k = 0; k < sizeof(T); k++)
+        dest.u8[k] = source.u8[sizeof(T) - k - 1];
+    return dest.u8;
+#elif !BOOST_ENDIAN_LITTLE_BYTE
+#error "unsupported endianness"
+#else
+    return source.u8;
 #endif
 }
 } // namespace detail
