@@ -217,102 +217,102 @@ template <class Container>
 template <typename ForwardIterator>
 size_t basic_element<Container>::detect_size(element_type e, ForwardIterator first, ForwardIterator last) {
     switch(e) {
-    case element_type::double_element:
-        return sizeof(double);
-    case element_type::string_element:
-        assert(sizeof(int32_t) <= std::distance(first, last));
-        return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
-    case element_type::document_element:
-        assert(sizeof(int32_t) <= std::distance(first, last));
-        return detail::little_endian_to_native<int32_t>(first, last);
-    case element_type::array_element:
-        assert(sizeof(int32_t) <= std::distance(first, last));
-        return detail::little_endian_to_native<int32_t>(first, last);
-    case element_type::binary_element:
-        assert(sizeof(int32_t) <= std::distance(first, last));
-        return sizeof(int32_t) + 1 + detail::little_endian_to_native<int32_t>(first, last);
-    case element_type::undefined_element:
-        break;
-    case element_type::oid_element:
-        return 12;
-    case element_type::boolean_element:
-        return sizeof(bool);
-    case element_type::date_element:
-        return sizeof(ElementTypeMap<element_type::date_element>);
-    case element_type::null_element:
-        break;
-    case element_type::regex_element:
-        return std::distance(first, std::find(std::find(first, last, '\0'), last, '\0'));
-    case element_type::db_pointer_element:
-        return detect_size(element_type::string_element, first, last) +
-               detect_size(element_type::oid_element, first, last);
-    case element_type::javascript_element:
-    case element_type::symbol_element:
-        return detect_size(element_type::string_element, first, last);
-    case element_type::scoped_javascript_element:
-        assert(sizeof(int32_t) <= std::distance(first, last));
-        return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
-    case element_type::int32_element:
-        return sizeof(int32_t);
-    case element_type::timestamp_element:
-        return sizeof(int64_t);
-    case element_type::int64_element:
-        return sizeof(int64_t);
-    case element_type::min_key:
-        break;
-    case element_type::max_key:
-        break;
-    default:
-        assert(false);
+        case element_type::double_element:
+            return sizeof(double);
+        case element_type::string_element:
+            assert(sizeof(int32_t) <= std::distance(first, last));
+            return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
+        case element_type::document_element:
+            assert(sizeof(int32_t) <= std::distance(first, last));
+            return detail::little_endian_to_native<int32_t>(first, last);
+        case element_type::array_element:
+            assert(sizeof(int32_t) <= std::distance(first, last));
+            return detail::little_endian_to_native<int32_t>(first, last);
+        case element_type::binary_element:
+            assert(sizeof(int32_t) <= std::distance(first, last));
+            return sizeof(int32_t) + 1 + detail::little_endian_to_native<int32_t>(first, last);
+        case element_type::undefined_element:
+            break;
+        case element_type::oid_element:
+            return 12;
+        case element_type::boolean_element:
+            return sizeof(bool);
+        case element_type::date_element:
+            return sizeof(ElementTypeMap<element_type::date_element>);
+        case element_type::null_element:
+            break;
+        case element_type::regex_element:
+            return std::distance(first, std::find(std::find(first, last, '\0'), last, '\0'));
+        case element_type::db_pointer_element:
+            return detect_size(element_type::string_element, first, last) +
+                   detect_size(element_type::oid_element, first, last);
+        case element_type::javascript_element:
+        case element_type::symbol_element:
+            return detect_size(element_type::string_element, first, last);
+        case element_type::scoped_javascript_element:
+            assert(sizeof(int32_t) <= std::distance(first, last));
+            return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
+        case element_type::int32_element:
+            return sizeof(int32_t);
+        case element_type::timestamp_element:
+            return sizeof(int64_t);
+        case element_type::int64_element:
+            return sizeof(int64_t);
+        case element_type::min_key:
+            break;
+        case element_type::max_key:
+            break;
+        default:
+            assert(false);
     }
     return 0;
 }
 
 template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
     switch(type) {
-    case element_type::double_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
-    case element_type::string_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::string_element>>::value;
-    case element_type::document_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::document_element>>::value;
-    case element_type::array_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::array_element>>::value;
-    case element_type::binary_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::binary_element>>::value;
-    case element_type::undefined_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::undefined_element>>::value;
-    case element_type::oid_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::oid_element>>::value;
-    case element_type::boolean_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value &&
-               !std::is_floating_point<T>::value;
-    case element_type::date_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::date_element>>::value;
-    case element_type::null_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::null_element>>::value;
-    case element_type::regex_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::regex_element>>::value;
-    case element_type::db_pointer_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::db_pointer_element>>::value;
-    case element_type::javascript_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::javascript_element>>::value;
-    case element_type::symbol_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::symbol_element>>::value;
-    case element_type::scoped_javascript_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::scoped_javascript_element>>::value;
-    case element_type::int32_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::int32_element>>::value;
-    case element_type::timestamp_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::timestamp_element>>::value;
-    case element_type::int64_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::int64_element>>::value;
-    case element_type::min_key:
-        return std::is_convertible<T, ElementTypeMap<element_type::min_key>>::value;
-    case element_type::max_key:
-        return std::is_convertible<T, ElementTypeMap<element_type::max_key>>::value;
-    default:
-        assert(false);
+        case element_type::double_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        case element_type::string_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::string_element>>::value;
+        case element_type::document_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::document_element>>::value;
+        case element_type::array_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::array_element>>::value;
+        case element_type::binary_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::binary_element>>::value;
+        case element_type::undefined_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::undefined_element>>::value;
+        case element_type::oid_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::oid_element>>::value;
+        case element_type::boolean_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value &&
+                   !std::is_floating_point<T>::value;
+        case element_type::date_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::date_element>>::value;
+        case element_type::null_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::null_element>>::value;
+        case element_type::regex_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::regex_element>>::value;
+        case element_type::db_pointer_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::db_pointer_element>>::value;
+        case element_type::javascript_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::javascript_element>>::value;
+        case element_type::symbol_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::symbol_element>>::value;
+        case element_type::scoped_javascript_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::scoped_javascript_element>>::value;
+        case element_type::int32_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::int32_element>>::value;
+        case element_type::timestamp_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::timestamp_element>>::value;
+        case element_type::int64_element:
+            return std::is_convertible<T, ElementTypeMap<element_type::int64_element>>::value;
+        case element_type::min_key:
+            return std::is_convertible<T, ElementTypeMap<element_type::min_key>>::value;
+        case element_type::max_key:
+            return std::is_convertible<T, ElementTypeMap<element_type::max_key>>::value;
+        default:
+            assert(false);
     };
 }
 
@@ -456,68 +456,68 @@ template <typename ReturnT, typename Container> ReturnT get(const basic_element<
 
 std::ostream& operator<<(std::ostream& os, element_type e) {
     switch(e) {
-    case element_type::double_element:
-        os << "double_element";
-        break;
-    case element_type::string_element:
-        os << "string_element";
-        break;
-    case element_type::document_element:
-        os << "document_element";
-        break;
-    case element_type::array_element:
-        os << "array_element";
-        break;
-    case element_type::binary_element:
-        os << "binary_element";
-        break;
-    case element_type::undefined_element:
-        os << "undefined_element";
-        break;
-    case element_type::oid_element:
-        os << "oid_element";
-        break;
-    case element_type::boolean_element:
-        os << "boolean_element";
-        break;
-    case element_type::date_element:
-        os << "date_element";
-        break;
-    case element_type::null_element:
-        os << "null_element";
-        break;
-    case element_type::regex_element:
-        os << "regex_element";
-        break;
-    case element_type::db_pointer_element:
-        os << "db_pointer_element";
-        break;
-    case element_type::javascript_element:
-        os << "javascript_element";
-        break;
-    case element_type::symbol_element:
-        os << "symbol_element";
-        break;
-    case element_type::scoped_javascript_element:
-        os << "scoped_javascript_element";
-        break;
-    case element_type::int32_element:
-        os << "int32_element";
-        break;
-    case element_type::timestamp_element:
-        os << "timestamp_element";
-        break;
-    case element_type::int64_element:
-        os << "int64_element";
-        break;
-    case element_type::min_key:
-        os << "min_key";
-        break;
-    case element_type::max_key:
-        os << "max_key";
-        break;
-    default:
-        assert(false);
+        case element_type::double_element:
+            os << "double_element";
+            break;
+        case element_type::string_element:
+            os << "string_element";
+            break;
+        case element_type::document_element:
+            os << "document_element";
+            break;
+        case element_type::array_element:
+            os << "array_element";
+            break;
+        case element_type::binary_element:
+            os << "binary_element";
+            break;
+        case element_type::undefined_element:
+            os << "undefined_element";
+            break;
+        case element_type::oid_element:
+            os << "oid_element";
+            break;
+        case element_type::boolean_element:
+            os << "boolean_element";
+            break;
+        case element_type::date_element:
+            os << "date_element";
+            break;
+        case element_type::null_element:
+            os << "null_element";
+            break;
+        case element_type::regex_element:
+            os << "regex_element";
+            break;
+        case element_type::db_pointer_element:
+            os << "db_pointer_element";
+            break;
+        case element_type::javascript_element:
+            os << "javascript_element";
+            break;
+        case element_type::symbol_element:
+            os << "symbol_element";
+            break;
+        case element_type::scoped_javascript_element:
+            os << "scoped_javascript_element";
+            break;
+        case element_type::int32_element:
+            os << "int32_element";
+            break;
+        case element_type::timestamp_element:
+            os << "timestamp_element";
+            break;
+        case element_type::int64_element:
+            os << "int64_element";
+            break;
+        case element_type::min_key:
+            os << "min_key";
+            break;
+        case element_type::max_key:
+            os << "max_key";
+            break;
+        default:
+            assert(false);
     };
 
     return os;
