@@ -54,7 +54,7 @@ TEST(ElementTest, ElementParseTest2) {
     EXPECT_EQ(15, el1.size());
 }
 
-TEST(ElementTest, ElementParseTest3) {
+TEST(ElementTest, ElementConstructTest1) {
     auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
@@ -63,5 +63,82 @@ TEST(ElementTest, ElementParseTest3) {
     el1.value(val);
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ(val, jbson::get<element_type::double_element>(el1));
-    //    el1.value("test"s);
+}
+
+TEST(ElementTest, ElementCopyTest1) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    jbson::element el2 = el1;
+    ASSERT_EQ(element_type::double_element, el2.type());
+    EXPECT_EQ("Pi 6dp", el2.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(el1, el2);
+}
+
+TEST(ElementTest, ElementCopyTest2) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    jbson::element el2 = el1;
+    auto val = 44.854;
+    el2.value(val);
+    ASSERT_EQ(element_type::double_element, el2.type());
+    EXPECT_EQ("Pi 6dp", el2.name());
+    EXPECT_EQ(val, jbson::get<element_type::double_element>(el2));
+    EXPECT_NE(el1, el2);
+}
+
+TEST(ElementTest, ElementCopyConvertTest1) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    jbson::basic_element<std::list<char>> el2 = el1;
+    EXPECT_EQ(el1, el2);
+    auto val = 44.854;
+    el2.value(val);
+    ASSERT_EQ(element_type::double_element, el2.type());
+    EXPECT_EQ("Pi 6dp", el2.name());
+    EXPECT_EQ(val, jbson::get<element_type::double_element>(el2));
+    EXPECT_NE(el1, el2);
+}
+
+TEST(ElementTest, ElementMoveTest1) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    auto old_size = el1.size();
+    jbson::element el2 = std::move(el1);
+    ASSERT_EQ(2, el1.size());
+    ASSERT_EQ(old_size, el2.size());
+    ASSERT_EQ(element_type::double_element, el2.type());
+    EXPECT_EQ("Pi 6dp", el2.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_NE(el1, el2);
+}
+
+TEST(ElementTest, ElementMoveConvertTest1) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    auto old_size = el1.size();
+    jbson::basic_element<std::list<char>> el2(std::move(el1));
+    ASSERT_EQ(2, el1.size());
+    ASSERT_EQ(old_size, el2.size());
+    ASSERT_EQ(element_type::double_element, el2.type());
+    EXPECT_EQ("Pi 6dp", el2.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_NE(el1, el2);
+}
+
+TEST(ElementTest, ElementVoidTest) {
+    auto el1 = jbson::element{"null element", element_type::null_element};
+    ASSERT_EQ(element_type::null_element, el1.type());
+    EXPECT_EQ("null element", el1.name());
+//    el1.value<bool>();
 }

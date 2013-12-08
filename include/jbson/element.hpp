@@ -92,9 +92,11 @@ template <class Container> struct basic_element {
 
     basic_element() = default;
 
+    template <typename OtherContainer> basic_element(const basic_element<OtherContainer>&);
     basic_element(const basic_element&) = default;
     basic_element& operator=(const basic_element&) = default;
 
+    template <typename OtherContainer> basic_element(basic_element<OtherContainer>&&);
     basic_element(basic_element&&) = default;
     basic_element& operator=(basic_element&&) = default;
 
@@ -157,9 +159,26 @@ template <class Container> struct basic_element {
 
     template <typename ReturnT, typename> friend struct detail::get_impl;
     template <typename ReturnT, typename> friend struct detail::set_impl;
+
+    template <typename> friend struct basic_element;
 };
 
 using element = basic_element<std::vector<char>>;
+
+template <class Container>
+template <typename OtherContainer>
+basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem)
+    : m_name(elem.m_name), m_type(elem.m_type) {
+    boost::range::push_back(m_data, elem.m_data);
+}
+
+template <class Container>
+template <typename OtherContainer>
+basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem)
+    : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)) {
+    boost::range::push_back(m_data, elem.m_data);
+    elem.m_data.clear();
+}
 
 template <class Container>
 template <typename ForwardRange>
@@ -266,7 +285,8 @@ template <class Container> template <typename T> bool basic_element<Container>::
     case element_type::oid_element:
         return std::is_convertible<T, ElementTypeMap<element_type::oid_element>>::value;
     case element_type::boolean_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value &&
+               !std::is_floating_point<T>::value;
     case element_type::date_element:
         return std::is_convertible<T, ElementTypeMap<element_type::date_element>>::value;
     case element_type::null_element:
@@ -303,7 +323,6 @@ namespace detail {
 
 // getters
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
-    static_assert(std::is_arithmetic<ReturnT>::value, "return type not arithmetic");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
         return detail::little_endian_to_native<ReturnT>(elem.m_data.begin(), elem.m_data.end());
@@ -312,7 +331,6 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_ar
 
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<ReturnT, std::string>::value>> {
-    static_assert(std::is_same<ReturnT, std::string>::value, "return type not string");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
         auto first = elem.m_data.begin(), last = elem.m_data.end();
@@ -332,12 +350,13 @@ template <typename> struct is_element : std::false_type {};
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
 
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<is_document<ReturnT>::value>> {
-    static_assert(is_document<ReturnT>::value, "element type not array/document");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
         return ReturnT{elem.m_data};
     }
 };
+
+template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_void<ReturnT>::value>> {};
 
 // setters
 
@@ -371,6 +390,8 @@ struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::
         assert(elem.m_data.size() == val.size() + sizeof(int32_t));
     }
 };
+
+template <typename T> struct set_impl<T, std::enable_if_t<std::is_void<T>::value>> {};
 
 // endian shit
 template <typename T, typename ForwardIterator> T little_endian_to_native(ForwardIterator first, ForwardIterator last) {
@@ -426,6 +447,10 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
     using ReturnT = detail::ElementTypeMap<EType, Container>;
     assert(EType == elem.type());
 
+    return detail::get_impl<ReturnT>::call(elem);
+}
+
+template <typename ReturnT, typename Container> ReturnT get(const basic_element<Container>& elem) {
     return detail::get_impl<ReturnT>::call(elem);
 }
 
