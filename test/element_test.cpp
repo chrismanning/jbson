@@ -20,6 +20,21 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
     el1.value("test");
     EXPECT_EQ("test", jbson::get<element_type::string_element>(el1));
+
+    el1.value(element_type::boolean_element, false);
+    EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
+    el1.value(true);
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_EQ(8, el1.size());
+    el1.value(432);
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_EQ(8, el1.size());
+    el1.value(0);
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_EQ(8, el1.size());
 }
 
 TEST(ElementTest, ElementParseTest2) {

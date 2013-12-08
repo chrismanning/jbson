@@ -341,12 +341,23 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<is_documen
 
 // setters
 
-template <typename T> struct set_impl<T, std::enable_if_t<std::is_arithmetic<typename std::decay<T>::type>::value>> {
-    template <typename Container, typename T2> static void call(basic_element<Container>& elem, T2&& val) {
-        static_assert(std::is_convertible<typename std::decay<T>::type, typename std::decay<T2>::type>::value, "");
+template <typename T> struct set_impl<T, std::enable_if_t<std::is_integral<typename std::decay<T>::type>::value>> {
+    template <typename Container> static void call(basic_element<Container>& elem, T val) {
         assert(elem.template valid_type<typename std::decay<T>::type>());
         elem.m_data.clear();
-        boost::range::push_back(elem.m_data, detail::native_to_little_endian(std::forward<T>(val)));
+        if(elem.type() == element_type::boolean_element)
+            elem.m_data.push_back(static_cast<bool>(val));
+        else
+            boost::range::push_back(elem.m_data, detail::native_to_little_endian(val));
+    }
+};
+
+template <typename T>
+struct set_impl<T, std::enable_if_t<std::is_floating_point<typename std::decay<T>::type>::value>> {
+    template <typename Container> static void call(basic_element<Container>& elem, double val) {
+        assert(elem.template valid_type<typename std::decay<T>::type>());
+        elem.m_data.clear();
+        boost::range::push_back(elem.m_data, detail::native_to_little_endian(val));
     }
 };
 
