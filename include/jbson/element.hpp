@@ -15,6 +15,8 @@
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/optional.hpp>
+#include <boost/range/algorithm.hpp>
+#include <boost/range/algorithm_ext.hpp>
 
 namespace jbson {
 
@@ -41,9 +43,7 @@ enum class element_type : uint8_t {
     max_key = 0x7F
 };
 
-std::ostream& operator<<(std::ostream&, element_type);
-
-template <class Container> class basic_document;
+template <class, class> class basic_document;
 template <typename Container> struct basic_element;
 
 namespace detail {
@@ -59,8 +59,8 @@ using ElementTypeMap = typename mpl::at<
     typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, std::string>,
-        mpl::pair<element_type_c<element_type::document_element>, basic_document<Container>>,
-        mpl::pair<element_type_c<element_type::array_element>, basic_document<Container>>,
+        mpl::pair<element_type_c<element_type::document_element>, basic_document<Container, Container>>,
+        mpl::pair<element_type_c<element_type::array_element>, basic_document<Container, Container>>,
         mpl::pair<element_type_c<element_type::binary_element>, std::vector<char>>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
@@ -73,7 +73,7 @@ using ElementTypeMap = typename mpl::at<
         mpl::pair<element_type_c<element_type::javascript_element>, std::string>,
         mpl::pair<element_type_c<element_type::symbol_element>, std::string>,
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
-                  std::tuple<std::string, basic_document<Container>>>,
+                  std::tuple<std::string, basic_document<Container, Container>>>,
         mpl::pair<element_type_c<element_type::int32_element>, int32_t>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
         mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
@@ -81,7 +81,8 @@ using ElementTypeMap = typename mpl::at<
         mpl::pair<element_type_c<element_type::max_key>, void>>::type,
     element_type_c<EType>>::type;
 
-template <element_type EType, typename ReturnT, typename Enable = void> struct get_impl;
+template <typename ReturnT, typename Enable = void> struct get_impl;
+template <typename ReturnT, typename Enable = void> struct set_impl;
 
 } // namespace detail
 
@@ -106,7 +107,7 @@ template <class Container> struct basic_element {
     template <typename T>
     basic_element(const std::string& name, element_type type, T&& val)
         : basic_element(name, type) {
-        value(type, std::forward<T>(val));
+        value(std::forward<T>(val));
     }
     template <typename ForwardIterator>
     basic_element(const std::string&, element_type, ForwardIterator, ForwardIterator);
@@ -114,35 +115,26 @@ template <class Container> struct basic_element {
 
     // field name
     const std::string& name() const { return m_name; }
+    void name(std::string n) { m_name = std::move(n); }
     // size in bytes
     size_t size() const;
 
     element_type type() const { return m_type; }
     void type(element_type type) { m_type = type; }
 
-    template <typename T> boost::optional<T> value() const;
+    template <typename T> boost::optional<T> value() const { return detail::get_impl<T>::call(*this); }
 
-    template <typename T>
-    void value(T&& val, typename std::enable_if_t<std::is_pod<typename std::decay<T>::type>::value>* = nullptr) {
-        auto arr = detail::native_to_little_endian(std::forward<T>(val));
-        m_data.assign(arr.begin(), arr.end());
-    }
+    template <typename T> void value(T&& val) { detail::set_impl<T>::call(*this, std::forward<T>(val)); }
 
-    void value(std::string str) {
-        assert(valid_type<typename std::decay<std::string>::type>(type()));
-        m_data.assign(str.begin(), str.end());
+    template <typename T> void value(element_type type, T&& val) {
+        this->type(type);
+        value(std::forward<T>(val));
     }
 
     template <element_type EType, typename T> void value(T&& val) noexcept {
         using T2 = ElementTypeMap<EType>;
         static_assert(std::is_convertible<typename std::decay<T>::type, T2>::value, "");
         value(EType, std::forward<T2>(val));
-    }
-
-    template <typename T> void value(element_type type, T&& val) {
-        assert(valid_type<typename std::decay<T>::type>(type));
-        this->type(type);
-        value(std::forward<T>(val));
     }
 
     explicit operator bool() const { return !m_data.empty(); }
@@ -161,8 +153,10 @@ template <class Container> struct basic_element {
     template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
     template <typename ForwardIterator> static size_t detect_size(element_type, ForwardIterator, ForwardIterator);
     template <typename T> static bool valid_type(element_type);
+    template <typename T> bool valid_type() const { return valid_type<T>(type()); }
 
-    template <element_type EType, typename ReturnT, typename> friend struct detail::get_impl;
+    template <typename ReturnT, typename> friend struct detail::get_impl;
+    template <typename ReturnT, typename> friend struct detail::set_impl;
 };
 
 using element = basic_element<std::vector<char>>;
@@ -197,7 +191,7 @@ basic_element<Container>::basic_element(const std::string& name, element_type ty
     : m_name(name), m_type(type) {}
 
 template <class Container> size_t basic_element<Container>::size() const {
-    return m_data.size() + m_name.size() + sizeof(int32_t) + sizeof('\0');
+    return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
 }
 
 template <class Container>
@@ -260,43 +254,43 @@ template <class Container> template <typename T> bool basic_element<Container>::
     case element_type::double_element:
         return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
     case element_type::string_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::string_element>>::value;
     case element_type::document_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::document_element>>::value;
     case element_type::array_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::array_element>>::value;
     case element_type::binary_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::binary_element>>::value;
     case element_type::undefined_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::undefined_element>>::value;
     case element_type::oid_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::oid_element>>::value;
     case element_type::boolean_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value;
     case element_type::date_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::date_element>>::value;
     case element_type::null_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::null_element>>::value;
     case element_type::regex_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::regex_element>>::value;
     case element_type::db_pointer_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::db_pointer_element>>::value;
     case element_type::javascript_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::javascript_element>>::value;
     case element_type::symbol_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::symbol_element>>::value;
     case element_type::scoped_javascript_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::scoped_javascript_element>>::value;
     case element_type::int32_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::int32_element>>::value;
     case element_type::timestamp_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::timestamp_element>>::value;
     case element_type::int64_element:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::int64_element>>::value;
     case element_type::min_key:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::min_key>>::value;
     case element_type::max_key:
-        return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
+        return std::is_convertible<T, ElementTypeMap<element_type::max_key>>::value;
     default:
         assert(false);
     };
@@ -307,18 +301,20 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
 
 namespace detail {
 
-template <element_type EType, typename ReturnT>
-struct get_impl<EType, ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
+// getters
+template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
     static_assert(std::is_arithmetic<ReturnT>::value, "return type not arithmetic");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
         return detail::little_endian_to_native<ReturnT>(elem.m_data.begin(), elem.m_data.end());
     }
 };
 
-template <element_type EType, typename ReturnT>
-struct get_impl<EType, ReturnT, std::enable_if_t<std::is_same<ReturnT, std::string>::value>> {
+template <typename ReturnT>
+struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<ReturnT, std::string>::value>> {
     static_assert(std::is_same<ReturnT, std::string>::value, "return type not string");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
         auto first = elem.m_data.begin(), last = elem.m_data.end();
         std::advance(first, sizeof(int32_t));
         last = std::find(first, last, '\0');
@@ -328,20 +324,44 @@ struct get_impl<EType, ReturnT, std::enable_if_t<std::is_same<ReturnT, std::stri
 
 template <typename> struct is_document : std::false_type {};
 
-template <typename Container> struct is_document<basic_document<Container>> : std::true_type {};
+template <typename Container, typename ElementContainer>
+struct is_document<basic_document<Container, ElementContainer>> : std::true_type {};
 
 template <typename> struct is_element : std::false_type {};
 
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
 
-template <element_type EType, typename ReturnT>
-struct get_impl<EType, ReturnT, std::enable_if_t<is_document<ReturnT>::value>> {
+template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<is_document<ReturnT>::value>> {
     static_assert(is_document<ReturnT>::value, "element type not array/document");
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
         return ReturnT{elem.m_data};
     }
 };
 
+// setters
+
+template <typename T> struct set_impl<T, std::enable_if_t<std::is_arithmetic<typename std::decay<T>::type>::value>> {
+    template <typename Container, typename T2> static void call(basic_element<Container>& elem, T2&& val) {
+        static_assert(std::is_convertible<typename std::decay<T>::type, typename std::decay<T2>::type>::value, "");
+        assert(elem.template valid_type<typename std::decay<T>::type>());
+        elem.m_data.clear();
+        boost::range::push_back(elem.m_data, detail::native_to_little_endian(std::forward<T>(val)));
+    }
+};
+
+template <typename T>
+struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, std::string>::value>> {
+    template <typename Container> static void call(basic_element<Container>& elem, std::string val) {
+        assert(elem.template valid_type<typename std::decay<std::string>::type>());
+        elem.m_data.clear();
+        boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size())));
+        boost::range::push_back(elem.m_data, val);
+        assert(elem.m_data.size() == val.size() + sizeof(int32_t));
+    }
+};
+
+// endian shit
 template <typename T, typename ForwardIterator> T little_endian_to_native(ForwardIterator first, ForwardIterator last) {
     static_assert(std::is_pod<T>::value, "Can only byte swap POD types");
     assert(std::distance(first, last) >= sizeof(T));
@@ -395,7 +415,7 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
     using ReturnT = detail::ElementTypeMap<EType, Container>;
     assert(EType == elem.type());
 
-    return detail::get_impl<EType, ReturnT>::call(elem);
+    return detail::get_impl<ReturnT>::call(elem);
 }
 
 std::ostream& operator<<(std::ostream& os, element_type e) {
