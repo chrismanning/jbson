@@ -10,6 +10,7 @@
 #include <vector>
 #include <chrono>
 #include <array>
+#include <exception>
 
 #include <boost/predef/other/endian.h>
 #include <boost/mpl/map.hpp>
@@ -47,6 +48,26 @@ enum class element_type : uint8_t {
 
 template <class, class> class basic_document;
 template <typename Container> struct basic_element;
+
+struct jbson_error : std::exception {
+    const char* what() const noexcept override { return "jbson_error"; }
+};
+
+struct invalid_element_type : jbson_error {
+    const char* what() const noexcept override { return "invalid_element_type"; }
+};
+
+struct incompatible_element_conversion : jbson_error {
+    const char* what() const noexcept override { return "incompatible_element_conversion"; }
+};
+
+struct incompatible_type_conversion : jbson_error {
+    const char* what() const noexcept override { return "incompatible_type_conversion"; }
+};
+
+struct invalid_element_size : jbson_error {
+    const char* what() const noexcept override { return "invalid_element_size"; }
+};
 
 namespace detail {
 template <typename T, typename ForwardIterator> T little_endian_to_native(ForwardIterator, ForwardIterator);
@@ -100,19 +121,19 @@ template <> struct TypeMap<boost::string_ref> {
 template <element_type EType, typename Container>
 using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, element_type_c<EType>>::type;
 
-template <typename Container>
-struct ContainerConstruct {
+template <typename Container> struct ContainerConstruct {
     using container_type = Container;
     explicit ContainerConstruct(const container_type& rng) : c(rng) {}
-    ContainerConstruct(typename container_type::const_iterator first, typename container_type::const_iterator last) : c(first, last) {}
+    ContainerConstruct(typename container_type::const_iterator first, typename container_type::const_iterator last)
+        : c(first, last) {}
     container_type c;
 };
 
-template <>
-struct ContainerConstruct<boost::string_ref> {
+template <> struct ContainerConstruct<boost::string_ref> {
     using container_type = boost::string_ref;
     explicit ContainerConstruct(const container_type& rng) : c(rng) {}
-    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last) : c(first, std::distance(first, last)) {}
+    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last)
+        : c(first, std::distance(first, last)) {}
     container_type c;
 };
 
@@ -223,15 +244,19 @@ basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem)
     elem.m_data.clear();
 }
 
-template <class Container>
-basic_element<Container>::basic_element(const container_type& c) {
+template <class Container> basic_element<Container>::basic_element(const container_type& c) {
     auto first = c.begin(), last = c.end();
     m_type = static_cast<element_type>(*first++);
+    if(!m_type)
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
     auto str_end = std::find(first, last, '\0');
     m_name.assign(first, str_end++);
     first = str_end;
-    last = std::next(first, detect_size(m_type, first, last));
-    m_data = std::move(detail::ContainerConstruct<Container>{first, last}.c);
+    const auto elem_size = detect_size(m_type, first, last);
+    if(std::distance(first, last) < elem_size)
+        BOOST_THROW_EXCEPTION(invalid_element_size{});
+    last = std::next(first, elem_size);
+    m_data = std::move(detail::ContainerConstruct<Container>(first, last).c);
 }
 
 template <class Container>
@@ -241,27 +266,26 @@ basic_element<Container>::basic_element(const ForwardRange& range)
 
 template <class Container>
 template <typename ForwardIterator>
-basic_element<Container>::basic_element(ForwardIterator first, ForwardIterator last) {
-    m_type = static_cast<element_type>(*first++);
-    auto str_end = std::find(first, last, '\0');
-    m_name.assign(first, str_end++);
-    first = str_end;
-    last = std::next(first, detect_size(m_type, first, last));
-    m_data = Container{first, last};
-}
+basic_element<Container>::basic_element(ForwardIterator first, ForwardIterator last)
+    : basic_element(container_type{first, last}) {}
 
 template <class Container>
 template <typename ForwardIterator>
 basic_element<Container>::basic_element(const std::string& name, element_type type, ForwardIterator first,
                                         ForwardIterator last)
     : m_name(name), m_type(type) {
+    if(!m_type)
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
     last = std::next(first, detect_size(m_type, first, last));
     m_data = Container{first, last};
 }
 
 template <class Container>
 basic_element<Container>::basic_element(const std::string& name, element_type type)
-    : m_name(name), m_type(type) {}
+    : m_name(name), m_type(type) {
+    if(!m_type)
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
+}
 
 template <class Container> size_t basic_element<Container>::size() const {
     return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
@@ -336,7 +360,7 @@ void basic_element<Container>::visit(
             visitor(element_type::max_key);
             return;
         default:
-            assert(false);
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 }
 
@@ -344,8 +368,8 @@ template <class Container>
 template <typename Visitor>
 auto basic_element<Container>::visit(
     Visitor&& visitor,
-    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*) const
--> decltype(std::declval<Visitor>()(double {}, element_type{})) {
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*)
+    const -> decltype(std::declval<Visitor>()(double {}, element_type{})) {
     switch(m_type) {
         case element_type::double_element:
             return visitor(detail::get_impl<ElementTypeMap<element_type::double_element>>::call(*this), m_type);
@@ -368,17 +392,17 @@ auto basic_element<Container>::visit(
         case element_type::null_element:
             return visitor(element_type::null_element);
         case element_type::regex_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
+        //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
         case element_type::db_pointer_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
-            // m_type);
+        //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
+        // m_type);
         case element_type::javascript_element:
             return visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
         case element_type::symbol_element:
             return visitor(detail::get_impl<ElementTypeMap<element_type::symbol_element>>::call(*this), m_type);
         case element_type::scoped_javascript_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
-            // m_type);
+        //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
+        // m_type);
         case element_type::int32_element:
             return visitor(detail::get_impl<ElementTypeMap<element_type::int32_element>>::call(*this), m_type);
         case element_type::timestamp_element:
@@ -390,7 +414,7 @@ auto basic_element<Container>::visit(
         case element_type::max_key:
             return visitor(element_type::max_key);
         default:
-            assert(false);
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 }
 
@@ -444,7 +468,7 @@ size_t basic_element<Container>::detect_size(element_type e, ForwardIterator fir
         case element_type::max_key:
             break;
         default:
-            assert(false);
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
     }
     return 0;
 }
@@ -493,7 +517,7 @@ template <class Container> template <typename T> bool basic_element<Container>::
         case element_type::max_key:
             return std::is_convertible<T, ElementTypeMap<element_type::max_key>>::value;
         default:
-            assert(false);
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 }
 
@@ -507,22 +531,27 @@ template <> struct get_impl<boost::string_ref> {
     template <typename Container> static boost::string_ref call(const basic_element<Container>& elem) {
         static_assert(
             std::is_same<Container, boost::string_ref>::value || std::is_same<Container, std::vector<char>>::value, "");
-        assert(elem.template valid_type<boost::string_ref>());
+        if(!elem.template valid_type<boost::string_ref>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         auto first = elem.m_data.begin(), last = elem.m_data.end();
+        if(std::distance(first, last) <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         std::advance(first, sizeof(int32_t));
         auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
+        assert(length >= 0);
         last = std::find(first, last, '\0');
-        std::clog << "length: " << length << std::endl;
-        std::clog << "std::distance(first, last): " << std::distance(first, last) << std::endl;
-        assert(std::distance(first, last) == length);
+        if(std::distance(first, last) != length)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         return boost::string_ref{&*first, static_cast<size_t>(length)};
     }
 };
 
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
-        assert(elem.m_data.size() == sizeof(ReturnT));
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        if(elem.m_data.size() != sizeof(ReturnT))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         return detail::little_endian_to_native<ReturnT>(elem.m_data.begin(), elem.m_data.end());
     }
 };
@@ -530,14 +559,16 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_ar
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<ReturnT, std::string>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         auto first = elem.m_data.begin(), last = elem.m_data.end();
+        if(std::distance(first, last) <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         std::advance(first, sizeof(int32_t));
         auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
         last = std::find(first, last, '\0');
-        std::clog << "length: " << length << std::endl;
-        std::clog << "std::distance(first, last): " << std::distance(first, last) << std::endl;
-        assert(std::distance(first, last) == length);
+        if(std::distance(first, last) != length)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         return ReturnT{first, last};
     }
 };
@@ -564,13 +595,15 @@ template <typename Container> struct is_element<basic_element<Container>> : std:
 
 template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_ref_document<ReturnT>::value>::type> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         return ReturnT{boost::string_ref{elem.m_data.data(), elem.m_data.size()}};
     }
 };
 template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_copy_document<ReturnT>::value>::type> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         return ReturnT{elem.m_data};
     }
 };
@@ -578,18 +611,19 @@ template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::vector<char>>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         ReturnT vec;
         boost::range::push_back(vec, elem.m_data);
         return vec;
     }
 };
 
-template <typename Iterator>
-struct get_impl<boost::iterator_range<Iterator>> {
+template <typename Iterator> struct get_impl<boost::iterator_range<Iterator>> {
     using ReturnT = boost::iterator_range<Iterator>;
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         return elem.m_data;
     }
 };
@@ -597,8 +631,10 @@ struct get_impl<boost::iterator_range<Iterator>> {
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::array<char, 12>>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
-        assert(elem.m_data.size() == 12);
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        if(elem.m_data.size() != 12)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         ReturnT arr;
         std::copy(elem.m_data.begin(), elem.m_data.end(), arr.data());
         return arr;
@@ -610,8 +646,10 @@ struct get_impl<ReturnT,
                 std::enable_if_t<std::is_same<
                     ReturnT, std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
-        assert(elem.m_data.size() == 8);
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        if(elem.m_data.size() != 8)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         auto v = detail::little_endian_to_native<int64_t>(elem.m_data.begin(), elem.m_data.end());
         return ReturnT{std::chrono::milliseconds{v}};
     }
@@ -620,7 +658,8 @@ struct get_impl<ReturnT,
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::string>>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         auto first = std::find(elem.m_data.begin(), elem.m_data.end(), '\0');
         auto str = std::string(elem.m_data.begin(), first);
         auto last = std::find(++first, elem.m_data.end(), '\0');
@@ -632,14 +671,17 @@ template <typename ReturnT>
 struct get_impl<ReturnT,
                 std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::array<char, 12>>>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        assert(elem.template valid_type<ReturnT>());
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         auto first = elem.m_data.begin(), last = elem.m_data.end();
         std::advance(first, sizeof(int32_t));
         auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first);
         last = std::find(first, last, '\0');
         auto str = std::string(first, last++);
-        assert(length == str.size());
-        assert(std::distance(last, elem.m_data.end()) == 12);
+        if(length != str.size())
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
+        if(std::distance(last, elem.m_data.end()) != 12)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         ReturnT tup;
         std::copy(last, elem.m_data.end(), std::get<ElementTypeMap<element_type::oid_element, Container>>(tup).data());
         return std::move(tup);
@@ -651,7 +693,8 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_vo
 // setters
 template <typename T> struct set_impl<T, std::enable_if_t<std::is_integral<typename std::decay<T>::type>::value>> {
     template <typename Container> static void call(basic_element<Container>& elem, T val) {
-        assert(elem.template valid_type<typename std::decay<T>::type>());
+        if(!elem.template valid_type<typename std::decay<T>::type>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         elem.m_data.clear();
         if(elem.type() == element_type::boolean_element)
             elem.m_data.push_back(static_cast<bool>(val));
@@ -663,7 +706,8 @@ template <typename T> struct set_impl<T, std::enable_if_t<std::is_integral<typen
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_floating_point<typename std::decay<T>::type>::value>> {
     template <typename Container> static void call(basic_element<Container>& elem, double val) {
-        assert(elem.template valid_type<typename std::decay<T>::type>());
+        if(!elem.template valid_type<typename std::decay<T>::type>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         elem.m_data.clear();
         boost::range::push_back(elem.m_data, detail::native_to_little_endian(val));
     }
@@ -672,12 +716,14 @@ struct set_impl<T, std::enable_if_t<std::is_floating_point<typename std::decay<T
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, std::string>::value>> {
     template <typename Container> static void call(basic_element<Container>& elem, boost::string_ref val) {
-        assert(elem.template valid_type<typename std::decay<std::string>::type>());
+        if(!elem.template valid_type<typename std::decay<std::string>::type>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         elem.m_data.clear();
         boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
         boost::range::push_back(elem.m_data, val);
         elem.m_data.push_back('\0');
-        assert(elem.m_data.size() == val.size() + sizeof(int32_t) + sizeof('\0'));
+        if(elem.m_data.size() != val.size() + sizeof(int32_t) + sizeof('\0'))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
     }
 };
 
@@ -735,7 +781,8 @@ template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T&& va
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container> {
     using ReturnT = detail::ElementTypeMap<EType, Container>;
-    assert(EType == elem.type());
+    if(EType != elem.type())
+        BOOST_THROW_EXCEPTION(incompatible_element_conversion{});
 
     return detail::get_impl<ReturnT>::call(elem);
 }
@@ -807,7 +854,7 @@ std::ostream& operator<<(std::ostream& os, element_type e) {
             os << "max_key";
             break;
         default:
-            assert(false);
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 
     return os;

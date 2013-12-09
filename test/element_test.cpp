@@ -21,6 +21,10 @@ TEST(ElementTest, ElementParseTest1) {
     el1.value("test");
     EXPECT_EQ("test", jbson::get<element_type::string_element>(el1));
 
+    EXPECT_THROW(jbson::get<element_type::boolean_element>(el1), jbson::incompatible_element_conversion);
+    EXPECT_NO_THROW(el1.value<boost::string_ref>());
+    EXPECT_THROW(el1.value<bool>(), jbson::incompatible_type_conversion);
+
     el1.value(element_type::boolean_element, false);
     EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
     el1.value(true);
@@ -35,6 +39,9 @@ TEST(ElementTest, ElementParseTest1) {
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
+
+    EXPECT_NO_THROW(el1.value<bool>());
+    EXPECT_THROW(el1.value<int64_t>(), jbson::invalid_element_size);
 }
 
 TEST(ElementTest, ElementParseTest2) {
@@ -52,6 +59,15 @@ TEST(ElementTest, ElementParseTest2) {
     ASSERT_EQ(element_type::int32_element, el1.type());
     EXPECT_EQ(1234, jbson::get<element_type::int32_element>(el1));
     EXPECT_EQ(15, el1.size());
+}
+
+TEST(ElementTest, ElementParseTest3) {
+    auto bson = "\x00hello\x00\x06\x00\x00\x00world\x00"s;
+    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_type);
+    bson = "\x02hello\x06\x00\x00\x00world\x00"s;
+    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_size);
+    bson = "\x02hello\x00\x06\x00\x00\x00world"s;
+    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_size);
 }
 
 TEST(ElementTest, ElementConstructTest1) {
