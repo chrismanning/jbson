@@ -71,9 +71,9 @@ struct document_iter
 
 template <class Container, class ElementContainer = Container> class basic_document {
     template <class, class> friend struct detail::document_iter;
-    using container_type = Container;
 
   public:
+    using container_type = Container;
     using element_type = basic_element<ElementContainer>;
     using iterator = typename detail::document_iter<element_type, typename container_type::iterator>;
     using const_iterator = typename detail::document_iter<const element_type, typename container_type::const_iterator>;
@@ -86,7 +86,10 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    basic_document(const container_type& rng) : m_data(std::move(detail::ContainerConstruct<container_type>{rng}.c)) {}
+    basic_document(const container_type& rng) : m_data(std::move(detail::ContainerConstruct<container_type>{rng}.c)) {
+        if(m_data.size() > 4)
+            m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
+    }
 
     basic_document(typename container_type::iterator first, typename container_type::iterator last)
         : m_data(std::move(detail::ContainerConstruct<container_type>{first, last}.c))

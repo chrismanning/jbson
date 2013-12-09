@@ -140,7 +140,7 @@ TEST(ElementTest, ElementVoidTest) {
     auto el1 = jbson::element{"null element", element_type::null_element};
     ASSERT_EQ(element_type::null_element, el1.type());
     EXPECT_EQ("null element", el1.name());
-    ASSERT_EQ(el1.name().size() + sizeof('\0') + 1, el1.size());
+    ASSERT_EQ(el1.name().size() + sizeof('\0') + sizeof(element_type), el1.size());
     //    el1.value<bool>();
 }
 
@@ -149,6 +149,9 @@ TEST(ElementTest, ElementRefTest1) {
                                                       jbson::basic_element<boost::string_ref>{}))>::value,
                   "");
     static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
+                                                      jbson::basic_element<std::vector<char>>{}))>::value,
+                  "");
+    static_assert(std::is_same<jbson::basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(jbson::get<element_type::document_element>(
                                                       jbson::basic_element<std::vector<char>>{}))>::value,
                   "");
     static_assert(std::is_same<std::string, decltype(jbson::get<element_type::string_element>(
@@ -214,4 +217,16 @@ TEST(ElementTest, ElementVisitTest2) {
     EXPECT_EQ("Pi 6dp", el1.name());
     EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
     EXPECT_TRUE(el1.visit(BoolVisitor<double>(3.141592)));
+}
+
+TEST(ElementTest, ElementGetDocumentTest1) {
+    jbson::element::container_type data{{0x03,'e','m','b','e','d','d','e','d',' ','d','o','c','u','m','e','n','t','\0',0x05,0x00,0x00,0x00,0x00}};
+    auto el1 = jbson::basic_element<boost::iterator_range<jbson::element::container_type::const_iterator>>{data};
+    ASSERT_EQ(element_type::document_element, el1.type());
+    EXPECT_EQ("embedded document", el1.name());
+    auto doc = jbson::get<element_type::document_element>(el1);
+    static_assert(jbson::detail::is_document<decltype(doc)>::value,"");
+    static_assert(std::is_same<boost::iterator_range<jbson::element::container_type::const_iterator>,
+                  decltype(doc)::container_type>::value,"");
+    EXPECT_EQ(5, doc.size());
 }

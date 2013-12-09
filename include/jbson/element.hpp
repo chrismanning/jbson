@@ -19,7 +19,6 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/utility/string_ref.hpp>
-//#include <llvm/ADT/ArrayRef.h>
 
 namespace jbson {
 
@@ -83,14 +82,19 @@ template <typename Container, typename String = std::string> struct TypeMap {
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
 };
 
+template <typename Iterator> struct TypeMap<boost::iterator_range<Iterator>> {
+    typedef boost::iterator_range<Iterator> Container;
+    typedef typename TypeMap<Container, boost::string_ref>::map_type map_type;
+};
+
 template <typename... Args> struct TypeMap<std::vector<char, Args...>> {
-    typedef boost::string_ref Container;
-    typedef TypeMap<Container, Container>::map_type map_type;
+    typedef boost::iterator_range<typename std::vector<char, Args...>::const_iterator> Container;
+    typedef typename TypeMap<Container, boost::string_ref>::map_type map_type;
 };
 
 template <> struct TypeMap<boost::string_ref> {
     typedef boost::string_ref Container;
-    typedef TypeMap<Container, boost::string_ref>::map_type map_type;
+    typedef TypeMap<Container, Container>::map_type map_type;
 };
 
 template <element_type EType, typename Container>
@@ -99,15 +103,15 @@ using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, e
 template <typename Container>
 struct ContainerConstruct {
     using container_type = Container;
-    ContainerConstruct(const container_type& rng) : c(rng) {}
-    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last) : c(first, last) {}
+    explicit ContainerConstruct(const container_type& rng) : c(rng) {}
+    ContainerConstruct(typename container_type::const_iterator first, typename container_type::const_iterator last) : c(first, last) {}
     container_type c;
 };
 
 template <>
 struct ContainerConstruct<boost::string_ref> {
     using container_type = boost::string_ref;
-    ContainerConstruct(const container_type& rng) : c(rng) {}
+    explicit ContainerConstruct(const container_type& rng) : c(rng) {}
     ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last) : c(first, std::distance(first, last)) {}
     container_type c;
 };
@@ -578,6 +582,15 @@ struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::vector<char
         ReturnT vec;
         boost::range::push_back(vec, elem.m_data);
         return vec;
+    }
+};
+
+template <typename Iterator>
+struct get_impl<boost::iterator_range<Iterator>> {
+    using ReturnT = boost::iterator_range<Iterator>;
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        return elem.m_data;
     }
 };
 
