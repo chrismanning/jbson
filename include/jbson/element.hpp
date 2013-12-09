@@ -139,6 +139,11 @@ template <class Container> struct basic_element {
         value(EType, std::forward<T2>(val));
     }
 
+    template <typename Visitor>
+    void visit(Visitor&&,
+               std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>* =
+                   nullptr) const;
+
     explicit operator bool() const { return !m_data.empty(); }
 
     bool operator==(const basic_element& other) const {
@@ -211,6 +216,78 @@ basic_element<Container>::basic_element(const std::string& name, element_type ty
 
 template <class Container> size_t basic_element<Container>::size() const {
     return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
+}
+
+template <class Container>
+template <typename Visitor>
+void basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*) const {
+    switch(m_type) {
+        case element_type::double_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::double_element>>::call(*this), m_type);
+            return;
+        case element_type::string_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::string_element>>::call(*this), m_type);
+            return;
+        case element_type::document_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::document_element>>::call(*this), m_type);
+            return;
+        case element_type::array_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::array_element>>::call(*this), m_type);
+            return;
+        case element_type::binary_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::binary_element>>::call(*this), m_type);
+            return;
+        case element_type::undefined_element:
+            visitor(element_type::undefined_element);
+            return;
+        case element_type::oid_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::oid_element>>::call(*this), m_type);
+            return;
+        case element_type::boolean_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::boolean_element>>::call(*this), m_type);
+            return;
+        case element_type::date_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::date_element>>::call(*this), m_type);
+            return;
+        case element_type::null_element:
+            visitor(element_type::null_element);
+            return;
+        case element_type::regex_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
+            return;
+        case element_type::db_pointer_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this), m_type);
+            return;
+        case element_type::javascript_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
+            return;
+        case element_type::symbol_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::symbol_element>>::call(*this), m_type);
+            return;
+        case element_type::scoped_javascript_element:
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
+            // m_type);
+            return;
+        case element_type::int32_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::int32_element>>::call(*this), m_type);
+            return;
+        case element_type::timestamp_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::timestamp_element>>::call(*this), m_type);
+            return;
+        case element_type::int64_element:
+            visitor(detail::get_impl<ElementTypeMap<element_type::int64_element>>::call(*this), m_type);
+            return;
+        case element_type::min_key:
+            visitor(element_type::min_key);
+            return;
+        case element_type::max_key:
+            visitor(element_type::max_key);
+            return;
+        default:
+            assert(false);
+    };
 }
 
 template <class Container>
@@ -325,6 +402,7 @@ namespace detail {
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
+        assert(elem.m_data.size() == sizeof(ReturnT));
         return detail::little_endian_to_native<ReturnT>(elem.m_data.begin(), elem.m_data.end());
     }
 };
@@ -335,7 +413,11 @@ struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<ReturnT, std::stri
         assert(elem.template valid_type<ReturnT>());
         auto first = elem.m_data.begin(), last = elem.m_data.end();
         std::advance(first, sizeof(int32_t));
+        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
         last = std::find(first, last, '\0');
+        std::clog << "length: " << length << std::endl;
+        std::clog << "std::distance(first, last): " << std::distance(first, last) << std::endl;
+        assert(std::distance(first, last) == length);
         return ReturnT{first, last};
     }
 };
@@ -356,10 +438,71 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<is_documen
     }
 };
 
+template <typename ReturnT>
+struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::vector<char>>::value>> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        ReturnT vec;
+        boost::range::push_back(vec, elem.m_data);
+        return vec;
+    }
+};
+
+template <typename ReturnT>
+struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::array<char, 12>>::value>> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        assert(elem.m_data.size() == 12);
+        ReturnT arr;
+        std::copy(elem.m_data.begin(), elem.m_data.end(), arr.data());
+        return arr;
+    }
+};
+
+template <typename ReturnT>
+struct get_impl<ReturnT,
+                std::enable_if_t<std::is_same<
+                    ReturnT, std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>::value>> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        assert(elem.m_data.size() == 8);
+        auto v = detail::little_endian_to_native<int64_t>(elem.m_data.begin(), elem.m_data.end());
+        return ReturnT{std::chrono::milliseconds{v}};
+    }
+};
+
+template <typename ReturnT>
+struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::string>>::value>> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        auto first = std::find(elem.m_data.begin(), elem.m_data.end(), '\0');
+        auto str = std::string(elem.m_data.begin(), first);
+        auto last = std::find(++first, elem.m_data.end(), '\0');
+        return ReturnT{std::move(str), std::string{first, last}};
+    }
+};
+
+template <typename ReturnT>
+struct get_impl<ReturnT,
+                std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::array<char, 12>>>::value>> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        auto first = elem.m_data.begin(), last = elem.m_data.end();
+        std::advance(first, sizeof(int32_t));
+        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first);
+        last = std::find(first, last, '\0');
+        auto str = std::string(first, last++);
+        assert(length == str.size());
+        assert(std::distance(last, elem.m_data.end()) == 12);
+        ReturnT tup;
+        std::copy(last, elem.m_data.end(), std::get<ElementTypeMap<element_type::oid_element, Container>>(tup).data());
+        return std::move(tup);
+    }
+};
+
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_void<ReturnT>::value>> {};
 
 // setters
-
 template <typename T> struct set_impl<T, std::enable_if_t<std::is_integral<typename std::decay<T>::type>::value>> {
     template <typename Container> static void call(basic_element<Container>& elem, T val) {
         assert(elem.template valid_type<typename std::decay<T>::type>());
@@ -385,9 +528,9 @@ struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::
     template <typename Container> static void call(basic_element<Container>& elem, std::string val) {
         assert(elem.template valid_type<typename std::decay<std::string>::type>());
         elem.m_data.clear();
-        boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size())));
-        boost::range::push_back(elem.m_data, val);
-        assert(elem.m_data.size() == val.size() + sizeof(int32_t));
+        boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
+        boost::range::push_back(elem.m_data, val + '\0');
+        assert(elem.m_data.size() == val.size() + sizeof(int32_t) + sizeof('\0'));
     }
 };
 

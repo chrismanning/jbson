@@ -142,3 +142,26 @@ TEST(ElementTest, ElementVoidTest) {
     EXPECT_EQ("null element", el1.name());
     //    el1.value<bool>();
 }
+
+// test elements one type at a time
+template <typename ElemType> struct StaticVisitor {
+    ElemType m_v;
+
+    explicit StaticVisitor(ElemType v) : m_v(v) {}
+
+    void operator()(ElemType v, element_type e) {
+        EXPECT_EQ(element_type::double_element, e);
+        EXPECT_EQ(m_v, v);
+    }
+
+    template <typename T> void operator()(T, element_type) {}
+    void operator()(element_type) {}
+};
+
+TEST(ElementTest, ElementVisitTest1) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    el1.visit(StaticVisitor<double>(3.141592));
+}
