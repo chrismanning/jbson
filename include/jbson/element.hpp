@@ -14,9 +14,12 @@
 #include <boost/predef/other/endian.h>
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
+#include <boost/mpl/not.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
+#include <boost/utility/string_ref.hpp>
+//#include <llvm/ADT/ArrayRef.h>
 
 namespace jbson {
 
@@ -54,35 +57,63 @@ namespace mpl = boost::mpl;
 
 template <element_type EType> using element_type_c = mpl::integral_c<element_type, EType>;
 
-template <element_type EType, typename Container>
-using ElementTypeMap = typename mpl::at<
-    typename mpl::map<
+template <typename Container, typename String = std::string> struct TypeMap {
+    typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
-        mpl::pair<element_type_c<element_type::string_element>, std::string>,
+        mpl::pair<element_type_c<element_type::string_element>, String>,
         mpl::pair<element_type_c<element_type::document_element>, basic_document<Container, Container>>,
         mpl::pair<element_type_c<element_type::array_element>, basic_document<Container, Container>>,
-        mpl::pair<element_type_c<element_type::binary_element>, std::vector<char>>,
+        mpl::pair<element_type_c<element_type::binary_element>, Container>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
         mpl::pair<element_type_c<element_type::boolean_element>, bool>,
         mpl::pair<element_type_c<element_type::date_element>,
                   std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>,
         mpl::pair<element_type_c<element_type::null_element>, void>,
-        mpl::pair<element_type_c<element_type::regex_element>, std::tuple<std::string, std::string>>,
-        mpl::pair<element_type_c<element_type::db_pointer_element>, std::tuple<std::string, std::array<char, 12>>>,
-        mpl::pair<element_type_c<element_type::javascript_element>, std::string>,
-        mpl::pair<element_type_c<element_type::symbol_element>, std::string>,
+        mpl::pair<element_type_c<element_type::regex_element>, std::tuple<String, String>>,
+        mpl::pair<element_type_c<element_type::db_pointer_element>, std::tuple<String, std::array<char, 12>>>,
+        mpl::pair<element_type_c<element_type::javascript_element>, String>,
+        mpl::pair<element_type_c<element_type::symbol_element>, String>,
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
-                  std::tuple<std::string, basic_document<Container, Container>>>,
+                  std::tuple<String, basic_document<Container, Container>>>,
         mpl::pair<element_type_c<element_type::int32_element>, int32_t>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
         mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
         mpl::pair<element_type_c<element_type::min_key>, void>,
-        mpl::pair<element_type_c<element_type::max_key>, void>>::type,
-    element_type_c<EType>>::type;
+        mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
+};
+
+template <typename... Args> struct TypeMap<std::vector<char, Args...>> {
+    typedef boost::string_ref Container;
+    typedef TypeMap<Container, Container>::map_type map_type;
+};
+
+template <> struct TypeMap<boost::string_ref> {
+    typedef boost::string_ref Container;
+    typedef TypeMap<Container, boost::string_ref>::map_type map_type;
+};
+
+template <element_type EType, typename Container>
+using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, element_type_c<EType>>::type;
+
+template <typename Container>
+struct ContainerConstruct {
+    using container_type = Container;
+    ContainerConstruct(const container_type& rng) : c(rng) {}
+    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last) : c(first, last) {}
+    container_type c;
+};
+
+template <>
+struct ContainerConstruct<boost::string_ref> {
+    using container_type = boost::string_ref;
+    ContainerConstruct(const container_type& rng) : c(rng) {}
+    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last) : c(first, std::distance(first, last)) {}
+    container_type c;
+};
 
 template <typename ReturnT, typename Enable = void> struct get_impl;
-template <typename ReturnT, typename Enable = void> struct set_impl;
+template <typename T, typename Enable = void> struct set_impl;
 
 } // namespace detail
 
@@ -100,8 +131,7 @@ template <class Container> struct basic_element {
     basic_element(basic_element&&) = default;
     basic_element& operator=(basic_element&&) = default;
 
-    basic_element(container_type&& c) : m_data(std::move(c)) {}
-    basic_element(const container_type& c) : m_data(c) {}
+    basic_element(const container_type& c);
 
     template <typename ForwardRange> basic_element(const ForwardRange&);
     template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
@@ -143,6 +173,10 @@ template <class Container> struct basic_element {
     void visit(Visitor&&,
                std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>* =
                    nullptr) const;
+    template <typename Visitor>
+    auto visit(Visitor&&,
+               std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>* =
+                   nullptr) const -> decltype(std::declval<Visitor>()(double {}, element_type{}));
 
     explicit operator bool() const { return !m_data.empty(); }
 
@@ -163,7 +197,7 @@ template <class Container> struct basic_element {
     template <typename T> bool valid_type() const { return valid_type<T>(type()); }
 
     template <typename ReturnT, typename> friend struct detail::get_impl;
-    template <typename ReturnT, typename> friend struct detail::set_impl;
+    template <typename T, typename> friend struct detail::set_impl;
 
     template <typename> friend struct basic_element;
 };
@@ -183,6 +217,17 @@ basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem)
     : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)) {
     boost::range::push_back(m_data, elem.m_data);
     elem.m_data.clear();
+}
+
+template <class Container>
+basic_element<Container>::basic_element(const container_type& c) {
+    auto first = c.begin(), last = c.end();
+    m_type = static_cast<element_type>(*first++);
+    auto str_end = std::find(first, last, '\0');
+    m_name.assign(first, str_end++);
+    first = str_end;
+    last = std::next(first, detect_size(m_type, first, last));
+    m_data = std::move(detail::ContainerConstruct<Container>{first, last}.c);
 }
 
 template <class Container>
@@ -255,10 +300,11 @@ void basic_element<Container>::visit(
             visitor(element_type::null_element);
             return;
         case element_type::regex_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
             return;
         case element_type::db_pointer_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this), m_type);
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
+            // m_type);
             return;
         case element_type::javascript_element:
             visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
@@ -285,6 +331,60 @@ void basic_element<Container>::visit(
         case element_type::max_key:
             visitor(element_type::max_key);
             return;
+        default:
+            assert(false);
+    };
+}
+
+template <class Container>
+template <typename Visitor>
+auto basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*) const
+-> decltype(std::declval<Visitor>()(double {}, element_type{})) {
+    switch(m_type) {
+        case element_type::double_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::double_element>>::call(*this), m_type);
+        case element_type::string_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::string_element>>::call(*this), m_type);
+        case element_type::document_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::document_element>>::call(*this), m_type);
+        case element_type::array_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::array_element>>::call(*this), m_type);
+        case element_type::binary_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::binary_element>>::call(*this), m_type);
+        case element_type::undefined_element:
+            return visitor(element_type::undefined_element);
+        case element_type::oid_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::oid_element>>::call(*this), m_type);
+        case element_type::boolean_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::boolean_element>>::call(*this), m_type);
+        case element_type::date_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::date_element>>::call(*this), m_type);
+        case element_type::null_element:
+            return visitor(element_type::null_element);
+        case element_type::regex_element:
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
+        case element_type::db_pointer_element:
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
+            // m_type);
+        case element_type::javascript_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
+        case element_type::symbol_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::symbol_element>>::call(*this), m_type);
+        case element_type::scoped_javascript_element:
+            //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
+            // m_type);
+        case element_type::int32_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::int32_element>>::call(*this), m_type);
+        case element_type::timestamp_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::timestamp_element>>::call(*this), m_type);
+        case element_type::int64_element:
+            return visitor(detail::get_impl<ElementTypeMap<element_type::int64_element>>::call(*this), m_type);
+        case element_type::min_key:
+            return visitor(element_type::min_key);
+        case element_type::max_key:
+            return visitor(element_type::max_key);
         default:
             assert(false);
     };
@@ -399,6 +499,22 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
 namespace detail {
 
 // getters
+template <> struct get_impl<boost::string_ref> {
+    template <typename Container> static boost::string_ref call(const basic_element<Container>& elem) {
+        static_assert(
+            std::is_same<Container, boost::string_ref>::value || std::is_same<Container, std::vector<char>>::value, "");
+        assert(elem.template valid_type<boost::string_ref>());
+        auto first = elem.m_data.begin(), last = elem.m_data.end();
+        std::advance(first, sizeof(int32_t));
+        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
+        last = std::find(first, last, '\0');
+        std::clog << "length: " << length << std::endl;
+        std::clog << "std::distance(first, last): " << std::distance(first, last) << std::endl;
+        assert(std::distance(first, last) == length);
+        return boost::string_ref{&*first, static_cast<size_t>(length)};
+    }
+};
+
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
@@ -427,11 +543,28 @@ template <typename> struct is_document : std::false_type {};
 template <typename Container, typename ElementContainer>
 struct is_document<basic_document<Container, ElementContainer>> : std::true_type {};
 
+template <typename> struct is_ref_document : std::false_type {};
+
+template <typename ElementContainer>
+struct is_ref_document<basic_document<boost::string_ref, ElementContainer>> : std::true_type {};
+
+template <typename> struct is_copy_document : std::false_type {};
+
+template <typename Container, typename ElementContainer>
+struct is_copy_document<basic_document<
+    Container, ElementContainer>> : mpl::not_<is_ref_document<basic_document<Container, ElementContainer>>> {};
+
 template <typename> struct is_element : std::false_type {};
 
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
 
-template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<is_document<ReturnT>::value>> {
+template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_ref_document<ReturnT>::value>::type> {
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        assert(elem.template valid_type<ReturnT>());
+        return ReturnT{boost::string_ref{elem.m_data.data(), elem.m_data.size()}};
+    }
+};
+template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_copy_document<ReturnT>::value>::type> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         assert(elem.template valid_type<ReturnT>());
         return ReturnT{elem.m_data};
@@ -525,11 +658,12 @@ struct set_impl<T, std::enable_if_t<std::is_floating_point<typename std::decay<T
 
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, std::string>::value>> {
-    template <typename Container> static void call(basic_element<Container>& elem, std::string val) {
+    template <typename Container> static void call(basic_element<Container>& elem, boost::string_ref val) {
         assert(elem.template valid_type<typename std::decay<std::string>::type>());
         elem.m_data.clear();
         boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
-        boost::range::push_back(elem.m_data, val + '\0');
+        boost::range::push_back(elem.m_data, val);
+        elem.m_data.push_back('\0');
         assert(elem.m_data.size() == val.size() + sizeof(int32_t) + sizeof('\0'));
     }
 };

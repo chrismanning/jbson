@@ -66,12 +66,12 @@ struct document_iter
     const BaseIterator m_end;
     mutable typename std::decay<Value>::type m_cur;
 };
+
 } // namespace detail
 
 template <class Container, class ElementContainer = Container> class basic_document {
     template <class, class> friend struct detail::document_iter;
     using container_type = Container;
-    using allocator_type = typename container_type::allocator_type;
 
   public:
     using element_type = basic_element<ElementContainer>;
@@ -86,16 +86,25 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    template <typename ForwardRange>
-    basic_document(const ForwardRange& rng)
-        : basic_document(std::begin(rng), std::end(rng)) {}
+    basic_document(const container_type& rng) : m_data(std::move(detail::ContainerConstruct<container_type>{rng}.c)) {}
 
-    template <typename ForwardIterator>
-    basic_document(ForwardIterator first, ForwardIterator last)
-        : m_data(first, last) {
+    basic_document(typename container_type::iterator first, typename container_type::iterator last)
+        : m_data(std::move(detail::ContainerConstruct<container_type>{first, last}.c))
+    {
         if(m_data.size() > 4)
             m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
     }
+
+//    template <typename ForwardRange, typename = std::enable_if_t<detail::is_copy_document<basic_document<Container, ElementContainer>>::value>>
+//    explicit basic_document(const ForwardRange& rng)
+//        : basic_document(std::begin(rng), std::end(rng)) {}
+
+//    template <typename ForwardIterator, class = std::enable_if_t<detail::is_copy_document<basic_document>::value>>
+//    basic_document(ForwardIterator first, ForwardIterator last)
+//        : m_data(first, last) {
+//        if(m_data.size() > 4)
+//            m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
+//    }
 
     iterator begin() {
         assert(m_data.size() > sizeof(int32_t));

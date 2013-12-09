@@ -39,7 +39,7 @@ TEST(ElementTest, ElementParseTest1) {
 
 TEST(ElementTest, ElementParseTest2) {
     auto bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
-    auto el1 = jbson::element{bson};
+    auto el1 = jbson::basic_element<std::list<char>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
@@ -140,14 +140,42 @@ TEST(ElementTest, ElementVoidTest) {
     auto el1 = jbson::element{"null element", element_type::null_element};
     ASSERT_EQ(element_type::null_element, el1.type());
     EXPECT_EQ("null element", el1.name());
+    ASSERT_EQ(el1.name().size() + sizeof('\0') + 1, el1.size());
     //    el1.value<bool>();
 }
 
+TEST(ElementTest, ElementRefTest1) {
+    static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
+                                                      jbson::basic_element<boost::string_ref>{}))>::value,
+                  "");
+    static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
+                                                      jbson::basic_element<std::vector<char>>{}))>::value,
+                  "");
+    static_assert(std::is_same<std::string, decltype(jbson::get<element_type::string_element>(
+                                                jbson::basic_element<std::list<char>>{}))>::value,
+                  "");
+    ASSERT_TRUE(
+        (std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(jbson::element{}))>::value));
+}
+
+TEST(ElementTest, ElementRefTest2) {
+    boost::string_ref bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
+    auto el1 = jbson::basic_element<boost::string_ref>{bson};
+    EXPECT_EQ(bson.size(), el1.size());
+    ASSERT_EQ(element_type::string_element, el1.type());
+    EXPECT_EQ("hello", el1.name());
+    EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
+    auto str_ref = jbson::get<element_type::string_element>(el1);
+    EXPECT_TRUE(str_ref.data() >= bson.data() && str_ref.data() < (bson.data() + bson.size()));
+    el1.name("some name");
+    EXPECT_EQ("some name", el1.name());
+}
+
 // test elements one type at a time
-template <typename ElemType> struct StaticVisitor {
+template <typename ElemType> struct VoidVisitor {
     ElemType m_v;
 
-    explicit StaticVisitor(ElemType v) : m_v(v) {}
+    explicit VoidVisitor(ElemType v) : m_v(v) {}
 
     void operator()(ElemType v, element_type e) {
         EXPECT_EQ(element_type::double_element, e);
@@ -163,5 +191,27 @@ TEST(ElementTest, ElementVisitTest1) {
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
     EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
-    el1.visit(StaticVisitor<double>(3.141592));
+    el1.visit(VoidVisitor<double>(3.141592));
+}
+
+template <typename ElemType> struct BoolVisitor {
+    ElemType m_v;
+
+    explicit BoolVisitor(ElemType v) : m_v(v) {}
+
+    bool operator()(ElemType v, element_type e) {
+        EXPECT_EQ(m_v, v);
+        return element_type::double_element == e;
+    }
+
+    template <typename T> bool operator()(T, element_type) { return false; }
+    bool operator()(element_type) { return false; }
+};
+
+TEST(ElementTest, ElementVisitTest2) {
+    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_TRUE(el1.visit(BoolVisitor<double>(3.141592)));
 }
