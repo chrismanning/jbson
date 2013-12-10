@@ -61,5 +61,6 @@ function(cxx_test test_name)
 endfunction()
 
 cxx_test(element_test)
+cxx_test(document_test)
 
 endif()

@@ -22,13 +22,21 @@ struct document_iter
     : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag, Value> {
     document_iter() = default;
 
-    document_iter(BaseIterator it1, BaseIterator it2) : m_start(it1), m_end(it2) { reset_value(); }
+    document_iter(BaseIterator it1, BaseIterator it2) : m_start(it1), m_end(it2) {
+        if(m_start == m_end)
+            return;
+        m_cur = Value{m_start, m_end};
+    }
 
     template <class OtherValue, typename OtherIt>
     document_iter(const document_iter<OtherValue, OtherIt>& other,
                   typename std::enable_if<std::is_convertible<OtherValue, Value>::value&&
                                               std::is_convertible<OtherIt, BaseIterator>::value>::type* = nullptr)
-        : m_start(other.m_start), m_end(other.m_end), m_cur(other.m_cur) {}
+        : m_start(other.m_start), m_end(other.m_end) {
+        if(m_start == m_end)
+            return;
+        m_cur = Value{m_start, m_end};
+    }
 
   private:
     friend class boost::iterator_core_access;
@@ -40,31 +48,23 @@ struct document_iter
     }
 
     void increment() {
-        std::advance(m_start, m_cur.size() - m_cur.name().size() - sizeof(int32_t) - sizeof('\0'));
-        reset_value();
-    }
-
-    Value dereference() const { return m_cur; }
-
-    void reset_value() {
-        if(m_start == m_end)
-            return;
-        auto val = *m_start;
-        if(val == 0) {
-            m_start = m_end;
+        if(m_start == m_end) {
+            m_cur = boost::none;
             return;
         }
-        ++m_start;
-        auto type = static_cast<element_type>(val);
-        auto name = std::string{m_start, std::find(m_start, m_end, '\0')};
-        std::advance(m_start, name.size() + 1);
 
-        m_cur = {name, type, m_start, m_end};
+        std::advance(m_start, m_cur->size());
+        if(m_start == m_end)
+            m_cur = boost::none;
+        else
+            m_cur = Value{m_start, m_end};
     }
+
+    Value dereference() const { return *m_cur; }
 
     BaseIterator m_start;
     const BaseIterator m_end;
-    mutable typename std::decay<Value>::type m_cur;
+    mutable boost::optional<typename std::decay<Value>::type> m_cur;
 };
 
 } // namespace detail
@@ -86,28 +86,16 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    basic_document(const container_type& rng) : m_data(std::move(detail::ContainerConstruct<container_type>{rng}.c)) {
+    template <typename ForwardRange>
+    explicit basic_document(const ForwardRange& rng)
+        : basic_document(std::begin(rng), std::end(rng)) {}
+
+    template <typename ForwardIterator>
+    basic_document(ForwardIterator first, ForwardIterator last)
+        : m_data(std::move(detail::ContainerConstruct<container_type>(first, last).c)) {
         if(m_data.size() > 4)
             m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
     }
-
-    basic_document(typename container_type::iterator first, typename container_type::iterator last)
-        : m_data(std::move(detail::ContainerConstruct<container_type>{first, last}.c))
-    {
-        if(m_data.size() > 4)
-            m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
-    }
-
-//    template <typename ForwardRange, typename = std::enable_if_t<detail::is_copy_document<basic_document<Container, ElementContainer>>::value>>
-//    explicit basic_document(const ForwardRange& rng)
-//        : basic_document(std::begin(rng), std::end(rng)) {}
-
-//    template <typename ForwardIterator, class = std::enable_if_t<detail::is_copy_document<basic_document>::value>>
-//    basic_document(ForwardIterator first, ForwardIterator last)
-//        : m_data(first, last) {
-//        if(m_data.size() > 4)
-//            m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
-//    }
 
     iterator begin() {
         assert(m_data.size() > sizeof(int32_t));
