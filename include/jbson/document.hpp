@@ -15,12 +15,20 @@
 
 namespace jbson {
 
+struct invalid_document_size : jbson_error {
+    const char* what() const noexcept override { return "invalid_document_size"; }
+};
+
 namespace detail {
 
 template <typename Value, typename BaseIterator>
 struct document_iter
     : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag, Value> {
     document_iter() = default;
+    document_iter(document_iter&&) = default;
+    document_iter& operator=(document_iter&&) = default;
+    document_iter(const document_iter&) = default;
+    document_iter& operator=(const document_iter&) = default;
 
     document_iter(BaseIterator it1, BaseIterator it2) : m_start(it1), m_end(it2) {
         if(m_start == m_end)
@@ -30,8 +38,8 @@ struct document_iter
 
     template <class OtherValue, typename OtherIt>
     document_iter(const document_iter<OtherValue, OtherIt>& other,
-                  typename std::enable_if<std::is_convertible<OtherValue, Value>::value&&
-                                              std::is_convertible<OtherIt, BaseIterator>::value>::type* = nullptr)
+                  std::enable_if_t<std::is_convertible<OtherValue, Value>::value&&
+                                       std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
         : m_start(other.m_start), m_end(other.m_end) {
         if(m_start == m_end)
             return;
@@ -63,8 +71,8 @@ struct document_iter
     Value dereference() const { return *m_cur; }
 
     BaseIterator m_start;
-    const BaseIterator m_end;
-    mutable boost::optional<typename std::decay<Value>::type> m_cur;
+    BaseIterator m_end;
+    boost::optional<typename std::decay<Value>::type> m_cur;
 };
 
 } // namespace detail
@@ -92,17 +100,21 @@ template <class Container, class ElementContainer = Container> class basic_docum
 
     template <typename ForwardIterator>
     basic_document(ForwardIterator first, ForwardIterator last)
-        : m_data(std::move(detail::ContainerConstruct<container_type>(first, last).c)) {
+        : m_data(first, last) {
         if(m_data.size() > 4)
             m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
+        if(m_data.size() != m_size)
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
     iterator begin() {
-        assert(m_data.size() > sizeof(int32_t));
+        if(m_data.size() <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
         return {std::next(m_data.begin(), sizeof(int32_t)), std::prev(m_data.end())};
     }
     const_iterator begin() const {
-        assert(m_data.size() > sizeof(int32_t));
+        if(m_data.size() <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
         return {std::next(m_data.begin(), sizeof(int32_t)), std::prev(m_data.end())};
     }
 

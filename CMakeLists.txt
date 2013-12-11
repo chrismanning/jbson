@@ -10,12 +10,11 @@ set_target_properties(jbson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -stdlib=libc++ -fsanitize=address")
 
 if(${JBSON_ENABLE_TESTING})
 enable_testing()
-
-find_package(GTest)
 
 get_cmake_property(CACHE_VARS CACHE_VARIABLES)
 foreach(CACHE_VAR ${CACHE_VARS})
@@ -36,6 +35,7 @@ ExternalProject_Add(
     gtest
     SVN_REPOSITORY http://googletest.googlecode.com/svn/trunk/
     SVN_REVISION -r 660
+    UPDATE_COMMAND ""
     TIMEOUT 10
     CMAKE_ARGS --no-warn-unused-cli ${PARENT_CMAKE_ARGS} "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}"
     # Disable install step
