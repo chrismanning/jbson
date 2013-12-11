@@ -16,6 +16,7 @@
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/not.hpp>
+#include <boost/mpl/and.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -129,6 +130,17 @@ using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, e
 template <typename ReturnT, typename Enable = void> struct get_impl;
 template <typename T, typename Enable = void> struct set_impl;
 
+template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
+std::enable_if_t<std::is_void<
+    decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value>
+visit(element_type, Args&&... args);
+
+template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
+std::enable_if_t<!std::is_void<decltype(
+                      std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value,
+                 decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>
+visit(element_type, Args&&... args);
+
 } // namespace detail
 
 template <class Container> struct basic_element {
@@ -184,13 +196,15 @@ template <class Container> struct basic_element {
     }
 
     template <typename Visitor>
-    void visit(Visitor&&,
-               std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>* =
-                   nullptr) const;
+    void
+    visit(Visitor&&,
+          std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
+              nullptr) const;
     template <typename Visitor>
-    auto visit(Visitor&&,
-               std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>* =
-                   nullptr) const -> decltype(std::declval<Visitor>()(double {}, element_type{}));
+    auto visit(
+        Visitor&&,
+        std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
+            nullptr) const -> decltype(std::declval<Visitor>()("", double {}, element_type{}));
 
     explicit operator bool() const { return !m_data.empty(); }
 
@@ -280,234 +294,319 @@ template <class Container> size_t basic_element<Container>::size() const {
     return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
 }
 
+template <element_type EType, typename Visitor, typename Element> struct element_visitor {
+    using element_type = std::decay_t<Element>;
+    auto operator()(Visitor&& visitor, const element_type& elem) const {
+        return visitor(
+            elem.name(),
+            detail::get_impl<detail::ElementTypeMap<EType, typename element_type::container_type>>::call(elem), EType);
+    }
+};
+
+template <typename Visitor, typename Element>
+struct element_visitor<element_type::undefined_element, Visitor, Element> {
+    auto operator()(Visitor&& visitor, Element&& elem) const {
+        return visitor(elem.name(), element_type::undefined_element);
+    }
+};
+
+template <typename Visitor, typename Element> struct element_visitor<element_type::null_element, Visitor, Element> {
+    auto operator()(Visitor&& visitor, Element&& elem) const {
+        return visitor(elem.name(), element_type::null_element);
+    }
+};
+
+template <typename Visitor, typename Element> struct element_visitor<element_type::min_key, Visitor, Element> {
+    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), element_type::min_key); }
+};
+
+template <typename Visitor, typename Element> struct element_visitor<element_type::max_key, Visitor, Element> {
+    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), element_type::max_key); }
+};
+
 template <class Container>
 template <typename Visitor>
 void basic_element<Container>::visit(
     Visitor&& visitor,
-    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*) const {
-    switch(m_type) {
-        case element_type::double_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::double_element>>::call(*this), m_type);
-            return;
-        case element_type::string_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::string_element>>::call(*this), m_type);
-            return;
-        case element_type::document_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::document_element>>::call(*this), m_type);
-            return;
-        case element_type::array_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::array_element>>::call(*this), m_type);
-            return;
-        case element_type::binary_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::binary_element>>::call(*this), m_type);
-            return;
-        case element_type::undefined_element:
-            visitor(element_type::undefined_element);
-            return;
-        case element_type::oid_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::oid_element>>::call(*this), m_type);
-            return;
-        case element_type::boolean_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::boolean_element>>::call(*this), m_type);
-            return;
-        case element_type::date_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::date_element>>::call(*this), m_type);
-            return;
-        case element_type::null_element:
-            visitor(element_type::null_element);
-            return;
-        case element_type::regex_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
-            return;
-        case element_type::db_pointer_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
-            // m_type);
-            return;
-        case element_type::javascript_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
-            return;
-        case element_type::symbol_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::symbol_element>>::call(*this), m_type);
-            return;
-        case element_type::scoped_javascript_element:
-            //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
-            // m_type);
-            return;
-        case element_type::int32_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::int32_element>>::call(*this), m_type);
-            return;
-        case element_type::timestamp_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::timestamp_element>>::call(*this), m_type);
-            return;
-        case element_type::int64_element:
-            visitor(detail::get_impl<ElementTypeMap<element_type::int64_element>>::call(*this), m_type);
-            return;
-        case element_type::min_key:
-            visitor(element_type::min_key);
-            return;
-        case element_type::max_key:
-            visitor(element_type::max_key);
-            return;
-        default:
-            BOOST_THROW_EXCEPTION(invalid_element_type{});
-    };
+    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*) const {
+    detail::visit<element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
+    return;
 }
 
 template <class Container>
 template <typename Visitor>
 auto basic_element<Container>::visit(
     Visitor&& visitor,
-    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(double {}, element_type{}))>::value>*)
-    const -> decltype(std::declval<Visitor>()(double {}, element_type{})) {
-    switch(m_type) {
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*)
+    const -> decltype(std::declval<Visitor>()("", double {}, element_type{})) {
+    return detail::visit<element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
+}
+
+namespace detail {
+
+// void visit
+template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
+std::enable_if_t<std::is_void<
+    decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value>
+visit(element_type type, Args&&... args) {
+    switch(type) {
         case element_type::double_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::double_element>>::call(*this), m_type);
+            Visitor<element_type::double_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::string_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::string_element>>::call(*this), m_type);
+            Visitor<element_type::string_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::document_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::document_element>>::call(*this), m_type);
+            Visitor<element_type::document_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::array_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::array_element>>::call(*this), m_type);
+            Visitor<element_type::array_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::binary_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::binary_element>>::call(*this), m_type);
+            Visitor<element_type::binary_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::undefined_element:
-            return visitor(element_type::undefined_element);
+            Visitor<element_type::undefined_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::oid_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::oid_element>>::call(*this), m_type);
+            Visitor<element_type::oid_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::boolean_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::boolean_element>>::call(*this), m_type);
+            Visitor<element_type::boolean_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::date_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::date_element>>::call(*this), m_type);
+            Visitor<element_type::date_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::null_element:
-            return visitor(element_type::null_element);
+            Visitor<element_type::null_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::regex_element:
-        //            visitor(detail::get_impl<ElementTypeMap<element_type::regex_element>>::call(*this), m_type);
+            Visitor<element_type::regex_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::db_pointer_element:
-        //            visitor(detail::get_impl<ElementTypeMap<element_type::db_pointer_element>>::call(*this),
-        // m_type);
+            Visitor<element_type::db_pointer_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::javascript_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::javascript_element>>::call(*this), m_type);
+            Visitor<element_type::javascript_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::symbol_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::symbol_element>>::call(*this), m_type);
+            Visitor<element_type::symbol_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::scoped_javascript_element:
-        //            visitor(detail::get_impl<ElementTypeMap<element_type::scoped_javascript_element>>::call(*this),
-        // m_type);
+            Visitor<element_type::scoped_javascript_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::int32_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::int32_element>>::call(*this), m_type);
+            Visitor<element_type::int32_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::timestamp_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::timestamp_element>>::call(*this), m_type);
+            Visitor<element_type::timestamp_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::int64_element:
-            return visitor(detail::get_impl<ElementTypeMap<element_type::int64_element>>::call(*this), m_type);
+            Visitor<element_type::int64_element, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::min_key:
-            return visitor(element_type::min_key);
+            Visitor<element_type::min_key, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         case element_type::max_key:
-            return visitor(element_type::max_key);
+            Visitor<element_type::max_key, Args...> {}
+            (std::forward<Args>(args)...);
+            return;
         default:
             BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 }
+
+// non-void visit
+template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
+std::enable_if_t<!std::is_void<decltype(
+                      std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value,
+                 decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>
+visit(element_type type, Args&&... args) {
+    switch(type) {
+        case element_type::double_element:
+            return Visitor<element_type::double_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::string_element:
+            return Visitor<element_type::string_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::document_element:
+            return Visitor<element_type::document_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::array_element:
+            return Visitor<element_type::array_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::binary_element:
+            return Visitor<element_type::binary_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::undefined_element:
+            return Visitor<element_type::undefined_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::oid_element:
+            return Visitor<element_type::oid_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::boolean_element:
+            return Visitor<element_type::boolean_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::date_element:
+            return Visitor<element_type::date_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::null_element:
+            return Visitor<element_type::null_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::regex_element:
+            return Visitor<element_type::regex_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::db_pointer_element:
+            return Visitor<element_type::db_pointer_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::javascript_element:
+            return Visitor<element_type::javascript_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::symbol_element:
+            return Visitor<element_type::symbol_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::scoped_javascript_element:
+            return Visitor<element_type::scoped_javascript_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::int32_element:
+            return Visitor<element_type::int32_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::timestamp_element:
+            return Visitor<element_type::timestamp_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::int64_element:
+            return Visitor<element_type::int64_element, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::min_key:
+            return Visitor<element_type::min_key, Args...> {}
+            (std::forward<Args>(args)...);
+        case element_type::max_key:
+            return Visitor<element_type::max_key, Args...> {}
+            (std::forward<Args>(args)...);
+        default:
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
+    };
+}
+} // namespace detail
+
+template <element_type EType, typename ForwardIterator, typename = ForwardIterator> struct size_func {
+    size_t operator()(ForwardIterator, ForwardIterator) const {
+        return sizeof(detail::ElementTypeMap<EType, std::string>);
+    }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::null_element, ForwardIterator> {
+    size_t operator()(ForwardIterator, ForwardIterator) const { return 0; }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::min_key, ForwardIterator> {
+    size_t operator()(ForwardIterator, ForwardIterator) const { return 0; }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::max_key, ForwardIterator> {
+    size_t operator()(ForwardIterator, ForwardIterator) const { return 0; }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::undefined_element, ForwardIterator> {
+    size_t operator()(ForwardIterator, ForwardIterator) const { return 0; }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
+    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+        assert(sizeof(int32_t) <= std::distance(first, last));
+        return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
+    }
+};
+
+template <typename ForwardIterator>
+struct size_func<element_type::javascript_element, ForwardIterator> : size_func<element_type::string_element,
+                                                                                ForwardIterator> {};
+
+template <typename ForwardIterator>
+struct size_func<element_type::symbol_element, ForwardIterator> : size_func<element_type::string_element,
+                                                                            ForwardIterator> {};
+
+template <typename ForwardIterator>
+struct size_func<element_type::binary_element, ForwardIterator> : private size_func<element_type::string_element,
+                                                                                    ForwardIterator> {
+    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+        return size_func<element_type::string_element, ForwardIterator>::operator()(first, last) + 1;
+    }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::document_element, ForwardIterator> {
+    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+        assert(sizeof(int32_t) <= std::distance(first, last));
+        return detail::little_endian_to_native<int32_t>(first, last);
+    }
+};
+
+template <typename ForwardIterator>
+struct size_func<element_type::array_element, ForwardIterator> : size_func<element_type::document_element,
+                                                                           ForwardIterator> {};
+
+template <typename ForwardIterator>
+struct size_func<element_type::scoped_javascript_element, ForwardIterator> : size_func<element_type::document_element,
+                                                                                       ForwardIterator> {};
+
+template <typename ForwardIterator>
+struct size_func<element_type::db_pointer_element,
+                 ForwardIterator> : private size_func<element_type::oid_element, ForwardIterator>,
+                                    private size_func<element_type::string_element, ForwardIterator> {
+    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+        return size_func<element_type::string_element, ForwardIterator>::operator()(first, last) +
+               size_func<element_type::oid_element, ForwardIterator>::operator()(first, last);
+    }
+};
+
+template <typename ForwardIterator> struct size_func<element_type::regex_element, ForwardIterator> {
+    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+        return std::distance(first, std::find(std::find(first, last, '\0'), last, '\0'));
+    }
+};
 
 template <class Container>
 template <typename ForwardIterator>
 size_t basic_element<Container>::detect_size(element_type e, ForwardIterator first, ForwardIterator last) {
-    switch(e) {
-        case element_type::double_element:
-            return sizeof(double);
-        case element_type::string_element:
-            assert(sizeof(int32_t) <= std::distance(first, last));
-            return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
-        case element_type::document_element:
-            assert(sizeof(int32_t) <= std::distance(first, last));
-            return detail::little_endian_to_native<int32_t>(first, last);
-        case element_type::array_element:
-            assert(sizeof(int32_t) <= std::distance(first, last));
-            return detail::little_endian_to_native<int32_t>(first, last);
-        case element_type::binary_element:
-            assert(sizeof(int32_t) <= std::distance(first, last));
-            return sizeof(int32_t) + 1 + detail::little_endian_to_native<int32_t>(first, last);
-        case element_type::undefined_element:
-            break;
-        case element_type::oid_element:
-            return 12;
-        case element_type::boolean_element:
-            return sizeof(bool);
-        case element_type::date_element:
-            return sizeof(ElementTypeMap<element_type::date_element>);
-        case element_type::null_element:
-            break;
-        case element_type::regex_element:
-            return std::distance(first, std::find(std::find(first, last, '\0'), last, '\0'));
-        case element_type::db_pointer_element:
-            return detect_size(element_type::string_element, first, last) +
-                   detect_size(element_type::oid_element, first, last);
-        case element_type::javascript_element:
-        case element_type::symbol_element:
-            return detect_size(element_type::string_element, first, last);
-        case element_type::scoped_javascript_element:
-            assert(sizeof(int32_t) <= std::distance(first, last));
-            return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
-        case element_type::int32_element:
-            return sizeof(int32_t);
-        case element_type::timestamp_element:
-            return sizeof(int64_t);
-        case element_type::int64_element:
-            return sizeof(int64_t);
-        case element_type::min_key:
-            break;
-        case element_type::max_key:
-            break;
-        default:
-            BOOST_THROW_EXCEPTION(invalid_element_type{});
-    }
-    return 0;
+    return detail::visit<size_func>(e, first, last);
 }
 
-template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
-    switch(type) {
-        case element_type::double_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::double_element>>::value;
-        case element_type::string_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::string_element>>::value;
-        case element_type::document_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::document_element>>::value;
-        case element_type::array_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::array_element>>::value;
-        case element_type::binary_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::binary_element>>::value;
-        case element_type::undefined_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::undefined_element>>::value;
-        case element_type::oid_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::oid_element>>::value;
-        case element_type::boolean_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::boolean_element>>::value &&
-                   !std::is_floating_point<T>::value;
-        case element_type::date_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::date_element>>::value;
-        case element_type::null_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::null_element>>::value;
-        case element_type::regex_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::regex_element>>::value;
-        case element_type::db_pointer_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::db_pointer_element>>::value;
-        case element_type::javascript_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::javascript_element>>::value;
-        case element_type::symbol_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::symbol_element>>::value;
-        case element_type::scoped_javascript_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::scoped_javascript_element>>::value;
-        case element_type::int32_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::int32_element>>::value;
-        case element_type::timestamp_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::timestamp_element>>::value;
-        case element_type::int64_element:
-            return std::is_convertible<T, ElementTypeMap<element_type::int64_element>>::value;
-        case element_type::min_key:
-            return std::is_convertible<T, ElementTypeMap<element_type::min_key>>::value;
-        case element_type::max_key:
-            return std::is_convertible<T, ElementTypeMap<element_type::max_key>>::value;
-        default:
-            BOOST_THROW_EXCEPTION(invalid_element_type{});
+template <typename T, typename Container> struct is_valid_func {
+    template <element_type EType, typename... Args>
+    struct inner : std::is_convertible<T, detail::ElementTypeMap<EType, Container>> {
+        static_assert(sizeof...(Args) == 0, "");
     };
+    template <typename... Args> struct inner<element_type::boolean_element, Args...> {
+        static_assert(sizeof...(Args) == 0, "");
+        bool operator()() const {
+            return boost::mpl::and_<
+                boost::mpl::not_<std::is_floating_point<T>>,
+                std::is_convertible<T, detail::ElementTypeMap<element_type::boolean_element, Container>>>::type::value;
+        }
+    };
+};
+
+template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
+    return detail::visit<is_valid_func<T, Container>::template inner>(type);
 }
 
 template <element_type EType, typename Container>
@@ -638,8 +737,15 @@ struct get_impl<ReturnT,
     }
 };
 
-template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::string>>::value>> {
+template <typename T> struct is_string : std::false_type {};
+
+template <> struct is_string<std::string> : std::true_type {};
+
+template <> struct is_string<boost::string_ref> : std::true_type {};
+
+template <typename StringT>
+struct get_impl<std::tuple<StringT, StringT>, std::enable_if_t<is_string<std::decay_t<StringT>>::value>> {
+    using ReturnT = std::tuple<StringT, StringT>;
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         if(!elem.template valid_type<ReturnT>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
@@ -650,9 +756,9 @@ struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::tuple<std::
     }
 };
 
-template <typename ReturnT>
-struct get_impl<ReturnT,
-                std::enable_if_t<std::is_same<ReturnT, std::tuple<std::string, std::array<char, 12>>>::value>> {
+template <typename StringT>
+struct get_impl<std::tuple<StringT, std::array<char, 12>>, std::enable_if_t<is_string<std::decay_t<StringT>>::value>> {
+    using ReturnT = std::tuple<std::string, std::array<char, 12>>;
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         if(!elem.template valid_type<ReturnT>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
@@ -668,6 +774,32 @@ struct get_impl<ReturnT,
         ReturnT tup;
         std::copy(last, elem.m_data.end(), std::get<ElementTypeMap<element_type::oid_element, Container>>(tup).data());
         return std::move(tup);
+    }
+};
+
+template <typename StringT, typename DocumentT>
+struct get_impl<
+    std::tuple<StringT, DocumentT>,
+    std::enable_if_t<is_document<std::decay_t<DocumentT>>::value&& is_string<std::decay_t<StringT>>::value>> {
+    using ReturnT = std::tuple<std::decay_t<StringT>, DocumentT>;
+    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
+        if(!elem.template valid_type<ReturnT>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        auto first = elem.m_data.begin(), last = elem.m_data.end();
+        if(sizeof(int32_t) <= std::distance(first, last))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
+        auto size = little_endian_to_native<int32_t>(first, last);
+        std::advance(first, sizeof(int32_t));
+        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
+        last = std::find(first, last, '\0');
+        if(std::distance(first, last) != length)
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
+        auto str = StringT{&*first, static_cast<size_t>(length)};
+        std::advance(first, sizeof(int32_t) + length + 1);
+        auto doc = DocumentT{first, last};
+        if(size != str.size() + sizeof(int32_t) + 1 + doc.size())
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
+        return std::make_tuple(str, doc);
     }
 };
 
