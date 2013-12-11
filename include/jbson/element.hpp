@@ -77,25 +77,44 @@ namespace mpl = boost::mpl;
 
 template <element_type EType> using element_type_c = mpl::integral_c<element_type, EType>;
 
-template <typename Container, typename String = std::string> struct TypeMap {
+template <typename Iterator, typename Enable = void> struct is_iterator_pointer : std::false_type {};
+
+template <typename Iterator>
+struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_constructible<Iterator, char*>::value>> : std::true_type {
+};
+
+template <typename Iterator>
+struct is_iterator_pointer<
+    Iterator, std::enable_if_t<std::is_pointer<typename Iterator::iterator_type>::value>> : std::true_type {};
+
+template <typename Iterator>
+struct is_iterator_pointer<
+    boost::iterator_range<Iterator>,
+    std::enable_if_t<std::is_pointer<std::decay_t<typename Iterator::iterator_type>>::value>> : std::true_type {};
+
+template <typename Container> struct TypeMap {
+    using container_type = std::conditional_t<is_iterator_pointer<typename Container::iterator>::value,
+                                              boost::iterator_range<typename Container::const_iterator>, Container>;
+    using string_type = std::conditional_t<is_iterator_pointer<typename container_type::iterator>::value,
+                                           boost::string_ref, std::string>;
     typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
-        mpl::pair<element_type_c<element_type::string_element>, String>,
-        mpl::pair<element_type_c<element_type::document_element>, basic_document<Container, Container>>,
-        mpl::pair<element_type_c<element_type::array_element>, basic_document<Container, Container>>,
-        mpl::pair<element_type_c<element_type::binary_element>, Container>,
+        mpl::pair<element_type_c<element_type::string_element>, string_type>,
+        mpl::pair<element_type_c<element_type::document_element>, basic_document<container_type, container_type>>,
+        mpl::pair<element_type_c<element_type::array_element>, basic_document<container_type, container_type>>,
+        mpl::pair<element_type_c<element_type::binary_element>, container_type>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
         mpl::pair<element_type_c<element_type::boolean_element>, bool>,
         mpl::pair<element_type_c<element_type::date_element>,
                   std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>,
         mpl::pair<element_type_c<element_type::null_element>, void>,
-        mpl::pair<element_type_c<element_type::regex_element>, std::tuple<String, String>>,
-        mpl::pair<element_type_c<element_type::db_pointer_element>, std::tuple<String, std::array<char, 12>>>,
-        mpl::pair<element_type_c<element_type::javascript_element>, String>,
-        mpl::pair<element_type_c<element_type::symbol_element>, String>,
+        mpl::pair<element_type_c<element_type::regex_element>, std::tuple<string_type, string_type>>,
+        mpl::pair<element_type_c<element_type::db_pointer_element>, std::tuple<string_type, std::array<char, 12>>>,
+        mpl::pair<element_type_c<element_type::javascript_element>, string_type>,
+        mpl::pair<element_type_c<element_type::symbol_element>, string_type>,
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
-                  std::tuple<String, basic_document<Container, Container>>>,
+                  std::tuple<string_type, basic_document<container_type, container_type>>>,
         mpl::pair<element_type_c<element_type::int32_element>, int32_t>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
         mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
@@ -103,39 +122,8 @@ template <typename Container, typename String = std::string> struct TypeMap {
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
 };
 
-template <typename Iterator> struct TypeMap<boost::iterator_range<Iterator>> {
-    typedef boost::iterator_range<Iterator> Container;
-    typedef typename TypeMap<Container, boost::string_ref>::map_type map_type;
-};
-
-template <typename... Args> struct TypeMap<std::vector<char, Args...>> {
-    typedef boost::iterator_range<typename std::vector<char, Args...>::const_iterator> Container;
-    typedef typename TypeMap<Container, boost::string_ref>::map_type map_type;
-};
-
-template <> struct TypeMap<boost::string_ref> {
-    typedef boost::string_ref Container;
-    typedef TypeMap<Container, Container>::map_type map_type;
-};
-
 template <element_type EType, typename Container>
 using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, element_type_c<EType>>::type;
-
-template <typename Container> struct ContainerConstruct {
-    using container_type = Container;
-    explicit ContainerConstruct(const container_type& rng) : c(rng) {}
-    ContainerConstruct(typename container_type::const_iterator first, typename container_type::const_iterator last)
-        : c(first, last) {}
-    container_type c;
-};
-
-template <> struct ContainerConstruct<boost::string_ref> {
-    using container_type = boost::string_ref;
-    explicit ContainerConstruct(const container_type& rng) : c(rng) {}
-    ContainerConstruct(typename container_type::iterator first, typename container_type::iterator last)
-        : c(first, std::distance(first, last)) {}
-    container_type c;
-};
 
 template <typename ReturnT, typename Enable = void> struct get_impl;
 template <typename T, typename Enable = void> struct set_impl;
@@ -179,7 +167,7 @@ template <class Container> struct basic_element {
     element_type type() const { return m_type; }
     void type(element_type type) { m_type = type; }
 
-    template <typename T> boost::optional<T> value() const { return detail::get_impl<T>::call(*this); }
+    template <typename T> T value() const { return detail::get_impl<T>::call(*this); }
 
     template <typename T> void value(T&& val) { detail::set_impl<T>::call(*this, std::forward<T>(val)); }
 
@@ -256,7 +244,7 @@ template <class Container> basic_element<Container>::basic_element(const contain
     if(std::distance(first, last) < elem_size)
         BOOST_THROW_EXCEPTION(invalid_element_size{});
     last = std::next(first, elem_size);
-    m_data = std::move(detail::ContainerConstruct<Container>(first, last).c);
+    m_data = Container{first, last};
 }
 
 template <class Container>
@@ -529,8 +517,6 @@ namespace detail {
 // getters
 template <> struct get_impl<boost::string_ref> {
     template <typename Container> static boost::string_ref call(const basic_element<Container>& elem) {
-        static_assert(
-            std::is_same<Container, boost::string_ref>::value || std::is_same<Container, std::vector<char>>::value, "");
         if(!elem.template valid_type<boost::string_ref>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
         auto first = elem.m_data.begin(), last = elem.m_data.end();

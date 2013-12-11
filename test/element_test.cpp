@@ -167,7 +167,8 @@ TEST(ElementTest, ElementRefTest1) {
     static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
                                                       jbson::basic_element<std::vector<char>>{}))>::value,
                   "");
-    static_assert(std::is_same<jbson::basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(jbson::get<element_type::document_element>(
+    static_assert(std::is_same<jbson::basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
+                  decltype(jbson::get<element_type::document_element>(
                                                       jbson::basic_element<std::vector<char>>{}))>::value,
                   "");
     static_assert(std::is_same<std::string, decltype(jbson::get<element_type::string_element>(
@@ -178,14 +179,16 @@ TEST(ElementTest, ElementRefTest1) {
 }
 
 TEST(ElementTest, ElementRefTest2) {
-    boost::string_ref bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
-    auto el1 = jbson::basic_element<boost::string_ref>{bson};
+    std::vector<char> bson;
+    boost::range::push_back(bson, "\x02hello\x00\x06\x00\x00\x00world\x00"s);
+    auto el1 = jbson::basic_element<boost::iterator_range<decltype(bson)::const_iterator>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
     EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
     auto str_ref = jbson::get<element_type::string_element>(el1);
-    EXPECT_TRUE(str_ref.data() >= bson.data() && str_ref.data() < (bson.data() + bson.size()));
+    EXPECT_GE(str_ref.data(), bson.data());
+    EXPECT_LT(str_ref.data(), (bson.data() + bson.size()));
     el1.name("some name");
     EXPECT_EQ("some name", el1.name());
 }
