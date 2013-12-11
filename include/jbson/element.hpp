@@ -47,6 +47,7 @@ enum class element_type : uint8_t {
 };
 
 template <class, class> class basic_document;
+template <class, class> class basic_array;
 template <typename Container> struct basic_element;
 
 struct jbson_error : std::exception {
@@ -101,7 +102,7 @@ template <typename Container> struct TypeMap {
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, string_type>,
         mpl::pair<element_type_c<element_type::document_element>, basic_document<container_type, container_type>>,
-        mpl::pair<element_type_c<element_type::array_element>, basic_document<container_type, container_type>>,
+        mpl::pair<element_type_c<element_type::array_element>, basic_array<container_type, container_type>>,
         mpl::pair<element_type_c<element_type::binary_element>, container_type>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
@@ -564,6 +565,9 @@ template <typename> struct is_document : std::false_type {};
 template <typename Container, typename ElementContainer>
 struct is_document<basic_document<Container, ElementContainer>> : std::true_type {};
 
+template <typename Container, typename ElementContainer>
+struct is_document<basic_array<Container, ElementContainer>> : std::true_type {};
+
 template <typename> struct is_ref_document : std::false_type {};
 
 template <typename ElementContainer>
@@ -579,14 +583,7 @@ template <typename> struct is_element : std::false_type {};
 
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
 
-template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_ref_document<ReturnT>::value>::type> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        return ReturnT{boost::string_ref{elem.m_data.data(), elem.m_data.size()}};
-    }
-};
-template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_copy_document<ReturnT>::value>::type> {
+template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_document<ReturnT>::value>::type> {
     template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
         if(!elem.template valid_type<ReturnT>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{});

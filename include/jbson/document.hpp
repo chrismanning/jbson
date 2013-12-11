@@ -22,8 +22,8 @@ struct invalid_document_size : jbson_error {
 namespace detail {
 
 template <typename Value, typename BaseIterator>
-struct document_iter
-    : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag, Value> {
+struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag,
+                                              std::add_lvalue_reference_t<std::add_const_t<Value>>> {
     document_iter() = default;
     document_iter(document_iter&&) = default;
     document_iter& operator=(document_iter&&) = default;
@@ -68,7 +68,7 @@ struct document_iter
             m_cur = Value{m_start, m_end};
     }
 
-    Value dereference() const { return *m_cur; }
+    std::add_lvalue_reference_t<std::add_const_t<Value>> dereference() const { return *m_cur; }
 
     BaseIterator m_start;
     BaseIterator m_end;
@@ -83,8 +83,8 @@ template <class Container, class ElementContainer = Container> class basic_docum
   public:
     using container_type = Container;
     using element_type = basic_element<ElementContainer>;
-    using iterator = typename detail::document_iter<element_type, typename container_type::iterator>;
-    using const_iterator = typename detail::document_iter<const element_type, typename container_type::const_iterator>;
+    using iterator = typename detail::document_iter<element_type, typename container_type::const_iterator>;
+    using const_iterator = iterator;
 
     basic_document() = default;
 
@@ -107,24 +107,24 @@ template <class Container, class ElementContainer = Container> class basic_docum
             BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
-    iterator begin() {
-        if(m_data.size() <= sizeof(int32_t))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
-        return {std::next(m_data.begin(), sizeof(int32_t)), std::prev(m_data.end())};
-    }
     const_iterator begin() const {
         if(m_data.size() <= sizeof(int32_t))
             BOOST_THROW_EXCEPTION(invalid_document_size{});
         return {std::next(m_data.begin(), sizeof(int32_t)), std::prev(m_data.end())};
     }
 
-    iterator end() {
-        auto last = std::prev(m_data.end());
-        return {last, last};
-    }
     const_iterator end() const {
         auto last = std::prev(m_data.end());
         return {last, last};
+    }
+
+    const_iterator find(boost::string_ref elem_name) const {
+        auto end = this->end();
+        for(auto i = begin(); i != end; ++i) {
+            if(i->name() == elem_name)
+                return i;
+        }
+        return end;
     }
 
     int32_t size() const { return m_size; }
@@ -135,6 +135,26 @@ template <class Container, class ElementContainer = Container> class basic_docum
 };
 
 using document = basic_document<std::vector<char>>;
+
+template <class Container, class ElementContainer = Container>
+class basic_array : basic_document<Container, ElementContainer> {
+    using base = basic_document<Container, ElementContainer>;
+
+  public:
+    using container_type = typename base::container_type;
+    using element_type = typename base::element_type;
+    using iterator = typename base::iterator;
+    using const_iterator = typename base::const_iterator;
+
+    using base::basic_document;
+    using base::begin;
+    using base::end;
+    using base::size;
+
+    const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
+};
+
+using array = basic_array<std::vector<char>>;
 
 } // namespace jbson
 
