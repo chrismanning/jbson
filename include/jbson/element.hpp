@@ -147,7 +147,7 @@ template <class Container> struct basic_element {
     using container_type = typename std::decay<Container>::type;
     static_assert(std::is_same<typename container_type::value_type, char>::value, "");
 
-    basic_element() = default;
+    basic_element() = delete;
 
     template <typename OtherContainer> basic_element(const basic_element<OtherContainer>&);
     basic_element(const basic_element&) = default;
@@ -157,7 +157,7 @@ template <class Container> struct basic_element {
     basic_element(basic_element&&) = default;
     basic_element& operator=(basic_element&&) = default;
 
-    basic_element(const container_type& c);
+    explicit basic_element(const container_type& c);
 
     template <typename ForwardRange> basic_element(const ForwardRange&);
     template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
@@ -208,6 +208,9 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const { return !m_data.empty(); }
 
+    template <typename OutContainer>
+    explicit operator OutContainer() const;
+
     bool operator==(const basic_element& other) const {
         return m_name == other.m_name && m_type == other.m_type &&
                std::equal(m_data.begin(), m_data.end(), other.m_data.begin(), other.m_data.end());
@@ -231,6 +234,25 @@ template <class Container> struct basic_element {
 };
 
 using element = basic_element<std::vector<char>>;
+
+template <class Container>
+template <typename OutContainer>
+basic_element<Container>::operator OutContainer() const {
+    OutContainer c;
+    if(m_type == static_cast<element_type>(0x00))
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
+    c.push_back(static_cast<char>(m_type));
+    if(m_name.empty())
+        BOOST_THROW_EXCEPTION(invalid_element_size{});
+    boost::range::push_back(c, m_name);
+    c.push_back('\0');
+    if(detect_size(m_type, m_data.begin(), m_data.end()) != m_data.size())
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
+    boost::range::push_back(c, m_data);
+
+    return std::move(c);
+}
+
 
 template <class Container>
 template <typename OtherContainer>
@@ -532,7 +554,8 @@ template <typename ForwardIterator> struct size_func<element_type::undefined_ele
 
 template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
-        assert(sizeof(int32_t) <= std::distance(first, last));
+        if(sizeof(int32_t) > std::distance(first, last))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
     }
 };
@@ -555,7 +578,8 @@ struct size_func<element_type::binary_element, ForwardIterator> : private size_f
 
 template <typename ForwardIterator> struct size_func<element_type::document_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
-        assert(sizeof(int32_t) <= std::distance(first, last));
+        if(sizeof(int32_t) > std::distance(first, last))
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
         return detail::little_endian_to_native<int32_t>(first, last);
     }
 };

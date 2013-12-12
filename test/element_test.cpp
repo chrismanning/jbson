@@ -162,20 +162,20 @@ TEST(ElementTest, ElementVoidTest) {
 
 TEST(ElementTest, ElementRefTest1) {
     static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
-                                                      jbson::basic_element<boost::string_ref>{}))>::value,
+                                                      std::declval<jbson::basic_element<boost::string_ref>>()))>::value,
                   "");
     static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
-                                                      jbson::basic_element<std::vector<char>>{}))>::value,
+                                                      std::declval<jbson::basic_element<std::vector<char>>>()))>::value,
                   "");
     static_assert(std::is_same<jbson::basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
                   decltype(jbson::get<element_type::document_element>(
-                                                      jbson::basic_element<std::vector<char>>{}))>::value,
+                                                      std::declval<jbson::basic_element<std::vector<char>>>()))>::value,
                   "");
     static_assert(std::is_same<std::string, decltype(jbson::get<element_type::string_element>(
-                                                jbson::basic_element<std::list<char>>{}))>::value,
+                                                std::declval<jbson::basic_element<std::list<char>>>()))>::value,
                   "");
     ASSERT_TRUE(
-        (std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(jbson::element{}))>::value));
+        (std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(std::declval<jbson::element>()))>::value));
 }
 
 TEST(ElementTest, ElementRefTest2) {
