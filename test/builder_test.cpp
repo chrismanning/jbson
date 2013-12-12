@@ -10,40 +10,70 @@ using namespace std::literals;
 
 #include <jbson/document.hpp>
 #include <jbson/builder.hpp>
-//using namespace jbson;
+using namespace jbson;
 
 #include <gtest/gtest.h>
 
 TEST(BuilderTest, BuildTest1) {
-    jbson::doc_builder doc_builder;
-    doc_builder("hello", jbson::element_type::string_element, "world");
+    auto builder = doc_builder("hello", element_type::string_element, "world");
 
-    auto raw_data = std::vector<char>(4, '\0');
-    for(auto&& e : doc_builder.m_elements) {
-        boost::range::push_back(raw_data, static_cast<std::vector<char>>(e));
-    }
-    raw_data.push_back('\0');
-    auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(raw_data.size()));
-    ASSERT_EQ(4, size.size());
+    jbson::document doc(builder);
 
-    ::memmove(raw_data.data(), size.data(), size.size());
-
-    auto doc = jbson::document{raw_data};
-
-    bool v{false};
-    for(auto&& e : doc) {
-        v = true;
-        EXPECT_EQ(jbson::element_type::string_element, e.type());
-        EXPECT_EQ("hello", e.name());
-        EXPECT_EQ("world", jbson::get<jbson::element_type::string_element>(e));
-    }
-    ASSERT_TRUE(v);
+    auto it = doc.begin();
+    ASSERT_NE(doc.end(), it);
+    auto e = *it;
+    EXPECT_EQ(element_type::string_element, e.type());
+    EXPECT_EQ("hello", e.name());
+    EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 }
 
 TEST(BuilderTest, BuildTest2) {
-    jbson::doc_builder doc_builder;
-    doc_builder("hello", jbson::element_type::string_element);
+    auto builder = doc_builder("hello", element_type::string_element);
+    EXPECT_THROW((void)document(builder), invalid_element_size);
+    builder = doc_builder("hello", element_type::null_element);
+    EXPECT_NO_THROW((void)document(builder));
+    EXPECT_THROW(builder = doc_builder("hello", element_type::undefined_element, 0), incompatible_type_conversion);
+}
 
-    auto v = std::vector<char>{};
-    EXPECT_THROW(v = std::move(static_cast<decltype(v)>(doc_builder.m_elements.front())), jbson::invalid_element_size);
+TEST(BuilderTest, BuildNestTest1) {
+    auto doc = document(doc_builder
+                        ("hello", element_type::string_element, "world")
+                        ("embedded document", element_type::array_element, doc_builder
+                            ("0", element_type::string_element, "awesome")
+                            ("1", element_type::double_element, 5.05)
+                            ("2", element_type::int32_element, 1986)
+                        ));
+
+    auto it = doc.begin();
+    auto end = doc.end();
+    ASSERT_NE(it, end);
+
+    auto e = *it++;
+    EXPECT_EQ(element_type::string_element, e.type());
+    EXPECT_EQ("hello", e.name());
+    EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
+
+    auto arr_el = *it++;
+    ASSERT_EQ(it, end);
+
+    EXPECT_EQ(element_type::array_element, arr_el.type());
+    auto arr = get<element_type::array_element>(arr_el);
+    static_assert(detail::is_document<decltype(arr)>::value, "");
+    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+
+    it = arr.begin();
+    end = arr.end();
+    EXPECT_EQ("0", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("awesome", get<element_type::string_element>(*it));
+    it++;
+    EXPECT_EQ("1", it->name());
+    EXPECT_EQ(element_type::double_element, it->type());
+    EXPECT_EQ(5.05, it->value<double>());
+    it++;
+    EXPECT_EQ("2", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1986, it->value<int32_t>());
+    it++;
+    ASSERT_EQ(it, end);
 }

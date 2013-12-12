@@ -208,8 +208,7 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const { return !m_data.empty(); }
 
-    template <typename OutContainer>
-    explicit operator OutContainer() const;
+    template <typename OutContainer> explicit operator OutContainer() const;
 
     bool operator==(const basic_element& other) const {
         return m_name == other.m_name && m_type == other.m_type &&
@@ -235,9 +234,7 @@ template <class Container> struct basic_element {
 
 using element = basic_element<std::vector<char>>;
 
-template <class Container>
-template <typename OutContainer>
-basic_element<Container>::operator OutContainer() const {
+template <class Container> template <typename OutContainer> basic_element<Container>::operator OutContainer() const {
     OutContainer c;
     if(m_type == static_cast<element_type>(0x00))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
@@ -252,7 +249,6 @@ basic_element<Container>::operator OutContainer() const {
 
     return std::move(c);
 }
-
 
 template <class Container>
 template <typename OtherContainer>
@@ -528,6 +524,9 @@ visit(element_type type, Args&&... args) {
             BOOST_THROW_EXCEPTION(invalid_element_type{});
     };
 }
+
+template <typename T, typename Container, typename Enable = void> struct is_valid_func;
+
 } // namespace detail
 
 template <element_type EType, typename ForwardIterator, typename = ForwardIterator> struct size_func {
@@ -614,7 +613,16 @@ size_t basic_element<Container>::detect_size(element_type e, ForwardIterator fir
     return detail::visit<size_func>(e, first, last);
 }
 
-template <typename T, typename Container> struct is_valid_func {
+template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
+    return detail::visit<detail::is_valid_func<T, Container>::template inner>(type);
+}
+
+template <element_type EType, typename Container>
+auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
+
+namespace detail {
+
+template <typename T, typename Container, typename Enable> struct is_valid_func {
     template <element_type EType, typename... Args>
     struct inner : std::is_convertible<T, detail::ElementTypeMap<EType, Container>> {
         static_assert(sizeof...(Args) == 0, "");
@@ -627,16 +635,10 @@ template <typename T, typename Container> struct is_valid_func {
                 std::is_convertible<T, detail::ElementTypeMap<element_type::boolean_element, Container>>>::type::value;
         }
     };
+    template <typename... Args> struct inner<element_type::document_element, Args...> : std::true_type {
+        static_assert(sizeof...(Args) == 0, "");
+    };
 };
-
-template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
-    return detail::visit<is_valid_func<T, Container>::template inner>(type);
-}
-
-template <element_type EType, typename Container>
-auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
-
-namespace detail {
 
 // getters
 template <> struct get_impl<boost::string_ref> {

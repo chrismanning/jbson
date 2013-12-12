@@ -9,16 +9,57 @@
 #include <deque>
 
 #include <jbson/element.hpp>
+#include <jbson/document.hpp>
 
 namespace jbson {
 
 struct doc_builder {
-    template <typename ...Args>
-    doc_builder& operator()(Args&&... args) {
-        m_elements.emplace_back(std::forward<Args>(args)...);
+    doc_builder() = default;
+
+    doc_builder(const doc_builder&) = default;
+    doc_builder& operator=(const doc_builder&) = default;
+
+    doc_builder(doc_builder&&) = default;
+    doc_builder& operator=(doc_builder&&) = default;
+
+    doc_builder(const std::string& name, element_type type) {
+        m_elements.emplace_back(name, type);
+    }
+
+    template <typename T>
+    doc_builder(const std::string& name, element_type type, T&& val) {
+        m_elements.emplace_back(name, type, std::forward<T>(val));
+    }
+
+    doc_builder& operator()(const std::string& name, element_type type) {
+        m_elements.emplace_back(name, type);
         return *this;
     }
-//private:
+
+    template <typename T>
+    doc_builder& operator()(const std::string& name, element_type type, T&& val) {
+        m_elements.emplace_back(name, type, std::forward<T>(val));
+        return *this;
+    }
+
+    operator document() const {
+        auto raw_data = document::container_type(4, '\0');
+        for(auto&& e : m_elements) {
+            boost::range::push_back(raw_data, static_cast<std::vector<char>>(e));
+        }
+        raw_data.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(raw_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, raw_data.begin());
+        return document{raw_data};
+    }
+
+    operator array() const {
+        return array(*this);
+    }
+
+private:
     std::deque<element> m_elements;
 };
 

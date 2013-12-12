@@ -77,6 +77,8 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
 
 } // namespace detail
 
+struct doc_builder;
+
 template <class Container, class ElementContainer = Container> class basic_document {
     template <class, class> friend struct detail::document_iter;
 
@@ -94,7 +96,10 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    template <typename ForwardRange>
+    explicit basic_document(container_type&& c) : m_data(std::move(c)) {}
+
+    template <typename ForwardRange,
+              typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, doc_builder>::value>>
     explicit basic_document(const ForwardRange& rng)
         : basic_document(std::begin(rng), std::end(rng)) {}
 
@@ -129,6 +134,10 @@ template <class Container, class ElementContainer = Container> class basic_docum
 
     int32_t size() const { return m_size; }
 
+    const container_type& data() const& { return m_data; }
+
+    container_type&& data() && { return std::move(m_data); }
+
   private:
     container_type m_data;
     mutable int32_t m_size{0};
@@ -156,6 +165,35 @@ class basic_array : basic_document<Container, ElementContainer> {
 
 using array = basic_array<std::vector<char>>;
 
+namespace detail {
+
+template <typename T, typename Container>
+struct is_valid_func<T, Container,
+                     std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value>> {
+    template <element_type EType, typename... Args> struct inner : std::false_type {
+        static_assert(sizeof...(Args) == 0, "");
+    };
+    template <typename... Args> struct inner<element_type::document_element, Args...> : std::true_type {
+        static_assert(sizeof...(Args) == 0, "");
+    };
+    template <typename... Args> struct inner<element_type::array_element, Args...> : std::true_type {
+        static_assert(sizeof...(Args) == 0, "");
+    };
+};
+
+template <typename T>
+struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value>> {
+    template <typename Container> static void call(basic_element<Container>& elem, T&& val) {
+        if(!elem.template valid_type<typename std::decay<T>::type>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        elem.m_data.clear();
+        using doc_type = basic_document<std::vector<char>, std::vector<char>>;
+        static_assert(std::is_convertible<T, doc_type>::value, "");
+        elem.m_data = doc_type(std::forward<T>(val)).data();
+    }
+};
+
+} // namespace detail
 } // namespace jbson
 
 #endif // JBSON_DOCUMENT_HPP
