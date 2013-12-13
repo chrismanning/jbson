@@ -95,8 +95,7 @@ struct is_iterator_pointer<
     std::enable_if_t<std::is_pointer<std::decay_t<typename Iterator::iterator_type>>::value>> : std::true_type {};
 
 template <typename Container> struct TypeMap {
-    using container_type = std::conditional_t<is_iterator_pointer<typename Container::iterator>::value,
-                                              boost::iterator_range<typename Container::const_iterator>, Container>;
+    using container_type = boost::iterator_range<typename Container::const_iterator>;
     using string_type = std::conditional_t<is_iterator_pointer<typename container_type::iterator>::value,
                                            boost::string_ref, std::string>;
     typedef typename mpl::map<
