@@ -96,7 +96,11 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    explicit basic_document(container_type&& c) : m_data(std::move(c)) {}
+    explicit basic_document(container_type&& c) : m_data(std::move(c)) {
+        if(m_data.size() <= sizeof(int32_t) ||
+           m_data.size() != detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
+    }
 
     template <typename ForwardRange,
               typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, doc_builder>::value>>
@@ -106,9 +110,8 @@ template <class Container, class ElementContainer = Container> class basic_docum
     template <typename ForwardIterator>
     basic_document(ForwardIterator first, ForwardIterator last)
         : m_data(first, last) {
-        if(m_data.size() > 4)
-            m_size = detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
-        if(m_data.size() != m_size)
+        if(m_data.size() <= sizeof(int32_t) ||
+           m_data.size() != detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
             BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
@@ -132,15 +135,22 @@ template <class Container, class ElementContainer = Container> class basic_docum
         return end;
     }
 
-    int32_t size() const { return m_size; }
+    int32_t size() const { return m_data.size(); }
 
-    const container_type& data() const& { return m_data; }
+    const container_type& data() const& {
+        if(m_data.size() <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
+        return m_data;
+    }
 
-    container_type&& data() && { return std::move(m_data); }
+    container_type&& data() && {
+        if(m_data.size() <= sizeof(int32_t))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
+        return std::move(m_data);
+    }
 
   private:
     container_type m_data;
-    mutable int32_t m_size{0};
 };
 
 using document = basic_document<std::vector<char>>;
