@@ -257,3 +257,20 @@ TEST(DocumentTest, SetTest1) {
     ASSERT_NE(set.end(), it);
     EXPECT_EQ("Manning", it->value<boost::string_ref>());
 }
+
+TEST(DocumentTest, SetTest2) {
+    document_set set;
+    set.emplace("first name", element_type::string_element, "Chris");
+    set.emplace("surname", element_type::string_element, "Manning");
+    set.emplace("yob", element_type::int32_element, 1991);
+    auto doc = document{set};
+    auto it = doc.find("yob");
+    ASSERT_NE(doc.end(), it);
+    EXPECT_EQ(1991, it->value<int32_t>());
+    it = doc.find("first name");
+    ASSERT_NE(doc.end(), it);
+    EXPECT_EQ("Chris", it->value<boost::string_ref>());
+    it = doc.find("surname");
+    ASSERT_NE(doc.end(), it);
+    EXPECT_EQ("Manning", it->value<boost::string_ref>());
+}
