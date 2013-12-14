@@ -10,8 +10,8 @@ set_target_properties(jbson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -stdlib=libc++ -fsanitize=address")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -stdlib=libc++ -pthread")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
 if(${JBSON_ENABLE_TESTING})
 enable_testing()
@@ -53,6 +53,8 @@ add_library(test_main OBJECT test/test_main.cpp)
 ExternalProject_Get_Property(gtest binary_dir)
 set(GTEST_LIBRARIES "-L${binary_dir} -lgtest")
 message(STATUS "Gtest libs: ${GTEST_LIBRARIES}")
+
+add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
 
 function(cxx_test test_name)
   add_executable(${test_name} test/${test_name}.cpp $<TARGET_OBJECTS:test_main>)
