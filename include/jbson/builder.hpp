@@ -42,8 +42,9 @@ struct doc_builder {
         return *this;
     }
 
-    operator document() const {
-        auto raw_data = document::container_type(4, '\0');
+    template <typename Container>
+    operator basic_document<Container>() const {
+        auto raw_data = Container(4, '\0');
         for(auto&& e : m_elements) {
             boost::range::push_back(raw_data, static_cast<std::vector<char>>(e));
         }
@@ -52,11 +53,12 @@ struct doc_builder {
         static_assert(4 == size.size(), "");
 
         boost::range::copy(size, raw_data.begin());
-        return document{raw_data};
+        return basic_document<Container>{raw_data};
     }
 
-    operator array() const {
-        return array(*this);
+    template <typename Container>
+    operator basic_array<Container>() const {
+        return basic_array<Container>(*this);
     }
 
 private:
