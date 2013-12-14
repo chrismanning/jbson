@@ -6,10 +6,12 @@
 #include <string>
 using namespace std::literals;
 #include <list>
+#include <deque>
 #include <fstream>
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>
+#include <jbson/builder.hpp>
 using namespace jbson;
 
 #include <gtest/gtest.h>
@@ -126,4 +128,132 @@ TEST(DocumentTest, DocumentParseTest4) {
     EXPECT_EQ(1986, it->value<int32_t>());
     it++;
     ASSERT_EQ(it, end);
+}
+
+TEST(DocumentTest, ArrayTest1) {
+    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    ASSERT_FALSE(ifs.fail());
+    ifs.seekg(0, std::ios::end);
+    auto n = static_cast<std::streamoff>(ifs.tellg());
+    ASSERT_GT(n, 0);
+    auto binstring = std::vector<char>(n);
+    ifs.seekg(0, std::ios::beg);
+    ifs.read(binstring.data(), n);
+
+    auto doc = basic_document<boost::iterator_range<std::vector<char>::const_iterator>>{binstring};
+
+    auto end = doc.end();
+    auto it = doc.find("BSON");
+    ASSERT_NE(it, end);
+
+    auto arr_el = *it++;
+    ASSERT_EQ(it, end);
+
+    EXPECT_EQ(element_type::array_element, arr_el.type());
+    auto arr = get<element_type::array_element>(arr_el);
+    static_assert(detail::is_document<decltype(arr)>::value, "");
+    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+
+    static_assert(std::is_constructible<std::vector<element>, decltype(arr)>::value, "");
+    static_assert(std::is_constructible<std::deque<element>, decltype(arr)>::value, "");
+    static_assert(!std::is_constructible<std::list<element>, decltype(arr)>::value, "");
+    auto vec = std::vector<element>(arr);
+    ASSERT_EQ(3, vec.size());
+
+    auto vec_it = vec.begin();
+    auto vec_end = vec.end();
+    ASSERT_NE(vec_it, vec_end);
+    EXPECT_EQ("0", vec_it->name());
+    EXPECT_EQ(element_type::string_element, vec_it->type());
+    EXPECT_EQ("awesome", get<element_type::string_element>(*vec_it));
+    vec_it++;
+    ASSERT_NE(vec_it, vec_end);
+    EXPECT_EQ("1", vec_it->name());
+    EXPECT_EQ(element_type::double_element, vec_it->type());
+    EXPECT_EQ(5.05, vec_it->value<double>());
+    vec_it++;
+    ASSERT_NE(vec_it, vec_end);
+    EXPECT_EQ("2", vec_it->name());
+    EXPECT_EQ(element_type::int32_element, vec_it->type());
+    EXPECT_EQ(1986, vec_it->value<int32_t>());
+    vec_it++;
+    ASSERT_EQ(vec_it, vec_end);
+}
+
+TEST(DocumentTest, VectorToDocTest1) {
+    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    ASSERT_FALSE(ifs.fail());
+    ifs.seekg(0, std::ios::end);
+    auto n = static_cast<std::streamoff>(ifs.tellg());
+    ASSERT_GT(n, 0);
+    auto binstring = std::vector<char>(n);
+    ifs.seekg(0, std::ios::beg);
+    ifs.read(binstring.data(), n);
+
+    auto doc = basic_document<boost::iterator_range<std::vector<char>::const_iterator>>{binstring};
+    EXPECT_GE(&*doc.data().begin(), binstring.data());
+    EXPECT_LT(&*doc.data().begin(), binstring.data() + binstring.size());
+
+    auto end = doc.end();
+    auto it = doc.find("BSON");
+    ASSERT_NE(it, end);
+
+    auto arr_el = *it++;
+    ASSERT_EQ(it, end);
+
+    EXPECT_EQ(element_type::array_element, arr_el.type());
+    auto arr = get<element_type::array_element>(arr_el);
+    static_assert(detail::is_document<decltype(arr)>::value, "");
+    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+    EXPECT_GE(&*arr.data().begin(), binstring.data());
+    EXPECT_LT(&*arr.data().begin(), binstring.data() + binstring.size());
+    auto arr_size = arr.size();
+
+    {
+        auto vec = std::vector<element>(arr);
+        ASSERT_EQ(3, vec.size());
+
+        auto doc = document(vec);
+        ASSERT_EQ(arr_size, doc.size());
+
+        auto it = doc.find("0");
+        auto end = doc.end();
+        ASSERT_NE(it, end);
+        EXPECT_EQ("0", it->name());
+        EXPECT_EQ(element_type::string_element, it->type());
+        EXPECT_EQ("awesome", get<element_type::string_element>(*it));
+        it = doc.find("1");
+        ASSERT_NE(it, end);
+        EXPECT_EQ("1", it->name());
+        EXPECT_EQ(element_type::double_element, it->type());
+        EXPECT_EQ(5.05, it->value<double>());
+        it = doc.find("2");
+        ASSERT_NE(it, end);
+        EXPECT_EQ("2", it->name());
+        EXPECT_EQ(element_type::int32_element, it->type());
+        EXPECT_EQ(1986, it->value<int32_t>());
+        it++;
+        ASSERT_EQ(it, end);
+    }
+}
+
+TEST(DocumentTest, SetTest1) {
+    auto doc = static_cast<document>(
+                       doc_builder
+                       ("first name", element_type::string_element, "Chris")
+                       ("surname", element_type::string_element, "Manning")
+                       ("yob", element_type::int32_element, 1991)
+                    );
+    static_assert(std::is_same<decltype(doc), document>::value, "");
+    auto set = static_cast<document_set>(doc);
+    ASSERT_EQ(3, set.size());
+    auto it = set.find("yob");
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ(1991, it->value<int32_t>());
+    it = set.find("first name");
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("Chris", it->value<boost::string_ref>());
+    it = set.find("surname");
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("Manning", it->value<boost::string_ref>());
 }

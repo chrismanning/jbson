@@ -148,11 +148,21 @@ template <class Container> struct basic_element {
 
     basic_element() = delete;
 
-    template <typename OtherContainer> basic_element(const basic_element<OtherContainer>&);
+    template <typename OtherContainer>
+    basic_element(const basic_element<OtherContainer>&,
+                  std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
+    template <typename OtherContainer>
+    basic_element(const basic_element<OtherContainer>&,
+                  std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
     basic_element(const basic_element&) = default;
     basic_element& operator=(const basic_element&) = default;
 
-    template <typename OtherContainer> basic_element(basic_element<OtherContainer>&&);
+    template <typename OtherContainer>
+    basic_element(basic_element<OtherContainer>&&,
+                  std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
+    template <typename OtherContainer>
+    basic_element(basic_element<OtherContainer>&&,
+                  std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
     basic_element(basic_element&&) = default;
     basic_element& operator=(basic_element&&) = default;
 
@@ -207,6 +217,7 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const { return !m_data.empty(); }
 
+    template <typename OutContainer> void write_to_container(OutContainer&) const;
     template <typename OutContainer> explicit operator OutContainer() const;
 
     bool operator==(const basic_element& other) const {
@@ -233,11 +244,12 @@ template <class Container> struct basic_element {
 
 using element = basic_element<std::vector<char>>;
 
-template <class Container> template <typename OutContainer> basic_element<Container>::operator OutContainer() const {
-    OutContainer c;
+template <class Container>
+template <typename OutContainer>
+void basic_element<Container>::write_to_container(OutContainer& c) const {
     if(m_type == static_cast<element_type>(0x00))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
-    c.push_back(static_cast<char>(m_type));
+    c.push_back(static_cast<uint8_t>(m_type));
     if(m_name.empty())
         BOOST_THROW_EXCEPTION(invalid_element_size{});
     boost::range::push_back(c, m_name);
@@ -245,24 +257,44 @@ template <class Container> template <typename OutContainer> basic_element<Contai
     if(detect_size(m_type, m_data.begin(), m_data.end()) != m_data.size())
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     boost::range::push_back(c, m_data);
+}
 
+template <class Container> template <typename OutContainer> basic_element<Container>::operator OutContainer() const {
+    OutContainer c;
+    write_to_container(c);
     return std::move(c);
 }
 
 template <class Container>
 template <typename OtherContainer>
-basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem)
+basic_element<Container>::basic_element(
+    const basic_element<OtherContainer>& elem,
+    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*)
     : m_name(elem.m_name), m_type(elem.m_type) {
     boost::range::push_back(m_data, elem.m_data);
 }
 
 template <class Container>
 template <typename OtherContainer>
-basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem)
+basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem,
+                                        std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
+    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data) {}
+
+template <class Container>
+template <typename OtherContainer>
+basic_element<Container>::basic_element(
+    basic_element<OtherContainer>&& elem,
+    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*)
     : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)) {
     boost::range::push_back(m_data, elem.m_data);
     elem.m_data.clear();
 }
+
+template <class Container>
+template <typename OtherContainer>
+basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem,
+                                        std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
+    : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)), m_data(std::move(elem.m_data)) {}
 
 template <class Container> basic_element<Container>::basic_element(const container_type& c) {
     auto first = c.begin(), last = c.end();
@@ -276,7 +308,7 @@ template <class Container> basic_element<Container>::basic_element(const contain
     if(std::distance(first, last) < elem_size)
         BOOST_THROW_EXCEPTION(invalid_element_size{});
     last = std::next(first, elem_size);
-    m_data = Container{first, last};
+    m_data = container_type{first, last};
 }
 
 template <class Container>
