@@ -259,13 +259,10 @@ struct is_valid_func<T, Container,
 
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value>> {
-    template <typename Container> static void call(basic_element<Container>& elem, T&& val) {
-        if(!elem.template valid_type<typename std::decay<T>::type>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        elem.m_data.clear();
+    template <typename Container> static void call(Container& data, T&& val) {
         using doc_type = basic_document<std::vector<char>, std::vector<char>>;
         static_assert(std::is_convertible<T, doc_type>::value, "");
-        elem.m_data = doc_type(std::forward<T>(val)).data();
+        data = doc_type(std::forward<T>(val)).data();
     }
 };
 

@@ -31,17 +31,17 @@ TEST(ElementTest, ElementParseTest1) {
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
-    el1.value(432);
+    el1.value(static_cast<bool>(432));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
-    el1.value(0);
+    el1.value(static_cast<bool>(0));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
 
     EXPECT_NO_THROW(el1.value<bool>());
-    EXPECT_THROW(el1.value<int64_t>(), jbson::invalid_element_size);
+    EXPECT_THROW(el1.value<int64_t>(), jbson::incompatible_type_conversion);
 }
 
 TEST(ElementTest, ElementParseTest2) {
@@ -248,4 +248,12 @@ TEST(ElementTest, ElementGetDocumentTest1) {
     static_assert(std::is_same<boost::iterator_range<jbson::element::container_type::const_iterator>,
                   decltype(doc)::container_type>::value,"");
     EXPECT_EQ(5, doc.size());
+}
+
+template <element_type EType>
+using ElementTypeMap = jbson::detail::ElementTypeMap<EType, std::string>;
+
+TEST(ElementTest, ElementSetTest1) {
+    ElementTypeMap<element_type::oid_element> oid;
+    jbson::element el{"_id", element_type::oid_element, oid};
 }

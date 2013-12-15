@@ -20,6 +20,7 @@
 #include <boost/optional.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
+#include <boost/range/adaptor/sliced.hpp>
 #include <boost/utility/string_ref.hpp>
 
 namespace jbson {
@@ -189,9 +190,18 @@ template <class Container> struct basic_element {
     element_type type() const { return m_type; }
     void type(element_type type) { m_type = type; }
 
-    template <typename T> T value() const { return detail::get_impl<T>::call(*this); }
+    template <typename T> T value() const {
+        if(!valid_type<T>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        return detail::get_impl<T>::call(m_data);
+    }
 
-    template <typename T> void value(T&& val) { detail::set_impl<T>::call(*this, std::forward<T>(val)); }
+    template <typename T> void value(T&& val) {
+        if(!valid_type<T>())
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        m_data.clear();
+        detail::set_impl<T>::call(m_data, std::forward<T>(val));
+    }
 
     template <typename T> void value(element_type type, T&& val) {
         this->type(type);
@@ -240,7 +250,12 @@ template <class Container> struct basic_element {
     template <typename T, typename> friend struct detail::set_impl;
 
     template <typename> friend struct basic_element;
+    template <element_type EType, typename T>
+    friend auto get(const basic_element<T>& elem) -> detail::ElementTypeMap<EType, T>;
 };
+
+template <element_type EType, typename Container>
+auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
 
 using element = basic_element<std::vector<char>>;
 
@@ -346,9 +361,7 @@ template <class Container> size_t basic_element<Container>::size() const {
 template <element_type EType, typename Visitor, typename Element> struct element_visitor {
     using element_type = std::decay_t<Element>;
     auto operator()(Visitor&& visitor, const element_type& elem) const {
-        return visitor(
-            elem.name(),
-            detail::get_impl<detail::ElementTypeMap<EType, typename element_type::container_type>>::call(elem), EType);
+        return visitor(elem.name(), get<EType>(elem), EType);
     }
 };
 
@@ -648,9 +661,6 @@ template <class Container> template <typename T> bool basic_element<Container>::
     return detail::visit<detail::is_valid_func<T, Container>::template inner>(type);
 }
 
-template <element_type EType, typename Container>
-auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
-
 namespace detail {
 
 template <typename T, typename Container, typename Enable> struct is_valid_func {
@@ -658,29 +668,19 @@ template <typename T, typename Container, typename Enable> struct is_valid_func 
     struct inner : std::is_convertible<T, detail::ElementTypeMap<EType, Container>> {
         static_assert(sizeof...(Args) == 0, "");
     };
-    template <typename... Args> struct inner<element_type::boolean_element, Args...> {
-        static_assert(sizeof...(Args) == 0, "");
-        bool operator()() const {
-            return boost::mpl::and_<
-                boost::mpl::not_<std::is_floating_point<T>>,
-                std::is_convertible<T, detail::ElementTypeMap<element_type::boolean_element, Container>>>::type::value;
-        }
-    };
-    template <typename... Args> struct inner<element_type::document_element, Args...> : std::true_type {
+    template <typename... Args> struct inner<element_type::boolean_element, Args...> : std::is_same<T, bool> {
         static_assert(sizeof...(Args) == 0, "");
     };
 };
 
 // getters
 template <> struct get_impl<boost::string_ref> {
-    template <typename Container> static boost::string_ref call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<boost::string_ref>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        auto first = elem.m_data.begin(), last = elem.m_data.end();
+    template <typename RangeT> static boost::string_ref call(const RangeT& data) {
+        auto first = data.begin(), last = data.end();
         if(std::distance(first, last) <= sizeof(int32_t))
             BOOST_THROW_EXCEPTION(invalid_element_size{});
         std::advance(first, sizeof(int32_t));
-        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
+        auto length = little_endian_to_native<int32_t>(data.begin(), first) - 1;
         assert(length >= 0);
         last = std::find(first, last, '\0');
         if(std::distance(first, last) != length)
@@ -690,25 +690,21 @@ template <> struct get_impl<boost::string_ref> {
 };
 
 template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        if(elem.m_data.size() != sizeof(ReturnT))
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        if(data.size() != sizeof(ReturnT))
             BOOST_THROW_EXCEPTION(invalid_element_size{});
-        return detail::little_endian_to_native<ReturnT>(elem.m_data.begin(), elem.m_data.end());
+        return detail::little_endian_to_native<ReturnT>(data.begin(), data.end());
     }
 };
 
 template <typename ReturnT>
 struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<ReturnT, std::string>::value>> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        auto first = elem.m_data.begin(), last = elem.m_data.end();
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        auto first = data.begin(), last = data.end();
         if(std::distance(first, last) <= sizeof(int32_t))
             BOOST_THROW_EXCEPTION(invalid_element_size{});
         std::advance(first, sizeof(int32_t));
-        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
+        auto length = little_endian_to_native<int32_t>(data.begin(), first) - 1;
         last = std::find(first, last, '\0');
         if(std::distance(first, last) != length)
             BOOST_THROW_EXCEPTION(invalid_element_size{});
@@ -724,139 +720,90 @@ struct is_document<basic_document<Container, ElementContainer>> : std::true_type
 template <typename Container, typename ElementContainer>
 struct is_document<basic_array<Container, ElementContainer>> : std::true_type {};
 
-template <typename> struct is_ref_document : std::false_type {};
-
-template <typename ElementContainer>
-struct is_ref_document<basic_document<boost::string_ref, ElementContainer>> : std::true_type {};
-
-template <typename> struct is_copy_document : std::false_type {};
-
-template <typename Container, typename ElementContainer>
-struct is_copy_document<basic_document<
-    Container, ElementContainer>> : mpl::not_<is_ref_document<basic_document<Container, ElementContainer>>> {};
-
 template <typename> struct is_element : std::false_type {};
 
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
 
-template <typename ReturnT> struct get_impl<ReturnT, typename std::enable_if<is_document<ReturnT>::value>::type> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        return ReturnT{elem.m_data};
+template <typename ReturnT>
+struct get_impl<ReturnT, typename std::enable_if<is_document<std::decay_t<ReturnT>>::value>::type> {
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        return ReturnT{data};
     }
 };
 
 template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::vector<char>>::value>> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+struct get_impl<ReturnT, std::enable_if_t<std::is_same<std::decay_t<ReturnT>, std::vector<char>>::value>> {
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
         ReturnT vec;
-        boost::range::push_back(vec, elem.m_data);
+        boost::range::push_back(vec, data);
         return vec;
     }
 };
 
-template <typename Iterator> struct get_impl<boost::iterator_range<Iterator>> {
-    using ReturnT = boost::iterator_range<Iterator>;
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        return elem.m_data;
-    }
+template <template <typename> class ReturnT, typename Iterator>
+struct get_impl<
+    ReturnT<Iterator>,
+    std::enable_if_t<std::is_same<std::decay_t<ReturnT<Iterator>>, typename boost::iterator_range<Iterator>>::value>> {
+    template <typename RangeT> static ReturnT<Iterator> call(const RangeT& data) { return data; }
 };
 
 template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_same<ReturnT, std::array<char, 12>>::value>> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        if(elem.m_data.size() != 12)
+struct get_impl<ReturnT, std::enable_if_t<std::is_same<std::decay_t<ReturnT>, std::array<char, 12>>::value>> {
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        if(data.size() != 12)
             BOOST_THROW_EXCEPTION(invalid_element_size{});
         ReturnT arr;
-        std::copy(elem.m_data.begin(), elem.m_data.end(), arr.data());
+        std::copy(data.begin(), data.end(), arr.data());
         return arr;
     }
 };
 
 template <typename ReturnT>
-struct get_impl<ReturnT,
-                std::enable_if_t<std::is_same<
-                    ReturnT, std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>::value>> {
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        if(elem.m_data.size() != 8)
+struct get_impl<
+    ReturnT,
+    std::enable_if_t<std::is_same<
+        std::decay_t<ReturnT>, std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>::value>> {
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        if(data.size() != 8)
             BOOST_THROW_EXCEPTION(invalid_element_size{});
-        auto v = detail::little_endian_to_native<int64_t>(elem.m_data.begin(), elem.m_data.end());
-        return ReturnT{std::chrono::milliseconds{v}};
+        return ReturnT{std::chrono::milliseconds{get_impl<int64_t>::call(data)}};
     }
 };
 
-template <typename T> struct is_string : std::false_type {};
-
-template <> struct is_string<std::string> : std::true_type {};
-
-template <> struct is_string<boost::string_ref> : std::true_type {};
-
 template <typename StringT>
-struct get_impl<std::tuple<StringT, StringT>, std::enable_if_t<is_string<std::decay_t<StringT>>::value>> {
+struct get_impl<std::tuple<StringT, StringT>,
+                std::enable_if_t<std::is_constructible<std::string, std::decay_t<StringT>>::value>> {
     using ReturnT = std::tuple<StringT, StringT>;
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        auto first = std::find(elem.m_data.begin(), elem.m_data.end(), '\0');
-        auto str = std::string(elem.m_data.begin(), first);
-        auto last = std::find(++first, elem.m_data.end(), '\0');
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        auto first = std::find(data.begin(), data.end(), '\0');
+        auto str = std::string(data.begin(), first);
+        auto last = std::find(++first, data.end(), '\0');
         return ReturnT{std::move(str), std::string{first, last}};
     }
 };
 
 template <typename StringT>
-struct get_impl<std::tuple<StringT, std::array<char, 12>>, std::enable_if_t<is_string<std::decay_t<StringT>>::value>> {
+struct get_impl<std::tuple<StringT, std::array<char, 12>>,
+                std::enable_if_t<std::is_constructible<std::string, std::decay_t<StringT>>::value>> {
     using ReturnT = std::tuple<std::string, std::array<char, 12>>;
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        auto first = elem.m_data.begin(), last = elem.m_data.end();
-        std::advance(first, sizeof(int32_t));
-        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first);
-        last = std::find(first, last, '\0');
-        auto str = std::string(first, last++);
-        if(length != str.size())
-            BOOST_THROW_EXCEPTION(invalid_element_size{});
-        if(std::distance(last, elem.m_data.end()) != 12)
-            BOOST_THROW_EXCEPTION(invalid_element_size{});
-        ReturnT tup;
-        std::copy(last, elem.m_data.end(), std::get<ElementTypeMap<element_type::oid_element, Container>>(tup).data());
-        return std::move(tup);
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        auto str = get_impl<StringT>::call(data);
+        auto oid = get_impl<std::array<char, 12>>::call(boost::adaptors::slice(
+            data, element::detect_size(element_type::string_element, data.begin(), data.end()), data.size()));
+        return ReturnT(str, oid);
     }
 };
 
 template <typename StringT, typename DocumentT>
-struct get_impl<
-    std::tuple<StringT, DocumentT>,
-    std::enable_if_t<is_document<std::decay_t<DocumentT>>::value&& is_string<std::decay_t<StringT>>::value>> {
+struct get_impl<std::tuple<StringT, DocumentT>,
+                std::enable_if_t<is_document<std::decay_t<DocumentT>>::value&&
+                                     std::is_constructible<std::string, std::decay_t<StringT>>::value>> {
     using ReturnT = std::tuple<std::decay_t<StringT>, DocumentT>;
-    template <typename Container> static ReturnT call(const basic_element<Container>& elem) {
-        if(!elem.template valid_type<ReturnT>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        auto first = elem.m_data.begin(), last = elem.m_data.end();
-        if(sizeof(int32_t) <= std::distance(first, last))
-            BOOST_THROW_EXCEPTION(invalid_element_size{});
-        auto size = little_endian_to_native<int32_t>(first, last);
-        std::advance(first, sizeof(int32_t));
-        auto length = little_endian_to_native<int32_t>(elem.m_data.begin(), first) - 1;
-        last = std::find(first, last, '\0');
-        if(std::distance(first, last) != length)
-            BOOST_THROW_EXCEPTION(invalid_element_size{});
-        auto str = StringT{&*first, static_cast<size_t>(length)};
-        std::advance(first, sizeof(int32_t) + length + 1);
-        auto doc = DocumentT{first, last};
-        if(size != str.size() + sizeof(int32_t) + 1 + doc.size())
-            BOOST_THROW_EXCEPTION(invalid_element_size{});
-        return std::make_tuple(str, doc);
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        auto str = get_impl<StringT>::call(data);
+        auto doc = get_impl<DocumentT>::call(boost::adaptors::slice(
+            data, element::detect_size(element_type::string_element, data.begin(), data.end()), data.size()));
+        return ReturnT(str, doc);
     }
 };
 
@@ -864,38 +811,44 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_vo
 
 // setters
 template <typename T> struct set_impl<T, std::enable_if_t<std::is_integral<typename std::decay<T>::type>::value>> {
-    template <typename Container> static void call(basic_element<Container>& elem, T val) {
-        if(!elem.template valid_type<typename std::decay<T>::type>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        elem.m_data.clear();
-        if(elem.type() == element_type::boolean_element)
-            elem.m_data.push_back(static_cast<bool>(val));
-        else
-            boost::range::push_back(elem.m_data, detail::native_to_little_endian(val));
+    template <typename Container> static void call(Container& data, T val) {
+        boost::range::push_back(data, detail::native_to_little_endian(val));
     }
 };
 
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_floating_point<typename std::decay<T>::type>::value>> {
-    template <typename Container> static void call(basic_element<Container>& elem, double val) {
-        if(!elem.template valid_type<typename std::decay<T>::type>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        elem.m_data.clear();
-        boost::range::push_back(elem.m_data, detail::native_to_little_endian(val));
+    template <typename Container> static void call(Container& data, double val) {
+        boost::range::push_back(data, detail::native_to_little_endian(val));
     }
 };
 
 template <typename T>
 struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, std::string>::value>> {
-    template <typename Container> static void call(basic_element<Container>& elem, boost::string_ref val) {
-        if(!elem.template valid_type<typename std::decay<std::string>::type>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        elem.m_data.clear();
-        boost::range::push_back(elem.m_data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
-        boost::range::push_back(elem.m_data, val);
-        elem.m_data.push_back('\0');
-        if(elem.m_data.size() != val.size() + sizeof(int32_t) + sizeof('\0'))
+    template <typename Container> static void call(Container& data, boost::string_ref val) {
+        boost::range::push_back(data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
+        boost::range::push_back(data, val);
+        data.push_back('\0');
+        if(data.size() != val.size() + sizeof(int32_t) + sizeof('\0'))
             BOOST_THROW_EXCEPTION(invalid_element_size{});
+    }
+};
+
+template <typename T> struct set_impl<T, std::enable_if_t<std::is_same<std::decay_t<T>, std::array<char, 12>>::value>> {
+    template <typename Container> static void call(Container& data, std::array<char, 12> val) {
+        boost::range::push_back(data, val);
+        if(data.size() != val.size())
+            BOOST_THROW_EXCEPTION(invalid_element_size{});
+    }
+};
+
+template <typename StringT>
+struct set_impl<std::tuple<StringT, std::array<char, 12>>,
+                std::enable_if_t<std::is_convertible<typename std::decay<StringT>::type, std::string>::value>> {
+    template <typename Container>
+    static void call(Container& data, std::tuple<StringT, std::array<char, 12>> val) {
+        set_impl<StringT>::call(data, std::get<0>(val));
+        set_impl<std::array<char, 12>>::call(data, std::get<1>(val));
     }
 };
 
@@ -956,11 +909,11 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
     if(EType != elem.type())
         BOOST_THROW_EXCEPTION(incompatible_element_conversion{});
 
-    return detail::get_impl<ReturnT>::call(elem);
+    return detail::get_impl<ReturnT>::call(elem.m_data);
 }
 
 template <typename ReturnT, typename Container> ReturnT get(const basic_element<Container>& elem) {
-    return detail::get_impl<ReturnT>::call(elem);
+    return detail::get_impl<ReturnT>::call(elem.m_data);
 }
 
 std::ostream& operator<<(std::ostream& os, element_type e) {
