@@ -11,6 +11,7 @@
 #include <set>
 
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/optional.hpp>
 #include <boost/range/metafunctions.hpp>
 
 #include <jbson/element.hpp>

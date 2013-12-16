@@ -6,154 +6,157 @@
 #include <string>
 using namespace std::literals;
 #include <list>
+#include <deque>
+
+#include <boost/container/stable_vector.hpp>
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>
-using jbson::element_type;
+using namespace jbson;
 
 #include <gtest/gtest.h>
 
 TEST(ElementTest, ElementParseTest1) {
-    auto el1 = jbson::element{"\x02hello\x00\x06\x00\x00\x00world\x00"s};
+    auto el1 = element{"\x02hello\x00\x06\x00\x00\x00world\x00"s};
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
-    EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
+    EXPECT_EQ("world", get<element_type::string_element>(el1));
     el1.value("test");
-    EXPECT_EQ("test", jbson::get<element_type::string_element>(el1));
+    EXPECT_EQ("test", get<element_type::string_element>(el1));
 
-    EXPECT_THROW(jbson::get<element_type::boolean_element>(el1), jbson::incompatible_element_conversion);
+    EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
     EXPECT_NO_THROW(el1.value<boost::string_ref>());
-    EXPECT_THROW(el1.value<bool>(), jbson::incompatible_type_conversion);
+    EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
 
     el1.value(element_type::boolean_element, false);
-    EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_FALSE(get<element_type::boolean_element>(el1));
     el1.value(true);
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
     el1.value(static_cast<bool>(432));
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_TRUE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
     el1.value(static_cast<bool>(0));
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_FALSE(jbson::get<element_type::boolean_element>(el1));
+    EXPECT_FALSE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
 
     EXPECT_NO_THROW(el1.value<bool>());
-    EXPECT_THROW(el1.value<int64_t>(), jbson::incompatible_type_conversion);
+    EXPECT_THROW(el1.value<int64_t>(), incompatible_type_conversion);
 }
 
 TEST(ElementTest, ElementParseTest2) {
     auto bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
-    auto el1 = jbson::basic_element<std::list<char>>{bson};
+    auto el1 = basic_element<std::list<char>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
-    EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
+    EXPECT_EQ("world", get<element_type::string_element>(el1));
     el1.name("some name");
     EXPECT_EQ("some name", el1.name());
     el1.value("some value");
-    EXPECT_EQ("some value", jbson::get<element_type::string_element>(el1));
+    EXPECT_EQ("some value", get<element_type::string_element>(el1));
     el1.value(element_type::int32_element, 1234);
     ASSERT_EQ(element_type::int32_element, el1.type());
-    EXPECT_EQ(1234, jbson::get<element_type::int32_element>(el1));
+    EXPECT_EQ(1234, get<element_type::int32_element>(el1));
     EXPECT_EQ(15, el1.size());
 }
 
 TEST(ElementTest, ElementParseTest3) {
     auto bson = "\x00hello\x00\x06\x00\x00\x00world\x00"s;
-    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_type);
+    ASSERT_THROW(element{bson}, invalid_element_type);
     bson = "\x02hello\x06\x00\x00\x00world\x00"s;
-    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_size);
+    ASSERT_THROW(element{bson}, invalid_element_size);
     bson = "\x02hello\x00\x06\x00\x00\x00world"s;
-    ASSERT_THROW(jbson::element{bson}, jbson::invalid_element_size);
+    ASSERT_THROW(element{bson}, invalid_element_size);
 }
 
 TEST(ElementTest, ElementConstructTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
     auto val = 44.854;
     el1.value(val);
     ASSERT_EQ(element_type::double_element, el1.type());
-    EXPECT_EQ(val, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(val, get<element_type::double_element>(el1));
 }
 
 TEST(ElementTest, ElementCopyTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
-    jbson::element el2 = el1;
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    element el2 = el1;
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_EQ(el1, el2);
 }
 
 TEST(ElementTest, ElementCopyTest2) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
-    jbson::element el2 = el1;
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    element el2 = el1;
     auto val = 44.854;
     el2.value(val);
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(val, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(val, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
 TEST(ElementTest, ElementCopyConvertTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
-    jbson::basic_element<std::list<char>> el2 = el1;
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    basic_element<std::list<char>> el2 = el1;
     EXPECT_EQ(el1, el2);
     auto val = 44.854;
     el2.value(val);
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(val, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(val, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
 TEST(ElementTest, ElementMoveTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
     auto old_size = el1.size();
-    jbson::element el2 = std::move(el1);
+    element el2 = std::move(el1);
     ASSERT_EQ(2, el1.size());
     ASSERT_EQ(old_size, el2.size());
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
 TEST(ElementTest, ElementMoveConvertTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
     auto old_size = el1.size();
-    jbson::basic_element<std::list<char>> el2(std::move(el1));
+    basic_element<std::list<char>> el2(std::move(el1));
     ASSERT_EQ(2, el1.size());
     ASSERT_EQ(old_size, el2.size());
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el2));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
 TEST(ElementTest, ElementVoidTest) {
-    auto el1 = jbson::element{"null element", element_type::null_element};
+    auto el1 = element{"null element", element_type::null_element};
     ASSERT_EQ(element_type::null_element, el1.type());
     EXPECT_EQ("null element", el1.name());
     ASSERT_EQ(el1.name().size() + sizeof('\0') + sizeof(element_type), el1.size());
@@ -161,32 +164,32 @@ TEST(ElementTest, ElementVoidTest) {
 }
 
 TEST(ElementTest, ElementRefTest1) {
-    static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
-                                                      std::declval<jbson::basic_element<boost::string_ref>>()))>::value,
+    static_assert(std::is_same<boost::string_ref, decltype(get<element_type::string_element>(
+                                                      std::declval<basic_element<boost::string_ref>>()))>::value,
                   "");
-    static_assert(std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(
-                                                      std::declval<jbson::basic_element<std::vector<char>>>()))>::value,
+    static_assert(std::is_same<boost::string_ref, decltype(get<element_type::string_element>(
+                                                      std::declval<basic_element<std::vector<char>>>()))>::value,
                   "");
-    static_assert(std::is_same<jbson::basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
-                  decltype(jbson::get<element_type::document_element>(
-                                                      std::declval<jbson::basic_element<std::vector<char>>>()))>::value,
+    static_assert(std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
+                  decltype(get<element_type::document_element>(
+                                                      std::declval<basic_element<std::vector<char>>>()))>::value,
                   "");
-    static_assert(std::is_same<std::string, decltype(jbson::get<element_type::string_element>(
-                                                std::declval<jbson::basic_element<std::list<char>>>()))>::value,
+    static_assert(std::is_same<std::string, decltype(get<element_type::string_element>(
+                                                std::declval<basic_element<std::list<char>>>()))>::value,
                   "");
     ASSERT_TRUE(
-        (std::is_same<boost::string_ref, decltype(jbson::get<element_type::string_element>(std::declval<jbson::element>()))>::value));
+        (std::is_same<boost::string_ref, decltype(get<element_type::string_element>(std::declval<element>()))>::value));
 }
 
 TEST(ElementTest, ElementRefTest2) {
     std::vector<char> bson;
     boost::range::push_back(bson, "\x02hello\x00\x06\x00\x00\x00world\x00"s);
-    auto el1 = jbson::basic_element<boost::iterator_range<decltype(bson)::const_iterator>>{bson};
+    auto el1 = basic_element<boost::iterator_range<decltype(bson)::const_iterator>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
-    EXPECT_EQ("world", jbson::get<element_type::string_element>(el1));
-    auto str_ref = jbson::get<element_type::string_element>(el1);
+    EXPECT_EQ("world", get<element_type::string_element>(el1));
+    auto str_ref = get<element_type::string_element>(el1);
     EXPECT_GE(str_ref.data(), bson.data());
     EXPECT_LT(str_ref.data(), (bson.data() + bson.size()));
     el1.name("some name");
@@ -209,10 +212,10 @@ template <typename ElemType> struct VoidVisitor {
 };
 
 TEST(ElementTest, ElementVisitTest1) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
     el1.visit(VoidVisitor<double>(3.141592));
 }
 
@@ -231,29 +234,68 @@ template <typename ElemType> struct BoolVisitor {
 };
 
 TEST(ElementTest, ElementVisitTest2) {
-    auto el1 = jbson::element{"Pi 6dp", element_type::double_element, 3.141592};
+    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, jbson::get<element_type::double_element>(el1));
+    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
     EXPECT_TRUE(el1.visit(BoolVisitor<double>(3.141592)));
 }
 
 TEST(ElementTest, ElementGetDocumentTest1) {
-    jbson::element::container_type data{{0x03,'e','m','b','e','d','d','e','d',' ','d','o','c','u','m','e','n','t','\0',0x05,0x00,0x00,0x00,0x00}};
-    auto el1 = jbson::basic_element<boost::iterator_range<jbson::element::container_type::const_iterator>>{data};
+    element::container_type data{{0x03,'e','m','b','e','d','d','e','d',' ','d','o','c','u','m','e','n','t','\0',0x05,0x00,0x00,0x00,0x00}};
+    auto el1 = basic_element<boost::iterator_range<element::container_type::const_iterator>>{data};
     ASSERT_EQ(element_type::document_element, el1.type());
     EXPECT_EQ("embedded document", el1.name());
-    auto doc = jbson::get<element_type::document_element>(el1);
-    static_assert(jbson::detail::is_document<decltype(doc)>::value,"");
-    static_assert(std::is_same<boost::iterator_range<jbson::element::container_type::const_iterator>,
+    auto doc = get<element_type::document_element>(el1);
+    static_assert(detail::is_document<decltype(doc)>::value,"");
+    static_assert(std::is_same<boost::iterator_range<element::container_type::const_iterator>,
                   decltype(doc)::container_type>::value,"");
     EXPECT_EQ(5, doc.size());
 }
 
-template <element_type EType>
-using ElementTypeMap = jbson::detail::ElementTypeMap<EType, std::string>;
+template <typename Container>
+struct ParameterizedContainerTest : ::testing::Test {
+    using container_type = Container;
+    template <element_type EType>
+    using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
+    using string_type = ElementTypeMap<element_type::string_element>;
+};
+TYPED_TEST_CASE_P(ParameterizedContainerTest);
 
-TEST(ElementTest, ElementSetTest1) {
-    ElementTypeMap<element_type::oid_element> oid;
-    jbson::element el{"_id", element_type::oid_element, oid};
+TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
+    const typename TestFixture::template ElementTypeMap<element_type::oid_element> oid{{1,2,3,4,5,6,7,8,9,10,11,12}};
+    basic_element<typename TestFixture::container_type> el{"_id", element_type::oid_element, oid};
+    EXPECT_EQ(oid, get<element_type::oid_element>(el));
+
+    EXPECT_NO_THROW(el.template value<element_type::db_pointer_element>(std::make_tuple("some collection", oid)));
+    typename TestFixture::string_type coll;
+    std::decay_t<decltype(oid)> new_oid;
+    std::tie(coll, new_oid) = get<element_type::db_pointer_element>(el);
+    EXPECT_EQ("some collection", coll);
+    EXPECT_EQ(oid, new_oid);
 }
+
+TYPED_TEST_P(ParameterizedContainerTest, ElementDateTest) {
+    using date_type = typename TestFixture::template ElementTypeMap<element_type::date_element>;
+    using clock_type = typename date_type::clock;
+    const auto now_time = std::chrono::time_point_cast<std::chrono::milliseconds>(clock_type::now());
+    static_assert(std::is_same<std::decay_t<decltype(now_time)>, date_type>::value, "");
+    basic_element<typename TestFixture::container_type> el{"date modified", element_type::date_element};
+    EXPECT_NO_THROW(el.value(now_time));
+    EXPECT_EQ(now_time, get<element_type::date_element>(el));
+}
+
+TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
+    using regex_type = typename TestFixture::template ElementTypeMap<element_type::regex_element>;
+    basic_element<typename TestFixture::container_type> el{"some filter", element_type::regex_element};
+    ASSERT_NO_THROW(el.value(regex_type(".*", "i")));
+    EXPECT_EQ(18, el.size());
+    typename TestFixture::string_type regex, options;
+    std::tie(regex, options) = get<element_type::regex_element>(el);
+    EXPECT_EQ(".*", regex);
+    EXPECT_EQ("i", options);
+}
+
+REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementDateTest, ElementRegexTest);
+using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>, boost::container::stable_vector<char>>;
+INSTANTIATE_TYPED_TEST_CASE_P(ParameterizedOIDTest, ParameterizedContainerTest, ContainerTypes);
