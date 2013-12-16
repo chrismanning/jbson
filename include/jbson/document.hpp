@@ -165,7 +165,7 @@ template <class Container, class ElementContainer = Container> class basic_docum
         return {std::next(m_data.begin(), sizeof(int32_t)), std::prev(m_data.end())};
     }
 
-    const_iterator end() const {
+    const_iterator end() const noexcept {
         auto last = std::prev(m_data.end());
         return {last, last};
     }
@@ -179,7 +179,7 @@ template <class Container, class ElementContainer = Container> class basic_docum
         return end;
     }
 
-    int32_t size() const { return m_data.size(); }
+    int32_t size() const noexcept { return m_data.size(); }
 
     const container_type& data() const& {
         if(m_data.size() <= sizeof(int32_t))
@@ -234,8 +234,9 @@ class basic_array : basic_document<Container, ElementContainer> {
         auto vec = RandomAccessContainer{};
         for(auto&& e : *this)
             vec.emplace_back(e);
-        boost::range::stable_sort(vec,
-                                  [](auto&& e1, auto&& e2) { return std::stoi(e1.name()) < std::stoi(e2.name()); });
+        boost::range::stable_sort(vec, [](auto&& e1, auto&& e2) {
+            return std::strtol(e1.name().begin(), nullptr, 0) < std::strtol(e2.name().begin(), nullptr, 0);
+        });
         return std::move(vec);
     }
 };

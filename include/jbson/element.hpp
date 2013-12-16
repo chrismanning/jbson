@@ -181,13 +181,13 @@ template <class Container> struct basic_element {
     basic_element(const std::string&, element_type);
 
     // field name
-    const std::string& name() const { return m_name; }
+    boost::string_ref name() const { return m_name; }
     void name(std::string n) { m_name = std::move(n); }
     // size in bytes
-    size_t size() const;
+    size_t size() const noexcept;
 
-    element_type type() const { return m_type; }
-    void type(element_type type) { m_type = type; }
+    element_type type() const noexcept { return m_type; }
+    void type(element_type type) noexcept { m_type = type; }
 
     template <typename T> T value() const {
         if(!valid_type<T>())
@@ -198,8 +198,10 @@ template <class Container> struct basic_element {
     template <typename T> void value(T&& val) {
         if(!valid_type<T>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-        m_data.clear();
-        detail::set_impl<T>::call(m_data, std::forward<T>(val));
+        decltype(m_data) data;
+        detail::set_impl<T>::call(data, std::forward<T>(val));
+        using std::swap;
+        swap(m_data, data);
     }
 
     template <typename T> void value(element_type type, T&& val) {
@@ -224,14 +226,14 @@ template <class Container> struct basic_element {
         std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
             nullptr) const -> decltype(std::declval<Visitor>()("", double {}, element_type{}));
 
-    explicit operator bool() const { return !m_data.empty(); }
+    explicit operator bool() const noexcept { return !m_data.empty(); }
 
     template <typename OutContainer> void write_to_container(OutContainer&) const;
     template <typename OutContainer> explicit operator OutContainer() const;
 
     bool operator==(const basic_element& other) const {
         return m_name == other.m_name && m_type == other.m_type &&
-               std::equal(m_data.begin(), m_data.end(), other.m_data.begin(), other.m_data.end());
+               boost::range::equal(m_data, other.m_data);
     }
     bool operator!=(const basic_element& other) const { return !(*this == other); }
 
@@ -354,7 +356,7 @@ basic_element<Container>::basic_element(const std::string& name, element_type ty
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 }
 
-template <class Container> size_t basic_element<Container>::size() const {
+template <class Container> size_t basic_element<Container>::size() const noexcept {
     return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
 }
 
