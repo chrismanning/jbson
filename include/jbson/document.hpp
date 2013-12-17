@@ -233,7 +233,7 @@ class basic_array : basic_document<Container, ElementContainer> {
     explicit operator RandomAccessContainer() const {
         auto vec = RandomAccessContainer{};
         for(auto&& e : *this)
-            vec.emplace_back(e);
+            vec.push_back(e);
         boost::range::stable_sort(vec, [](auto&& e1, auto&& e2) {
             return std::strtol(e1.name().begin(), nullptr, 0) < std::strtol(e2.name().begin(), nullptr, 0);
         });
@@ -260,12 +260,17 @@ struct is_valid_func<T, Container,
 };
 
 template <typename T>
-struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value>> {
+struct set_impl<T, std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value &&
+                                    !is_document<typename std::decay<T>::type>::value>> {
     template <typename Container> static void call(Container& data, T&& val) {
         using doc_type = basic_document<std::vector<char>, std::vector<char>>;
         static_assert(std::is_convertible<T, doc_type>::value, "");
         data = doc_type(std::forward<T>(val)).data();
     }
+};
+
+template <typename T> struct set_impl<T, std::enable_if_t<is_document<typename std::decay<T>::type>::value>> {
+    template <typename Container> static void call(Container& data, T&& val) { data = std::forward<T>(val).data(); }
 };
 
 } // namespace detail

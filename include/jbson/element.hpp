@@ -172,13 +172,12 @@ template <class Container> struct basic_element {
     template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
 
     template <typename T>
-    basic_element(const std::string& name, element_type type, T&& val)
-        : basic_element(name, type) {
+    basic_element(std::string name, element_type type, T&& val)
+        : basic_element(std::move(name), type) {
         value(std::forward<T>(val));
     }
-    template <typename ForwardIterator>
-    basic_element(const std::string&, element_type, ForwardIterator, ForwardIterator);
-    basic_element(const std::string&, element_type);
+    template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
+    basic_element(std::string, element_type);
 
     // field name
     boost::string_ref name() const { return m_name; }
@@ -211,7 +210,7 @@ template <class Container> struct basic_element {
 
     template <element_type EType, typename T> void value(T&& val) noexcept {
         using T2 = ElementTypeMap<EType>;
-        static_assert(std::is_convertible<typename std::decay<T>::type, T2>::value, "");
+        static_assert(std::is_constructible<T2, typename std::decay<T>::type>::value, "");
         value(EType, std::forward<T>(val));
     }
 
@@ -232,8 +231,7 @@ template <class Container> struct basic_element {
     template <typename OutContainer> explicit operator OutContainer() const;
 
     bool operator==(const basic_element& other) const {
-        return m_name == other.m_name && m_type == other.m_type &&
-               boost::range::equal(m_data, other.m_data);
+        return m_name == other.m_name && m_type == other.m_type && boost::range::equal(m_data, other.m_data);
     }
     bool operator!=(const basic_element& other) const { return !(*this == other); }
 
@@ -340,9 +338,9 @@ basic_element<Container>::basic_element(ForwardIterator first, ForwardIterator l
 
 template <class Container>
 template <typename ForwardIterator>
-basic_element<Container>::basic_element(const std::string& name, element_type type, ForwardIterator first,
+basic_element<Container>::basic_element(std::string name, element_type type, ForwardIterator first,
                                         ForwardIterator last)
-    : m_name(name), m_type(type) {
+    : m_name(std::move(name)), m_type(type) {
     if(!m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     last = std::next(first, detect_size(m_type, first, last));
@@ -350,8 +348,8 @@ basic_element<Container>::basic_element(const std::string& name, element_type ty
 }
 
 template <class Container>
-basic_element<Container>::basic_element(const std::string& name, element_type type)
-    : m_name(name), m_type(type) {
+basic_element<Container>::basic_element(std::string name, element_type type)
+    : m_name(std::move(name)), m_type(type) {
     if(!m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 }
@@ -847,7 +845,8 @@ template <typename T> struct set_impl<T, std::enable_if_t<std::is_floating_point
 
 // string
 template <typename T>
-struct set_impl<T, std::enable_if_t<std::is_constructible<boost::string_ref, std::decay_t<T>>::value>> {
+struct set_impl<T, std::enable_if_t<std::is_constructible<boost::string_ref, std::decay_t<T>>::value &&
+                                    !is_document<typename std::decay<T>::type>::value>> {
     template <typename Container> static void call(Container& data, boost::string_ref val) {
         auto old_size = data.size();
         boost::range::push_back(data, detail::native_to_little_endian(static_cast<int32_t>(val.size() + 1)));
