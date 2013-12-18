@@ -128,3 +128,16 @@ TEST(JsonReaderTest, JsonParseTest12) {
     ASSERT_EQ(element_type::int64_element, reader.m_elements.begin()->type());
     EXPECT_EQ(4294967296, get<element_type::int64_element>(*reader.m_elements.begin()));
 }
+
+TEST(JsonReaderTest, JsonParseTest13) {
+    auto json = boost::string_ref{R"({"key": {"nested key" : "nested value"}})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(1, reader.m_elements.size());
+    EXPECT_EQ("key", reader.m_elements.begin()->name());
+    ASSERT_EQ(element_type::document_element, reader.m_elements.begin()->type());
+    auto set = static_cast<document_set>(get<element_type::document_element>(*reader.m_elements.begin()));
+    EXPECT_EQ("nested key", set.begin()->name());
+    EXPECT_EQ("nested value", get<element_type::string_element>(*set.begin()));
+}
