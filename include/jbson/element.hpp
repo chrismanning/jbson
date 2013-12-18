@@ -51,7 +51,7 @@ template <class, class> class basic_document;
 template <class, class> class basic_array;
 template <typename Container> struct basic_element;
 
-struct jbson_error : std::exception {
+struct jbson_error : virtual std::exception, virtual boost::exception {
     const char* what() const noexcept override { return "jbson_error"; }
 };
 
