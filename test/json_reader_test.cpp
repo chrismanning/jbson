@@ -141,3 +141,45 @@ TEST(JsonReaderTest, JsonParseTest13) {
     EXPECT_EQ("nested key", set.begin()->name());
     EXPECT_EQ("nested value", get<element_type::string_element>(*set.begin()));
 }
+
+TEST(JsonReaderTest, JsonParseTest14) {
+    auto json = boost::string_ref{R"({"ke\ny":"value"})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(1, reader.m_elements.size());
+    EXPECT_EQ("ke\ny", reader.m_elements.begin()->name());
+    ASSERT_EQ(element_type::string_element, reader.m_elements.begin()->type());
+    EXPECT_EQ("value", get<element_type::string_element>(*reader.m_elements.begin()));
+}
+
+TEST(JsonReaderTest, JsonParseTest15) {
+    auto json = boost::string_ref{R"(["key": 4294967296])"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
+}
+
+TEST(JsonReaderTest, JsonParseTest16) {
+    auto json = boost::string_ref{R"([4294967296, "some string", true])"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(3, reader.m_elements.size());
+
+    auto it = reader.m_elements.begin();
+    EXPECT_EQ("0", it->name());
+    ASSERT_EQ(element_type::int64_element, it->type());
+    EXPECT_EQ(4294967296, get<element_type::int64_element>(*it));
+    ++it;
+    ASSERT_NE(reader.m_elements.end(), it);
+    EXPECT_EQ("1", it->name());
+    ASSERT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("some string", get<element_type::string_element>(*it));
+    ++it;
+    ASSERT_NE(reader.m_elements.end(), it);
+    EXPECT_EQ("2", it->name());
+    ASSERT_EQ(element_type::boolean_element, it->type());
+    EXPECT_TRUE(get<element_type::boolean_element>(*it));
+    ++it;
+    ASSERT_EQ(reader.m_elements.end(), it);
+}

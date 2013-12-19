@@ -53,6 +53,9 @@ struct json_reader {
     void parse_array(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, document_set&);
 
     template <typename ForwardIterator>
+    void parse_value(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
+
+    template <typename ForwardIterator>
     std::string parse_string(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&);
     template <typename ForwardIterator>
     void parse_number(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
@@ -164,50 +167,14 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
         if(*first != ':')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ":"));
         skip_space(++first, last);
-
-        switch(*first) {
-            case '{': {
-                document_set edoc;
-                parse_document(first, last, edoc);
-                el.value<element_type::document_element>(document{edoc});
-                break;
-            }
-            case '[': {
-                document_set edoc;
-                parse_array(first, last, edoc);
-                el.value<element_type::array_element>(array{edoc});
-                break;
-            }
-            case '"':
-                el.value<element_type::string_element>(parse_string(first, last));
-                break;
-            case 't':
-                if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)))) {
-                    el.value<element_type::boolean_element>(true);
-                    std::advance(first, 4);
-                    break;
-                }
-                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "true"));
-            case 'f':
-                if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)))) {
-                    el.value<element_type::boolean_element>(false);
-                    std::advance(first, 5);
-                    break;
-                }
-                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "false"));
-            case 'n':
-                if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4))))
-                    BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "null"));
-                std::advance(first, 4);
-                break;
-            default:
-                parse_number(first, last, el);
-        }
+        parse_value(first, last, el);
         elements.emplace(std::move(el));
 
         skip_space(first, last);
-        if(*first == ',')
+        if(*first == ',') {
+            ++first;
             continue;
+        }
         if(*first != '}')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "}"));
         else
@@ -218,11 +185,74 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
 template <typename ForwardIterator>
 void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
                               document_set& elements) {
-    if(*first++ != '[')
+    if(*first != '[')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "["));
-    skip_space(first, last);
+    skip_space(++first, last);
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     if(*first == ']')
         return;
+
+    int32_t idx{0};
+    while(true) {
+        element el{std::to_string(idx++), element_type::null_element};
+        skip_space(first, last);
+
+        parse_value(first, last, el);
+        elements.emplace(std::move(el));
+
+        skip_space(first, last);
+        if(*first == ',') {
+            ++first;
+            continue;
+        }
+        if(*first != ']')
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ", or ]"));
+        else
+            return;
+    }
+}
+
+template <typename ForwardIterator>
+void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last, element& el) {
+    switch(*first) {
+        case '{': {
+            document_set edoc;
+            parse_document(first, last, edoc);
+            el.value<element_type::document_element>(document{edoc});
+            break;
+        }
+        case '[': {
+            document_set edoc;
+            parse_array(first, last, edoc);
+            el.value<element_type::array_element>(array{edoc});
+            break;
+        }
+        case '"':
+            el.value<element_type::string_element>(parse_string(first, last));
+            break;
+        case 't':
+            if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)))) {
+                el.value<element_type::boolean_element>(true);
+                std::advance(first, 4);
+                break;
+            }
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "true"));
+        case 'f':
+            if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)))) {
+                el.value<element_type::boolean_element>(false);
+                std::advance(first, 5);
+                break;
+            }
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "false"));
+        case 'n':
+            if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4))))
+                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "null"));
+            std::advance(first, 4);
+            break;
+        default:
+            parse_number(first, last, el);
+    }
 }
 
 template <typename ForwardIterator>
@@ -240,13 +270,20 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
             break;
         }
 
-        //        if(*first == '\\') {
-        //            std::next(first);
-        //            break;
-        //        } else
-        str.push_back(*first);
+        auto c = *first;
+        if(*first == '\\') {
+            ++first;
+            if(first == last || *first == '\0')
+                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+            c = *first;
+            if(c == 'n')
+                c = '\n';
+            else
+                break;
+        }
+        str.push_back(c);
         ++first;
-        if(first == last)
+        if(first == last || *first == '\0')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     }
     return str;
