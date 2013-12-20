@@ -55,6 +55,8 @@ struct json_reader {
     template <typename ForwardIterator>
     void parse_value(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
 
+    bool parse_extended_value(element&, const document_set&);
+
     template <typename ForwardIterator>
     std::string parse_string(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&);
     template <typename ForwardIterator>
@@ -71,6 +73,7 @@ struct json_reader {
     json_parse_error make_parse_exception(json_error_num, const line_pos_iterator<ForwardIterator>& current,
                                           const line_pos_iterator<ForwardIterator>& last,
                                           const std::string& expected = {}) const;
+    json_parse_error make_parse_exception(json_error_num, const std::string& expected = {}) const;
 
   public:
     std::locale m_locale;
@@ -116,14 +119,19 @@ template <typename ForwardIterator>
 json_parse_error
 json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
                                   const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
-    auto e = json_parse_error{};
-    e << parse_error(err);
+    auto e = make_parse_exception(err, expected);
     if(m_start) {
         auto start = *static_cast<line_pos_iterator<ForwardIterator>*>(m_start.get());
         e << current_line(boost::lexical_cast<std::string>(boost::spirit::get_current_line(start, current, last)));
         e << line_pos(boost::spirit::get_column(start, current));
     } else
         std::abort();
+    return e;
+}
+
+json_parse_error json_reader::make_parse_exception(json_error_num err, const std::string& expected) const {
+    auto e = json_parse_error{};
+    e << parse_error(err);
     if(!expected.empty())
         e << expected_token(expected);
     return e;
@@ -214,18 +222,24 @@ void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const l
 }
 
 template <typename ForwardIterator>
-void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last, element& el) {
+void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
+                              element& el) {
     switch(*first) {
         case '{': {
             document_set edoc;
             parse_document(first, last, edoc);
-            el.value<element_type::document_element>(document{edoc});
+            if(!edoc.empty()) {
+                auto name = edoc.begin()->name();
+                if(!name.empty() && name[0] == '$' && parse_extended_value(el, edoc)) {
+                } else
+                    el.value<element_type::document_element>(document{edoc});
+            }
             break;
         }
         case '[': {
-            document_set edoc;
-            parse_array(first, last, edoc);
-            el.value<element_type::array_element>(array{edoc});
+            document_set earr;
+            parse_array(first, last, earr);
+            el.value<element_type::array_element>(array{earr});
             break;
         }
         case '"':
@@ -253,6 +267,89 @@ void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const l
         default:
             parse_number(first, last, el);
     }
+}
+
+bool json_reader::parse_extended_value(element& e, const document_set& edoc) {
+    if(edoc.empty())
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value"));
+    auto name = edoc.begin()->name();
+    if(name == "$binary" || name == "$type") {
+        if(edoc.size() != 2)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "binary element"));
+        // TODO: implement binary value
+    } else if(name == "$date") {
+        if(edoc.size() != 1 ||
+           (edoc.begin()->type() != element_type::int32_element && edoc.begin()->type() != element_type::int64_element))
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
+        using DateT = detail::ElementTypeMap<element_type::date_element, element::container_type>;
+        if(edoc.begin()->type() == element_type::int32_element)
+            e.value<element_type::date_element>(
+                DateT{std::chrono::milliseconds{get<element_type::int32_element>(*edoc.begin())}});
+        else if(edoc.begin()->type() == element_type::int64_element)
+            e.value<element_type::date_element>(
+                DateT{std::chrono::milliseconds{get<element_type::int64_element>(*edoc.begin())}});
+        else
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
+    } else if(name == "$timestamp") {
+        if(edoc.size() != 1)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "timestamp element"));
+        // TODO: implement timestamp
+    } else if(name == "$regex" || name == "$options") {
+        if(edoc.size() != 2)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
+        auto it = edoc.find("$regex");
+        if(it == edoc.end() || it->type() != element_type::string_element)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
+        auto re = get<element_type::string_element>(*it);
+        it = edoc.find("$options");
+        if(it == edoc.end() || it->type() != element_type::string_element)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
+        auto options = get<element_type::string_element>(*it);
+        e.value<element_type::regex_element>(std::make_tuple(re, options));
+    } else if(name == "$oid") {
+        if(edoc.size() != 1 || edoc.begin()->type() != element_type::string_element)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
+        auto str = get<element_type::string_element>(*edoc.begin());
+        if(str.size() != 24)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
+        std::array<char, 12> oid;
+        for(auto i = 0; i < 24; i += 2)
+            oid[i / 2] = static_cast<char>(std::stoi(str.substr(i, 2).to_string(), nullptr, 16));
+
+        e.value<element_type::oid_element>(oid);
+    } else if(name == "$ref" || name == "$id") {
+        if(edoc.size() != 2)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
+        auto it = edoc.find("$id");
+        if(it == edoc.end() || it->type() != element_type::string_element)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
+        auto str = get<element_type::string_element>(*it);
+        if(str.size() != 24)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
+        std::array<char, 12> oid;
+        for(auto i = 0; i < 24; i += 2)
+            oid[i / 2] = static_cast<char>(std::stoi(str.substr(i, 2).to_string(), nullptr, 16));
+
+        it = edoc.find("$ref");
+        if(it == edoc.end() || it->type() != element_type::string_element)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
+        auto coll = get<element_type::string_element>(*it);
+        e.value<element_type::db_pointer_element>(std::make_tuple(coll, oid));
+    } else if(name == "$undefined") {
+        if(edoc.size() != 1)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "undefined element"));
+        e.type(element_type::undefined_element);
+    } else if(name == "$minkey") {
+        if(edoc.size() != 1)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "minkey element"));
+        e.type(element_type::min_key);
+    } else if(name == "$maxkey") {
+        if(edoc.size() != 1)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "maxkey element"));
+        e.type(element_type::max_key);
+    } else
+        return false;
+    return true;
 }
 
 template <typename ForwardIterator>
@@ -294,8 +391,8 @@ void json_reader::parse_number(line_pos_iterator<ForwardIterator>& first,
                                const line_pos_iterator<ForwardIterator>& last_, element& e) {
     if(!std::isdigit(*first) && *first != '-')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last_, "number"));
-    auto last = std::find_if_not(
-        first, last_, boost::algorithm::is_any_of(boost::as_literal(".+-eE")) || boost::algorithm::is_digit());
+    auto last = std::find_if_not(first, last_, boost::algorithm::is_any_of(boost::as_literal(".+-eE")) ||
+                                                   boost::algorithm::is_digit());
 
     if(parse_int(first, last, e) || parse_float(first, last, e)) {
         first = last;

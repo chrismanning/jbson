@@ -183,3 +183,40 @@ TEST(JsonReaderTest, JsonParseTest16) {
     ++it;
     ASSERT_EQ(reader.m_elements.end(), it);
 }
+
+TEST(JsonReaderTest, JsonParseTest17) {
+    auto json = boost::string_ref{R"({"bindata" : {"$binary": false}})"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
+}
+
+TEST(JsonReaderTest, JsonParseTest18) {
+    auto json = boost::string_ref{R"({"_id" : {"$oid": ""}})"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
+}
+
+TEST(JsonReaderTest, JsonParseTest19) {
+    auto json = boost::string_ref{R"({"_id" : {"$oid": "507f1f77bcf86cd799439011"}})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(1, reader.m_elements.size());
+    auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::oid_element, e.type());
+
+    std::array<char, 12> oid{{static_cast<char>(0x50),
+                    static_cast<char>(0x7f),
+                    static_cast<char>(0x1f),
+                    static_cast<char>(0x77),
+                    static_cast<char>(0xbc),
+                    static_cast<char>(0xf8),
+                    static_cast<char>(0x6c),
+                    static_cast<char>(0xd7),
+                    static_cast<char>(0x99),
+                    static_cast<char>(0x43),
+                    static_cast<char>(0x90),
+                    static_cast<char>(0x11)
+                             }};
+    EXPECT_EQ(oid, get<element_type::oid_element>(e));
+}
