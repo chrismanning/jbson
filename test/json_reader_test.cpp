@@ -220,3 +220,21 @@ TEST(JsonReaderTest, JsonParseTest19) {
                              }};
     EXPECT_EQ(oid, get<element_type::oid_element>(e));
 }
+
+TEST(JsonReaderTest, JsonParseTest20) {
+    auto json = boost::string_ref{R"({"dollar" : "\u0024"})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(1, reader.m_elements.size());
+    auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::string_element, e.type());
+
+    EXPECT_EQ("$", get<element_type::string_element>(e));
+}
+
+TEST(JsonReaderTest, JsonParseTest21) {
+    auto json = boost::string_ref{R"({"str" : "\a"})"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
+}

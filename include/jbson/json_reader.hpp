@@ -373,8 +373,27 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
             if(first == last || *first == '\0')
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
             c = *first;
-            if(c == 'n')
+            if(c == '"')
+                c = '"';
+            else if(c == '\\')
+                c = '\\';
+            else if(c == '/')
+                c = '/';
+            else if(c == 'b')
+                c = '\b';
+            else if(c == 'f')
+                c = '\f';
+            else if(c == 'n')
                 c = '\n';
+            else if(c == 'r')
+                c = '\r';
+            else if(c == 'u') {
+                ++first;
+                c = std::char_traits<char>::to_char_type(
+                    std::stoi(std::string(first, std::next(first, 4)), nullptr, 16));
+                std::advance(first, 3);
+            } else if(std::iscntrl(c, m_locale))
+                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
             else
                 break;
         }
