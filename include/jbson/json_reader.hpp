@@ -389,8 +389,12 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
                 c = '\r';
             else if(c == 'u') {
                 ++first;
-                c = std::char_traits<char>::to_char_type(
-                    std::stoi(std::string(first, std::next(first, 4)), nullptr, 16));
+                auto idx = size_t{0};
+                auto codepoint = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
+                if(idx != 4)
+                    BOOST_THROW_EXCEPTION(
+                        make_parse_exception(json_error_num::unexpected_token, std::next(first, idx), last));
+                c = std::char_traits<char>::to_char_type(codepoint);
                 std::advance(first, 3);
             } else if(std::iscntrl(c, m_locale))
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
