@@ -32,7 +32,7 @@ endforeach()
 
 include(ExternalProject)
 ExternalProject_Add(
-    gtest
+    gtest_${PROJECT_NAME}
     SVN_REPOSITORY http://googletest.googlecode.com/svn/trunk/
     SVN_REVISION -r 660
     UPDATE_COMMAND ""
@@ -43,14 +43,14 @@ ExternalProject_Add(
     LOG_DOWNLOAD ON
     LOG_CONFIGURE ON
     LOG_BUILD ON)
-ExternalProject_Get_Property(gtest source_dir)
+ExternalProject_Get_Property(gtest_${PROJECT_NAME} source_dir)
 set(GTEST_INCLUDE_DIRS ${source_dir}/include)
 message(STATUS "Gtest include dirs: ${GTEST_INCLUDE_DIRS}")
 
 include_directories(${GTEST_INCLUDE_DIRS})
 add_library(test_main OBJECT test/test_main.cpp)
 
-ExternalProject_Get_Property(gtest binary_dir)
+ExternalProject_Get_Property(gtest_${PROJECT_NAME} binary_dir)
 set(GTEST_LIBRARIES "-L${binary_dir} -lgtest")
 message(STATUS "Gtest libs: ${GTEST_LIBRARIES}")
 
@@ -58,6 +58,7 @@ add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
 
 function(cxx_test test_name)
   add_executable(${test_name} test/${test_name}.cpp $<TARGET_OBJECTS:test_main>)
+  add_dependencies(${test_name} gtest_${PROJECT_NAME})
   target_link_libraries(${test_name} ${GTEST_LIBRARIES})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()

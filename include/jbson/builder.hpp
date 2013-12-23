@@ -13,43 +13,67 @@
 
 namespace jbson {
 
-struct doc_builder {
-    doc_builder() = default;
+struct builder {
+    builder() = default;
 
-    doc_builder(const doc_builder&) = default;
-    doc_builder& operator=(const doc_builder&) = default;
+    builder(const builder&) = default;
+    builder& operator=(const builder&) = default;
 
-    doc_builder(doc_builder&&) = default;
-    doc_builder& operator=(doc_builder&&) = default;
+    builder(builder&&) = default;
+    builder& operator=(builder&&) = default;
 
-    doc_builder(const std::string& name, element_type type) {
+    builder(const std::string& name, element_type type) {
         emplace(name, type);
     }
 
     template <typename T>
-    doc_builder(const std::string& name, element_type type, T&& val) {
+    builder(const std::string& name, element_type type, T&& val) {
         emplace(name, type, std::forward<T>(val));
     }
 
-    doc_builder& operator()(const std::string& name, element_type type) {
+    builder& operator()(const std::string& name, element_type type) {
         m_elements.emplace(name, type);
         return *this;
     }
 
     template <typename T>
-    doc_builder& operator()(const std::string& name, element_type type, T&& val) {
+    builder& operator()(const std::string& name, element_type type, T&& val) {
         m_elements.emplace(name, type, std::forward<T>(val));
         return *this;
     }
 
-    doc_builder& emplace(const std::string& name, element_type type) {
+    template <typename Container>
+    builder& operator()(basic_element<Container>&& e) {
+        m_elements.emplace(std::forward<basic_element<Container>>(e));
+        return *this;
+    }
+
+    template <typename Container>
+    builder& operator()(const basic_element<Container>& e) {
+        m_elements.emplace(e);
+        return *this;
+    }
+
+    builder& emplace(const std::string& name, element_type type) {
         m_elements.emplace(name, type);
         return *this;
     }
 
     template <typename T>
-    doc_builder& emplace(const std::string& name, element_type type, T&& val) {
+    builder& emplace(const std::string& name, element_type type, T&& val) {
         m_elements.emplace(name, type, std::forward<T>(val));
+        return *this;
+    }
+
+    template <typename Container>
+    builder& emplace(basic_element<Container>&& e) {
+        m_elements.emplace(std::forward<basic_element<Container>>(e));
+        return *this;
+    }
+
+    template <typename Container>
+    builder& emplace(const basic_element<Container>& e) {
+        m_elements.emplace(e);
         return *this;
     }
 

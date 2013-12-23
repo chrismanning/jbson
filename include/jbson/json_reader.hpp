@@ -231,15 +231,18 @@ void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const l
             if(!edoc.empty()) {
                 auto name = edoc.begin()->name();
                 if(!name.empty() && name[0] == '$' && parse_extended_value(el, edoc)) {
-                } else
-                    el.value<element_type::document_element>(document{edoc});
+                } else {
+                    auto doc = document{edoc};
+                    el.value<element_type::document_element>(std::move(doc));
+                }
             }
             break;
         }
         case '[': {
             document_set earr;
             parse_array(first, last, earr);
-            el.value<element_type::array_element>(array{earr});
+            auto arr = array{earr};
+            el.value<element_type::array_element>(std::move(arr));
             break;
         }
         case '"':
