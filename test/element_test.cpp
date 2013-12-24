@@ -34,6 +34,10 @@ TEST(ElementTest, ElementParseTest1) {
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
+    el1.value(432);
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_TRUE(get<element_type::boolean_element>(el1));
+    EXPECT_EQ(8, el1.size());
     el1.value(static_cast<bool>(432));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
@@ -44,7 +48,7 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_EQ(8, el1.size());
 
     EXPECT_NO_THROW(el1.value<bool>());
-    EXPECT_THROW(el1.value<int64_t>(), incompatible_type_conversion);
+    EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
 }
 
 TEST(ElementTest, ElementParseTest2) {

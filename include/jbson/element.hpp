@@ -731,9 +731,6 @@ template <typename T, typename Container, typename Enable> struct is_valid_func 
     struct inner : std::is_convertible<T, detail::ElementTypeMap<EType, Container>> {
         static_assert(sizeof...(Args) == 0, "");
     };
-    template <typename... Args> struct inner<element_type::boolean_element, Args...> : std::is_same<T, bool> {
-        static_assert(sizeof...(Args) == 0, "");
-    };
 };
 
 template <typename StringT> struct make_string {
@@ -893,19 +890,12 @@ template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_vo
 };
 
 // setters
-// integer & bool
+// arithmetic
 template <element_type EType, typename T>
-struct set_impl<EType, T, std::enable_if_t<std::is_integral<std::decay_t<T>>::value>> {
+struct set_impl<EType, T, std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>> {
     template <typename Container> static void call(Container& data, T val) {
-        boost::range::push_back(data, detail::native_to_little_endian(val));
-    }
-};
-
-// floating point
-template <element_type EType, typename T>
-struct set_impl<EType, T, std::enable_if_t<std::is_floating_point<std::decay_t<T>>::value>> {
-    template <typename Container> static void call(Container& data, double val) {
-        boost::range::push_back(data, detail::native_to_little_endian(val));
+        boost::range::push_back(data,
+                                detail::native_to_little_endian(static_cast<ElementTypeMap<EType, Container>>(val)));
     }
 };
 
