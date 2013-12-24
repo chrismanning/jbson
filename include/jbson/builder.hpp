@@ -22,74 +22,35 @@ struct builder {
     builder(builder&&) = default;
     builder& operator=(builder&&) = default;
 
-    builder(const std::string& name, element_type type) {
-        emplace(name, type);
-    }
+    template <typename... Args> builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
-    template <typename T>
-    builder(const std::string& name, element_type type, T&& val) {
-        emplace(name, type, std::forward<T>(val));
-    }
-
-    builder& operator()(const std::string& name, element_type type) {
-        m_elements.emplace(name, type);
+    template <typename... Args> builder& operator()(Args&&... args) {
+        emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename T>
-    builder& operator()(const std::string& name, element_type type, T&& val) {
-        m_elements.emplace(name, type, std::forward<T>(val));
+    template <typename... Args> builder& emplace(Args&&... args) {
+        m_elements.emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename Container>
-    builder& operator()(basic_element<Container>&& e) {
-        m_elements.emplace(std::forward<basic_element<Container>>(e));
-        return *this;
-    }
-
-    template <typename Container>
-    builder& operator()(const basic_element<Container>& e) {
-        m_elements.emplace(e);
-        return *this;
-    }
-
-    builder& emplace(const std::string& name, element_type type) {
-        m_elements.emplace(name, type);
-        return *this;
-    }
-
-    template <typename T>
-    builder& emplace(const std::string& name, element_type type, T&& val) {
-        m_elements.emplace(name, type, std::forward<T>(val));
-        return *this;
-    }
-
-    template <typename Container>
-    builder& emplace(basic_element<Container>&& e) {
-        m_elements.emplace(std::forward<basic_element<Container>>(e));
-        return *this;
-    }
-
-    template <typename Container>
-    builder& emplace(const basic_element<Container>& e) {
-        m_elements.emplace(e);
-        return *this;
-    }
-
-    template <typename Container>
+    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
+                                      Container, void, boost::mpl::vector<const char&>>::value>>
     operator basic_document<Container>() const {
-        return basic_document<Container>{m_elements};
+        return basic_document<Container>(m_elements);
     }
 
-    template <typename Container>
+    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
+                                      Container, void, boost::mpl::vector<const char&>>::value>>
     operator basic_array<Container>() const {
         return basic_array<Container>{m_elements};
     }
 
-private:
-    document_set m_elements;
+  private:
+    basic_document_set<std::deque<char>> m_elements;
 };
+static_assert(std::is_convertible<builder, document>::value, "");
+static_assert(!std::is_convertible<builder, basic_document<boost::iterator_range<const char*>>>::value, "");
 
 } // namespace jbson
 

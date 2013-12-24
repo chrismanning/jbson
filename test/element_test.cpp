@@ -17,7 +17,7 @@ using namespace jbson;
 #include <gtest/gtest.h>
 
 TEST(ElementTest, ElementParseTest1) {
-    auto el1 = element{"\x02hello\x00\x06\x00\x00\x00world\x00"s};
+    auto el1 = element{boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s)};
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
     EXPECT_EQ("world", get<element_type::string_element>(el1));
@@ -48,7 +48,7 @@ TEST(ElementTest, ElementParseTest1) {
 }
 
 TEST(ElementTest, ElementParseTest2) {
-    auto bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
+    auto bson = boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s);
     auto el1 = basic_element<std::list<char>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
@@ -65,7 +65,7 @@ TEST(ElementTest, ElementParseTest2) {
 }
 
 TEST(ElementTest, ElementParseTest3) {
-    auto bson = "\x00hello\x00\x06\x00\x00\x00world\x00"s;
+    auto bson = boost::make_iterator_range("\x00hello\x00\x06\x00\x00\x00world\x00"s);
     ASSERT_THROW(element{bson}, invalid_element_type);
     bson = "\x02hello\x06\x00\x00\x00world\x00"s;
     ASSERT_THROW(element{bson}, invalid_element_size);

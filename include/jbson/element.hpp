@@ -23,6 +23,7 @@
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/tti/has_member_function.hpp>
 
 namespace jbson {
 
@@ -157,6 +158,8 @@ template <element_type EType, typename Element> struct typeid_visitor {
 
 template <element_type EType, typename C, typename A = void, typename Enable = void> struct set_visitor;
 
+BOOST_TTI_HAS_MEMBER_FUNCTION(push_back);
+
 } // namespace detail
 
 template <class Container> struct basic_element {
@@ -241,7 +244,8 @@ template <class Container> struct basic_element {
         static_assert(std::is_same<std::decay_t<T>, T2>::value, "");
         type(EType);
         decltype(m_data) data;
-        detail::set_impl<EType, T2>::call(data, std::forward<T>(val));
+        detail::set_visitor<EType, container_type, T2> {}
+        (data, std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
     }
@@ -254,7 +258,8 @@ template <class Container> struct basic_element {
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
         type(EType);
         decltype(m_data) data;
-        detail::set_impl<EType, T2>::call(data, T2(std::forward<T>(val)));
+        detail::set_visitor<EType, container_type, T2> {}
+        (data, T2(std::forward<T>(val)));
         using std::swap;
         swap(m_data, data);
     }
@@ -315,9 +320,9 @@ void basic_element<Container>::write_to_container(OutContainer& c) const {
     boost::range::push_back(c, m_name);
     c.push_back('\0');
     if(detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(m_data.size()))
-        BOOST_THROW_EXCEPTION(invalid_element_size{}
-                              << actual_size(m_data.size())
-                              << expected_size(detect_size(m_type, m_data.begin(), m_data.end())));
+        BOOST_THROW_EXCEPTION(
+            invalid_element_size{} << actual_size(m_data.size())
+                                   << expected_size(detect_size(m_type, m_data.begin(), m_data.end())));
     boost::range::push_back(c, m_data);
 }
 
@@ -478,8 +483,8 @@ visit(element_type type, Args&&... args) {
             (std::forward<Args>(args)...);
             return;
         case element_type::binary_element:
-            Visitor<element_type::binary_element, Args...> {}
-            (std::forward<Args>(args)...);
+            //            Visitor<element_type::binary_element, Args...> {}
+            //            (std::forward<Args>(args)...);
             return;
         case element_type::undefined_element:
             Visitor<element_type::undefined_element, Args...> {}
@@ -566,8 +571,8 @@ visit(element_type type, Args&&... args) {
             return Visitor<element_type::array_element, Args...> {}
             (std::forward<Args>(args)...);
         case element_type::binary_element:
-            return Visitor<element_type::binary_element, Args...> {}
-            (std::forward<Args>(args)...);
+        //            return Visitor<element_type::binary_element, Args...> {}
+        //            (std::forward<Args>(args)...);
         case element_type::undefined_element:
             return Visitor<element_type::undefined_element, Args...> {}
             (std::forward<Args>(args)...);
@@ -614,8 +619,8 @@ visit(element_type type, Args&&... args) {
             return Visitor<element_type::max_key, Args...> {}
             (std::forward<Args>(args)...);
         default:
-            BOOST_THROW_EXCEPTION(invalid_element_type{}
-                                  << actual_type(typeid(Visitor<element_type::min_key, Args...>)));
+            BOOST_THROW_EXCEPTION(
+                invalid_element_type{} << actual_type(typeid(Visitor<element_type::min_key, Args...>)));
     };
 }
 
@@ -984,31 +989,20 @@ struct set_impl<EType, TupleT,
     }
 };
 
-// void
-template <element_type EType, typename T> struct set_impl<EType, T, std::enable_if_t<std::is_void<T>::value>> {
-    static_assert(std::is_void<T>::value, "cannot set void");
-};
-
-template <element_type EType, typename T>
-struct set_impl<EType, T,
-                std::enable_if_t<std::is_convertible<typename std::decay<T>::type,
-                                                     basic_document<std::vector<char>, std::vector<char>>>::value &&
-                                 !is_document<typename std::decay<T>::type>::value>> {
-    template <typename Container> static void call(Container& data, T&& val);
-};
-
-template <element_type EType, typename T>
-struct set_impl<EType, T, std::enable_if_t<is_document<typename std::decay<T>::type>::value>> {
-    template <typename Container> static void call(Container& data, T&& val);
-};
-
-template <typename T>
-struct set_impl<element_type::binary_element, T> {
+// binary
+template <typename T> struct set_impl<element_type::binary_element, T> {
     template <typename Container> static void call(Container&, T&&) {
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
     }
 };
 
+// void
+template <element_type EType, typename T> struct set_impl<EType, T, std::enable_if_t<std::is_void<T>::value>> {
+    static_assert(std::is_void<T>::value, "cannot set void");
+};
+
+// set visitor
+// voids
 template <element_type EType, typename C, typename A>
 struct set_visitor<EType, C, A, std::enable_if_t<size_func<EType, void*>::value == 0>> {
     template <typename... Args> void operator()(Args&&...) const {
@@ -1016,16 +1010,52 @@ struct set_visitor<EType, C, A, std::enable_if_t<size_func<EType, void*>::value 
     }
 };
 
+// doc special handling
+template <element_type EType, typename C, typename A>
+struct set_visitor<EType, C, A,
+                   std::enable_if_t<EType == element_type::document_element&& has_member_function_push_back<
+                                                 std::decay_t<C>, void, boost::mpl::vector<const char&>>::value>> {
+    using Container = std::decay_t<C>;
+    template <typename T>
+    void operator()(Container& data, T&& val,
+                    std::enable_if_t<std::is_constructible<basic_document<Container, Container>, T>::value>* =
+                        nullptr) const {
+        data = basic_document<Container, Container>(std::forward<T>(val)).data();
+    }
+    template <typename... Args> void operator()(Args&&...) const {
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+    }
+};
+
+// array special handling
+template <element_type EType, typename C, typename A>
+struct set_visitor<EType, C, A,
+                   std::enable_if_t<EType == element_type::array_element&& has_member_function_push_back<
+                                                 std::decay_t<C>, void, boost::mpl::vector<const char&>>::value>> {
+    using Container = std::decay_t<C>;
+    template <typename T>
+    void operator()(Container& data, T&& val,
+                    std::enable_if_t<std::is_constructible<basic_array<Container, Container>, T>::value>* =
+                        nullptr) const {
+        data = basic_array<Container, Container>(std::forward<T>(val)).data();
+    }
+    template <typename... Args> void operator()(Args&&...) const {
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+    }
+};
+
+// everything else
 template <element_type EType, typename Container, typename A>
-struct set_visitor<EType, Container, A, std::enable_if_t<!std::is_convertible<size_func<EType, void*>, int>::value>> {
+struct set_visitor<EType, Container, A,
+                   std::enable_if_t<(EType != element_type::array_element&& EType != element_type::document_element) &&
+                                    !std::is_convertible<size_func<EType, void*>, int>::value>> {
     using set_type = ElementTypeMap<EType, std::decay_t<Container>>;
     void operator()(std::decay_t<Container>& data, set_type val) const {
         set_impl<EType, set_type>::call(data, std::move(val));
     }
     template <typename T>
     void operator()(std::decay_t<Container>& data, T&& val,
-                    std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr,
-                    std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
+                    std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr) const {
         set_impl<EType, set_type>::call(data, set_type(std::forward<T>(val)));
     }
     template <typename T>

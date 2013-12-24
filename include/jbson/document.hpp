@@ -11,10 +11,14 @@
 #include <set>
 
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/iterator/iterator_traits.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/metafunctions.hpp>
 #include <boost/mpl/same_as.hpp>
 #include <boost/mpl/apply.hpp>
+#include <boost/mpl/and.hpp>
+#include <boost/mpl/has_xxx.hpp>
+#include <boost/mpl/quote.hpp>
 #include <boost/range/as_literal.hpp>
 
 #include <jbson/element.hpp>
@@ -99,10 +103,38 @@ template <typename T> struct is_iterator_range : std::false_type {};
 
 template <typename IteratorT> struct is_iterator_range<boost::iterator_range<IteratorT>> : std::true_type {};
 
-template <typename T> using lazy_enable_if = typename boost::lazy_enable_if<T, T>;
-template <typename T>
-using is_char_range =
-    lazy_enable_if<typename boost::mpl::apply<boost::mpl::same_as<char>, lazy_enable_if<boost::range_value<T>>>::type>;
+template <typename T, typename T2> using lazy_enable_if = typename boost::lazy_enable_if<T, T2>;
+
+BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
+BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
+
+template <typename RangeT, typename ElementTrait, typename RangeTrait>
+using is_range_of = typename boost::mpl::apply<
+    ElementTrait, typename boost::mpl::eval_if<
+                      boost::mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>,
+                      boost::mpl::apply<RangeTrait, std::decay_t<RangeT>>, boost::mpl::identity<void>>::type>::type;
+
+template <typename RangeT, typename ElementTrait>
+using is_range_of_value = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_value>>;
+
+template <typename RangeT, typename ElementT>
+using is_range_of_same_value =
+    is_range_of_value<RangeT, boost::mpl::bind2<boost::mpl::quote2<std::is_same>, ElementT, boost::mpl::_1>>;
+
+static_assert(is_range_of_same_value<std::vector<char>, char>::value, "");
+static_assert(!is_range_of_same_value<char, char>::value, "");
+static_assert(!is_range_of_same_value<double, char>::value, "");
+
+template <typename RangeT, typename ElementTrait>
+using is_range_of_iterator = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_mutable_iterator>>;
+
+template <template <typename...> class Fun, typename...> struct quote {
+    template <typename... Args> using apply = typename Fun<Args...>::type;
+};
+
+static_assert(is_range_of_iterator<std::vector<char>, boost::mpl::bind<quote<std::is_constructible>, std::vector<char>,
+                                                                       boost::mpl::_1, boost::mpl::_1>>::value,
+              "");
 
 } // namespace detail
 
@@ -110,6 +142,7 @@ template <typename Container>
 using basic_document_set = std::multiset<basic_element<Container>, detail::elem_string_compare>;
 
 using document_set = basic_document_set<element::container_type>;
+static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail::is_element>>::value, "");
 
 struct builder;
 
@@ -130,61 +163,70 @@ template <class Container, class ElementContainer = Container> class basic_docum
     basic_document(basic_document&&) = default;
     basic_document& operator=(basic_document&&) = default;
 
-    explicit basic_document(container_type&& c) : m_data(std::move(c)) {
+    template <typename SomeType>
+    explicit basic_document(SomeType&& c,
+                            std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
+        : m_data(std::forward<SomeType>(c)) {
         if(static_cast<ptrdiff_t>(m_data.size()) <= static_cast<ptrdiff_t>(sizeof(int32_t)) ||
-           m_data.size() != detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
-    }
-
-    template <typename OtherContainer>
-    basic_document(const basic_document<OtherContainer>& other,
-                   typename std::enable_if<std::is_constructible<Container, OtherContainer>::value>::type* = nullptr)
-        : m_data(other.m_data) {}
-
-    template <typename OtherContainer>
-    basic_document(const basic_document<OtherContainer>& other,
-                   typename std::enable_if<!std::is_constructible<Container, OtherContainer>::value>::type* = nullptr) {
-        boost::range::push_back(m_data, other.m_data);
-    }
-
-    template <typename DocT,
-              typename = std::enable_if_t<std::is_convertible<std::decay_t<DocT>, basic_document>::value>,
-              typename = std::enable_if_t<!std::is_constructible<basic_document,DocT>::value>>
-    basic_document(DocT&& doc)
-        : basic_document(static_cast<basic_document>(doc)) {}
-
-template <typename CharT, size_t N>
-explicit basic_document(CharT(&rng)[N]) = delete;
-
-template <typename CharT, size_t N>
-explicit basic_document(const CharT(&rng)[N]) = delete;
-
-    template <typename ForwardRange,
-              typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-              typename = std::enable_if_t<std::is_class<std::decay_t<ForwardRange>>::value>,
-              typename = detail::is_char_range<ForwardRange>,
-              typename = typename boost::disable_if<detail::is_document<ForwardRange>>::type>
-    explicit basic_document(const ForwardRange& rng)
-        : basic_document(std::begin(rng), std::end(rng)) {}
-
-    template <typename ForwardIterator>
-    basic_document(const ForwardIterator& first, const ForwardIterator& last,
-                   std::enable_if_t<std::is_same<typename boost::iterator_value<ForwardIterator>::type, char>::value>* =
-                       nullptr)
-        : m_data(first, last) {
-        if(m_data.size() <= static_cast<ptrdiff_t>(sizeof(int32_t)) ||
            static_cast<ptrdiff_t>(m_data.size()) !=
                detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
             BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
+    template <typename OtherContainer>
+    basic_document(const basic_document<OtherContainer>& other,
+                   std::enable_if_t<std::is_constructible<Container, OtherContainer>::value>* = nullptr)
+        : m_data(other.m_data) {}
+
+    template <typename OtherContainer>
+    basic_document(const basic_document<OtherContainer>& other,
+                   std::enable_if_t<!std::is_constructible<Container, OtherContainer>::value>* = nullptr) {
+        boost::range::push_back(m_data, other.m_data);
+    }
+
+    template <typename CharT, size_t N> explicit basic_document(CharT (&rng)[N]) = delete;
+
+    template <typename CharT, size_t N> explicit basic_document(const CharT (&rng)[N]) = delete;
+
+    template <
+        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
+        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
+        typename =
+            std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
+                             detail::is_range_of_iterator<
+                                 ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
+                                                                boost::mpl::_1, boost::mpl::_1>>::value>>
+    explicit basic_document(ForwardRange&& rng)
+        : basic_document(container_type(std::begin(rng), std::end(rng))) {}
+
+    template <
+        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
+        typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>,
+        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
+        typename =
+            std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
+                ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
+                                               boost::mpl::_1>>::value>>
+    explicit basic_document(ForwardRange&& rng, std::enable_if_t<true>* = nullptr)
+        : basic_document(container_type(rng)) {}
+
     template <typename ForwardIterator>
-    basic_document(ForwardIterator first, ForwardIterator last,
-                   std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
-                                    !detail::is_iterator_range<container_type>::value>* = nullptr) {
+    basic_document(
+        ForwardIterator first, ForwardIterator last,
+        std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
+            nullptr,
+        std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* = nullptr)
+        : basic_document(container_type{first, last}) {}
+
+    template <typename ForwardRange>
+    explicit basic_document(
+        ForwardRange&& rng,
+        std::enable_if_t<
+            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
+                             boost::mpl::not_<detail::is_iterator_range<container_type>>>::type::value>* = nullptr) {
         std::array<char, 4> arr{{0, 0, 0, 0}};
         boost::range::push_back(m_data, arr);
-        for(auto&& e : boost::make_iterator_range(first, last)) {
+        for(auto&& e : rng) {
             e.write_to_container(m_data);
         }
         m_data.push_back('\0');
@@ -193,6 +235,12 @@ explicit basic_document(const CharT(&rng)[N]) = delete;
 
         boost::range::copy(size, m_data.begin());
     }
+
+    template <typename ForwardIterator>
+    basic_document(ForwardIterator first, ForwardIterator last,
+                   std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
+                                    !detail::is_iterator_range<container_type>::value>* = nullptr)
+        : basic_document(boost::make_iterator_range(first, last)) {}
 
     const_iterator begin() const {
         if(m_data.size() <= static_cast<ptrdiff_t>(sizeof(int32_t)))
@@ -240,6 +288,9 @@ explicit basic_document(const CharT(&rng)[N]) = delete;
     container_type m_data;
     template <typename, typename> friend class basic_document;
     template <typename, typename> friend class basic_array;
+    static_assert(!std::is_constructible<basic_document, int>::value, "");
+    static_assert(!std::is_constructible<basic_document, double>::value, "");
+    static_assert(!std::is_constructible<basic_document, builder>::value, "");
 };
 
 using document = basic_document<std::vector<char>>;
@@ -269,36 +320,84 @@ class basic_array : basic_document<Container, ElementContainer> {
     basic_array(basic_array&&) = default;
     basic_array& operator=(basic_array&&) = default;
 
+    template <typename SomeType>
+    explicit basic_array(SomeType&& c,
+                         std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
+        : base(std::forward<SomeType>(c)) {
+        if(static_cast<ptrdiff_t>(m_data.size()) <= static_cast<ptrdiff_t>(sizeof(int32_t)) ||
+           static_cast<ptrdiff_t>(m_data.size()) !=
+               detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
+    }
+
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
-                typename boost::enable_if_c<std::is_constructible<Container, OtherContainer>::value>::type* = nullptr)
+                std::enable_if_t<std::is_constructible<Container, OtherContainer>::value>* = nullptr)
         : base(other.m_data) {}
 
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
-                typename boost::enable_if_c<!std::is_constructible<Container, OtherContainer>::value>::type* =
-                    nullptr) {
-        boost::range::push_back(base::m_data, other.m_data);
+                std::enable_if_t<!std::is_constructible<Container, OtherContainer>::value>* = nullptr) {
+        boost::range::push_back(m_data, other.m_data);
     }
-    template <typename DocT, typename = std::enable_if_t<std::is_convertible<std::decay_t<DocT>, basic_array>::value>>
-    basic_array(DocT&& doc)
-        : basic_array(static_cast<basic_array>(doc)) {}
 
-                                                         template <typename CharT, size_t N>
-                                                         explicit basic_array(CharT(&rng)[N]) = delete;
+    template <typename CharT, size_t N> explicit basic_array(CharT (&rng)[N]) = delete;
 
-                                                         template <typename CharT, size_t N>
-                                                         explicit basic_array(const CharT(&rng)[N]) = delete;
+    template <typename CharT, size_t N> explicit basic_array(const CharT (&rng)[N]) = delete;
 
-    template <typename ForwardRange,
-              typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-              typename = std::enable_if_t<std::is_class<std::decay_t<ForwardRange>>::value>,
-              typename = detail::is_char_range<ForwardRange>,
-              typename = typename boost::disable_if<detail::is_document<ForwardRange>>::type>
-    explicit basic_array(const ForwardRange& rng)
-        : base(std::begin(rng), std::end(rng)) {}
+    template <
+        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
+        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
+        typename =
+            std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
+                             detail::is_range_of_iterator<
+                                 ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
+                                                                boost::mpl::_1, boost::mpl::_1>>::value>>
+    explicit basic_array(ForwardRange&& rng)
+        : basic_array(container_type(std::begin(rng), std::end(rng))) {}
 
-    template <typename ForwardIterator> basic_array(ForwardIterator first, ForwardIterator last) : base(first, last) {}
+    template <
+        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
+        typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>,
+        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
+        typename =
+            std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
+                ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
+                                               boost::mpl::_1>>::value>>
+    explicit basic_array(ForwardRange&& rng, std::enable_if_t<true>* = nullptr)
+        : basic_array(container_type(rng)) {}
+
+    template <typename ForwardIterator>
+    basic_array(ForwardIterator first, ForwardIterator last,
+                std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
+                    nullptr,
+                std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* =
+                    nullptr)
+        : basic_array(container_type{first, last}) {}
+
+    template <typename ForwardRange>
+    explicit basic_array(
+        ForwardRange&& rng,
+        std::enable_if_t<
+            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
+                             boost::mpl::not_<detail::is_iterator_range<container_type>>>::type::value>* = nullptr) {
+        std::array<char, 4> arr{{0, 0, 0, 0}};
+        boost::range::push_back(m_data, arr);
+        for(auto&& e : rng) {
+            e.write_to_container(m_data);
+        }
+        m_data.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_data.begin());
+    }
+
+    template <typename ForwardIterator>
+    basic_array(ForwardIterator first, ForwardIterator last,
+                std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
+                                 !detail::is_iterator_range<container_type>::value>* = nullptr)
+        : basic_array(boost::make_iterator_range(first, last)) {}
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
@@ -335,29 +434,6 @@ struct is_valid_func<T, Container,
         static_assert(sizeof...(Args) == 0, "");
     };
 };
-
-template <element_type EType, typename T>
-template <typename Container>
-void set_impl<EType, T, std::enable_if_t<std::is_convertible<std::decay_t<T>, document>::value &&
-                                         !is_document<std::decay_t<T>>::value>>::call(Container& data, T&& val) {
-    using doc_type = basic_document<std::vector<char>, std::vector<char>>;
-    static_assert(std::is_convertible<T, ElementTypeMap<EType, Container>>::value, "");
-    data = ElementTypeMap<EType, Container>(std::forward<T>(val)).data();
-}
-template <typename...> struct doc_or_array;
-template <typename C, typename C2, typename C3> struct doc_or_array<basic_document<C, C2>, C3> {
-    using type = basic_document<C3>;
-};
-template <typename C, typename C2, typename C3> struct doc_or_array<basic_array<C, C2>, C3> {
-    using type = basic_array<C3>;
-};
-
-template <element_type EType, typename T>
-template <typename Container>
-void set_impl<EType, T, std::enable_if_t<is_document<std::decay_t<T>>::value>>::call(Container& data, T&& val) {
-    using doc_type = typename doc_or_array<std::decay_t<T>, Container>::type;
-    data = doc_type(std::forward<T>(val)).data();
-}
 
 } // namespace detail
 } // namespace jbson

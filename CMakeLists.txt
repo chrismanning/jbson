@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
 if(${JBSON_ENABLE_TESTING})
 enable_testing()
+endif()
 
 get_cmake_property(CACHE_VARS CACHE_VARIABLES)
 foreach(CACHE_VAR ${CACHE_VARS})
@@ -37,7 +38,7 @@ ExternalProject_Add(
     SVN_REVISION -r 660
     UPDATE_COMMAND ""
     TIMEOUT 10
-    CMAKE_ARGS --no-warn-unused-cli ${PARENT_CMAKE_ARGS} "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}"
+    CMAKE_ARGS --no-warn-unused-cli ${PARENT_CMAKE_ARGS} "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}" -DBUILD_SHARED_LIBS=OFF
     # Disable install step
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
@@ -48,7 +49,9 @@ set(GTEST_INCLUDE_DIRS ${source_dir}/include)
 message(STATUS "Gtest include dirs: ${GTEST_INCLUDE_DIRS}")
 
 include_directories(${GTEST_INCLUDE_DIRS})
-add_library(test_main OBJECT test/test_main.cpp)
+add_library(${PROJECT_NAME}_test_main OBJECT test/test_main.cpp)
+
+add_dependencies(${PROJECT_NAME}_test_main gtest_${PROJECT_NAME})
 
 ExternalProject_Get_Property(gtest_${PROJECT_NAME} binary_dir)
 set(GTEST_LIBRARIES "-L${binary_dir} -lgtest")
@@ -57,15 +60,12 @@ message(STATUS "Gtest libs: ${GTEST_LIBRARIES}")
 add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
 
 function(cxx_test test_name)
-  add_executable(${test_name} test/${test_name}.cpp $<TARGET_OBJECTS:test_main>)
-  add_dependencies(${test_name} gtest_${PROJECT_NAME})
-  target_link_libraries(${test_name} ${GTEST_LIBRARIES})
-  add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+  add_executable(${PROJECT_NAME}_${test_name} test/${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
+  target_link_libraries(${PROJECT_NAME}_${test_name} ${GTEST_LIBRARIES})
+  add_test(${PROJECT_NAME}_${test_name} ${EXECUTABLE_OUTPUT_PATH}/${PROJECT_NAME}_${test_name})
 endfunction()
 
 cxx_test(element_test)
 cxx_test(document_test)
 cxx_test(builder_test)
 cxx_test(json_reader_test)
-
-endif()
