@@ -49,6 +49,14 @@ TEST(ElementTest, ElementParseTest1) {
 
     EXPECT_NO_THROW(el1.value<bool>());
     EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
+    EXPECT_NO_THROW(el1.value<element_type::int64_element>(24));
+    ASSERT_EQ(element_type::int64_element, el1.type());
+    EXPECT_EQ(24, get<element_type::int64_element>(el1));
+    EXPECT_EQ(15, el1.size());
+    EXPECT_NO_THROW(el1.value((int8_t)24));
+    ASSERT_EQ(element_type::int64_element, el1.type());
+    EXPECT_EQ(24, get<element_type::int64_element>(el1));
+    EXPECT_EQ(15, el1.size());
 }
 
 TEST(ElementTest, ElementParseTest2) {
