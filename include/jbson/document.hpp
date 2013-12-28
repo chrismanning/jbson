@@ -13,15 +13,12 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <boost/optional.hpp>
-#include <boost/range/metafunctions.hpp>
-#include <boost/mpl/same_as.hpp>
-#include <boost/mpl/apply.hpp>
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/has_xxx.hpp>
-#include <boost/mpl/quote.hpp>
 #include <boost/range/as_literal.hpp>
 
-#include <jbson/element.hpp>
+#include "document_fwd.hpp"
+#include "element_fwd.hpp"
+#include "detail/traits.hpp"
+#include "element.hpp"
 
 namespace jbson {
 
@@ -85,68 +82,13 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
     boost::optional<typename std::decay<Value>::type> m_cur;
 };
 
-struct elem_string_compare {
-    using is_transparent = std::true_type;
-    template <typename EContainer, typename EContainer2>
-    bool operator()(const basic_element<EContainer>& lhs, const basic_element<EContainer2>& rhs) const {
-        return lhs.name() < rhs.name();
-    }
-    template <typename EContainer> bool operator()(const basic_element<EContainer>& lhs, boost::string_ref rhs) const {
-        return lhs.name() < rhs;
-    }
-    template <typename EContainer> bool operator()(boost::string_ref lhs, const basic_element<EContainer>& rhs) const {
-        return lhs < rhs.name();
-    }
-};
-
-template <typename T> struct is_iterator_range : std::false_type {};
-
-template <typename IteratorT> struct is_iterator_range<boost::iterator_range<IteratorT>> : std::true_type {};
-
-template <typename T, typename T2> using lazy_enable_if = typename boost::lazy_enable_if<T, T2>;
-
-BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
-
-template <typename RangeT, typename ElementTrait, typename RangeTrait>
-using is_range_of = typename boost::mpl::apply<
-    ElementTrait, typename boost::mpl::eval_if<
-                      boost::mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>,
-                      boost::mpl::apply<RangeTrait, std::decay_t<RangeT>>, boost::mpl::identity<void>>::type>::type;
-
-template <typename RangeT, typename ElementTrait>
-using is_range_of_value = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_value>>;
-
-template <typename RangeT, typename ElementT>
-using is_range_of_same_value =
-    is_range_of_value<RangeT, boost::mpl::bind2<boost::mpl::quote2<std::is_same>, ElementT, boost::mpl::_1>>;
-
-static_assert(is_range_of_same_value<std::vector<char>, char>::value, "");
-static_assert(!is_range_of_same_value<char, char>::value, "");
-static_assert(!is_range_of_same_value<double, char>::value, "");
-
-template <typename RangeT, typename ElementTrait>
-using is_range_of_iterator = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_mutable_iterator>>;
-
-template <template <typename...> class Fun, typename...> struct quote {
-    template <typename... Args> using apply = typename Fun<Args...>::type;
-};
-
-static_assert(is_range_of_iterator<std::vector<char>, boost::mpl::bind<quote<std::is_constructible>, std::vector<char>,
-                                                                       boost::mpl::_1, boost::mpl::_1>>::value,
-              "");
-
 } // namespace detail
 
-template <typename Container>
-using basic_document_set = std::multiset<basic_element<Container>, detail::elem_string_compare>;
-
-using document_set = basic_document_set<element::container_type>;
 static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail::is_element>>::value, "");
 
 struct builder;
 
-template <class Container, class ElementContainer = Container> class basic_document {
+template <class Container, class ElementContainer> class basic_document {
     template <class, class> friend struct detail::document_iter;
 
   public:
@@ -293,9 +235,7 @@ template <class Container, class ElementContainer = Container> class basic_docum
     static_assert(!std::is_constructible<basic_document, builder>::value, "");
 };
 
-using document = basic_document<std::vector<char>>;
-
-template <class Container, class ElementContainer = Container>
+template <class Container, class ElementContainer>
 class basic_array : basic_document<Container, ElementContainer> {
     using base = basic_document<Container, ElementContainer>;
     template <typename, typename> friend class basic_array;
@@ -416,8 +356,6 @@ class basic_array : basic_document<Container, ElementContainer> {
         return std::move(vec);
     }
 };
-
-using array = basic_array<std::vector<char>>;
 
 namespace detail {
 
