@@ -239,7 +239,7 @@ TEST(DocumentTest, VectorToDocTest1) {
 
 TEST(DocumentTest, SetTest1) {
     auto doc = static_cast<document>(
-                       doc_builder
+                       builder
                        ("first name", element_type::string_element, "Chris")
                        ("surname", element_type::string_element, "Manning")
                        ("yob", element_type::int32_element, 1991)

@@ -17,7 +17,7 @@ using namespace jbson;
 #include <gtest/gtest.h>
 
 TEST(ElementTest, ElementParseTest1) {
-    auto el1 = element{"\x02hello\x00\x06\x00\x00\x00world\x00"s};
+    auto el1 = element{boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s)};
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
     EXPECT_EQ("world", get<element_type::string_element>(el1));
@@ -34,6 +34,10 @@ TEST(ElementTest, ElementParseTest1) {
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
+    el1.value(432);
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_TRUE(get<element_type::boolean_element>(el1));
+    EXPECT_EQ(8, el1.size());
     el1.value(static_cast<bool>(432));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
@@ -44,11 +48,19 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_EQ(8, el1.size());
 
     EXPECT_NO_THROW(el1.value<bool>());
-    EXPECT_THROW(el1.value<int64_t>(), incompatible_type_conversion);
+    EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
+    EXPECT_NO_THROW(el1.value<element_type::int64_element>(24));
+    ASSERT_EQ(element_type::int64_element, el1.type());
+    EXPECT_EQ(24, get<element_type::int64_element>(el1));
+    EXPECT_EQ(15, el1.size());
+    EXPECT_NO_THROW(el1.value((int8_t)24));
+    ASSERT_EQ(element_type::int64_element, el1.type());
+    EXPECT_EQ(24, get<element_type::int64_element>(el1));
+    EXPECT_EQ(15, el1.size());
 }
 
 TEST(ElementTest, ElementParseTest2) {
-    auto bson = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
+    auto bson = boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s);
     auto el1 = basic_element<std::list<char>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
@@ -65,7 +77,7 @@ TEST(ElementTest, ElementParseTest2) {
 }
 
 TEST(ElementTest, ElementParseTest3) {
-    auto bson = "\x00hello\x00\x06\x00\x00\x00world\x00"s;
+    auto bson = boost::make_iterator_range("\x00hello\x00\x06\x00\x00\x00world\x00"s);
     ASSERT_THROW(element{bson}, invalid_element_type);
     bson = "\x02hello\x06\x00\x00\x00world\x00"s;
     ASSERT_THROW(element{bson}, invalid_element_size);

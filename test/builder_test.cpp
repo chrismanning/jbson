@@ -15,17 +15,17 @@ using namespace jbson;
 #include <gtest/gtest.h>
 
 TEST(BuilderTest, EmptyBuild) {
-    auto builder = doc_builder{};
+    auto builder_ = builder{};
 
-    document doc(builder);
+    document doc(builder_);
     // int32_t + 0x00
     EXPECT_EQ(5, doc.size());
 }
 
 TEST(BuilderTest, BuildTest1) {
-    auto builder = doc_builder("hello", element_type::string_element, "world");
+    auto builder_ = builder("hello", element_type::string_element, "world");
 
-    document doc(builder);
+    document doc(builder_);
 
     auto it = doc.begin();
     ASSERT_NE(doc.end(), it);
@@ -36,16 +36,16 @@ TEST(BuilderTest, BuildTest1) {
 }
 
 TEST(BuilderTest, BuildTest2) {
-    auto builder = doc_builder("hello", element_type::string_element);
-    EXPECT_THROW((void)document(builder), invalid_element_size);
-    builder = doc_builder("hello", element_type::null_element);
-    EXPECT_NO_THROW((void)document(builder));
-    EXPECT_THROW(builder = doc_builder("hello", element_type::undefined_element, 0), incompatible_type_conversion);
+    auto builder_ = builder("hello", element_type::string_element);
+    EXPECT_THROW((void)document(builder_), invalid_element_size);
+    builder_ = builder("hello", element_type::null_element);
+    EXPECT_NO_THROW((void)document(builder_));
+    EXPECT_THROW(builder_ = builder("hello", element_type::undefined_element, 0), incompatible_type_conversion);
 }
 
 TEST(BuilderTest, BuildTest3) {
     auto doc = static_cast<document>(
-                       doc_builder
+                       builder
                        ("first name", element_type::string_element, "Chris")
                        ("surname", element_type::string_element, "Manning")
                        ("yob", element_type::int32_element, 1991)
@@ -70,9 +70,9 @@ TEST(BuilderTest, BuildTest3) {
 }
 
 TEST(BuilderTest, BuildNestTest1) {
-    auto doc = document(doc_builder
+    auto doc = document(builder
                         ("hello", element_type::string_element, "world")
-                        ("embedded document", element_type::array_element, doc_builder
+                        ("embedded document", element_type::array_element, builder
                          ("0", element_type::string_element, "awesome")
                          ("1", element_type::double_element, 5.05)
                          ("2", element_type::int32_element, 1986)

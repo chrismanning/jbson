@@ -13,59 +13,44 @@
 
 namespace jbson {
 
-struct doc_builder {
-    doc_builder() = default;
+struct builder {
+    builder() = default;
 
-    doc_builder(const doc_builder&) = default;
-    doc_builder& operator=(const doc_builder&) = default;
+    builder(const builder&) = default;
+    builder& operator=(const builder&) = default;
 
-    doc_builder(doc_builder&&) = default;
-    doc_builder& operator=(doc_builder&&) = default;
+    builder(builder&&) = default;
+    builder& operator=(builder&&) = default;
 
-    doc_builder(const std::string& name, element_type type) {
-        emplace(name, type);
-    }
+    template <typename... Args> builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
-    template <typename T>
-    doc_builder(const std::string& name, element_type type, T&& val) {
-        emplace(name, type, std::forward<T>(val));
-    }
-
-    doc_builder& operator()(const std::string& name, element_type type) {
-        m_elements.emplace(name, type);
+    template <typename... Args> builder& operator()(Args&&... args) {
+        emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename T>
-    doc_builder& operator()(const std::string& name, element_type type, T&& val) {
-        m_elements.emplace(name, type, std::forward<T>(val));
+    template <typename... Args> builder& emplace(Args&&... args) {
+        m_elements.emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    doc_builder& emplace(const std::string& name, element_type type) {
-        m_elements.emplace(name, type);
-        return *this;
-    }
-
-    template <typename T>
-    doc_builder& emplace(const std::string& name, element_type type, T&& val) {
-        m_elements.emplace(name, type, std::forward<T>(val));
-        return *this;
-    }
-
-    template <typename Container>
+    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
+                                      Container, void, boost::mpl::vector<const char&>>::value>>
     operator basic_document<Container>() const {
-        return basic_document<Container>{m_elements};
+        return basic_document<Container>(m_elements);
     }
 
-    template <typename Container>
+    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
+                                      Container, void, boost::mpl::vector<const char&>>::value>>
     operator basic_array<Container>() const {
         return basic_array<Container>{m_elements};
     }
 
-private:
-    document_set m_elements;
+  private:
+    basic_document_set<std::deque<char>> m_elements;
 };
+static_assert(std::is_convertible<builder, document>::value, "");
+static_assert(!std::is_convertible<builder, basic_document<boost::iterator_range<const char*>>>::value, "");
 
 } // namespace jbson
 
