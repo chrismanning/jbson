@@ -101,7 +101,7 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
         auto oid = get<element_type::oid_element>(e);
         std::array<char, 25> buf;
         for(size_t i = 0; i < oid.size(); ++i)
-            std::snprintf(&buf[i*2], 3, "%x", static_cast<unsigned char>(oid[i]));
+            std::snprintf(&buf[i*2], 3, "%0.2x", static_cast<unsigned char>(oid[i]));
         return stringify(static_cast<document>(builder("$oid", element_type::string_element,
                                                        boost::string_ref(buf.data(), 24))), out);
     }

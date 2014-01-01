@@ -130,6 +130,14 @@ TEST(JsonWriterTest, JsonWriteTest5) {
 
 TEST(JsonWriterTest, JsonWriteTest6) {
     auto json = std::string{};
+    std::array<char, 12> oid{{0,1,2,3,4,5,6,7,8,9,10,11}};
+    write_json(static_cast<document>(builder("some oid", element_type::oid_element, oid)),
+               std::back_inserter(json));
+    EXPECT_EQ(R"({ "some oid" : { "$oid" : "000102030405060708090a0b" } })", json);
+}
+
+TEST(JsonWriterTest, JsonWriteTest7) {
+    auto json = std::string{};
     std::array<char, 12> oid{{static_cast<char>(0x50),
                     static_cast<char>(0x7f),
                     static_cast<char>(0x1f),
