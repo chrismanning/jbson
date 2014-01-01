@@ -285,8 +285,7 @@ template <class Container> size_t basic_element<Container>::size() const noexcep
 namespace detail {
 
 template <element_type EType, typename Visitor, typename Element> struct element_visitor {
-    using element_type = std::decay_t<Element>;
-    auto operator()(Visitor&& visitor, const element_type& elem) const {
+    auto operator()(Visitor&& visitor, Element&& elem) const {
         return visitor(elem.name(), get<EType>(elem), EType);
     }
 };

@@ -219,8 +219,12 @@ template <typename ElemType> struct VoidVisitor {
         EXPECT_EQ(m_v, v);
     }
 
-    template <typename T> void operator()(boost::string_ref, T, element_type) {}
-    void operator()(boost::string_ref, element_type) {}
+    template <typename T> void operator()(boost::string_ref, T, element_type) {
+        FAIL();
+    }
+    void operator()(boost::string_ref, element_type) {
+        FAIL();
+    }
 };
 
 TEST(ElementTest, ElementVisitTest1) {
@@ -300,7 +304,7 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementDateTest) {
 TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
     using regex_type = typename TestFixture::template ElementTypeMap<element_type::regex_element>;
     basic_element<typename TestFixture::container_type> el{"some filter", element_type::regex_element};
-    ASSERT_NO_THROW(el.value(regex_type(".*", "i")));
+    ASSERT_NO_THROW(el.value(std::make_tuple(".*", "i")));
     EXPECT_EQ(18, el.size());
     typename TestFixture::string_type regex, options;
     std::tie(regex, options) = get<element_type::regex_element>(el);
