@@ -469,11 +469,13 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
     first = std::find_if_not(first, last, [this](char c) { return std::isspace(c, m_locale); });
 }
 
+inline namespace literal {
 document_set operator"" _json(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
     return reader;
 }
+} // namespace literal
 
 } // namesapce jbson
 
