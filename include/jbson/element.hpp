@@ -14,6 +14,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/utility/string_ref.hpp>
+#include <boost/mpl/or.hpp>
 
 #include "element_fwd.hpp"
 #include "document_fwd.hpp"
@@ -359,8 +360,12 @@ struct elem_string_compare {
 
 template <typename T, typename Container, typename Enable> struct is_valid_func {
     template <element_type EType, typename... Args>
-    struct inner : std::is_convertible<T, detail::ElementTypeMap<EType, Container>> {
+    struct inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
+                            std::is_constructible<detail::ElementTypeMap<EType, Container>, T>> {
         static_assert(sizeof...(Args) == 0, "");
+        constexpr bool operator()() const {
+            return inner::value;
+        }
     };
 };
 
