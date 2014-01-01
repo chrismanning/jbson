@@ -39,12 +39,17 @@ struct json_reader {
 
     ~json_reader() {}
 
-    template <typename ForwardIterator>
-    void parse(line_pos_iterator<ForwardIterator>, line_pos_iterator<ForwardIterator>);
-    template <typename ForwardRange> void parse(const ForwardRange& range) {
-        using line_it = line_pos_iterator<typename boost::range_iterator<ForwardRange>::type>;
+    template <typename ForwardIterator> void parse(ForwardIterator, ForwardIterator);
+
+    template <typename ForwardRange_> void parse(ForwardRange_&& range_) {
+        auto range = boost::as_literal(std::forward<ForwardRange_>(range_));
+        using ForwardRange = decltype(range);
+        BOOST_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
+        using line_it = line_pos_iterator<typename boost::range_const_iterator<std::decay_t<ForwardRange>>::type>;
         parse(line_it{std::begin(range)}, line_it{std::end(range)});
     }
+
+    operator document_set() const { return m_elements; }
 
   private:
     template <typename ForwardIterator>
@@ -75,7 +80,7 @@ struct json_reader {
                                           const std::string& expected = {}) const;
     json_parse_error make_parse_exception(json_error_num, const std::string& expected = {}) const;
 
-  public:
+  private:
     std::locale m_locale;
     document_set m_elements;
     std::shared_ptr<void> m_start;
@@ -137,9 +142,11 @@ json_parse_error json_reader::make_parse_exception(json_error_num err, const std
     return e;
 }
 
-template <typename ForwardIterator>
-void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
+template <typename ForwardIterator> void json_reader::parse(ForwardIterator first_, ForwardIterator last_) {
+    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
+
+    line_pos_iterator<ForwardIterator> first{first_}, last{last_};
     m_start = std::make_shared<line_pos_iterator<ForwardIterator>>(first);
     skip_space(first, last);
     if(first == last || *first == '\0')
@@ -460,6 +467,12 @@ template <typename ForwardIterator>
 void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
                              const line_pos_iterator<ForwardIterator>& last) {
     first = std::find_if_not(first, last, [this](char c) { return std::isspace(c, m_locale); });
+}
+
+document_set operator"" _json(const char* str, size_t len) {
+    auto reader = json_reader{};
+    reader.parse(str, str + len);
+    return reader;
 }
 
 } // namesapce jbson

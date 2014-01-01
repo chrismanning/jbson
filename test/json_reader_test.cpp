@@ -8,6 +8,7 @@ using namespace std::literals;
 
 #include <boost/exception/diagnostic_information.hpp>
 
+#define private public
 #include <jbson/json_reader.hpp>
 using namespace jbson;
 
@@ -32,7 +33,7 @@ TEST(JsonReaderTest, JsonParseTest3) {
 }
 
 TEST(JsonReaderTest, JsonParseTest4) {
-    auto json = boost::string_ref{R"({       "key"       :   "value"  })"};
+    auto json = R"({       "key"       :   "value"  })";
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
@@ -54,9 +55,10 @@ TEST(JsonReaderTest, JsonParseTest5) {
 }
 
 TEST(JsonReaderTest, JsonParseTest6) {
-    auto json = boost::string_ref{R"({"key":true})"};
+    auto json = std::array<char, 12>{};
+    boost::copy(boost::as_literal(R"({"key":true})"), json.data());
     auto reader = json_reader{};
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(reader.parse(json.data()));
 
     ASSERT_EQ(1, reader.m_elements.size());
     EXPECT_EQ("key", reader.m_elements.begin()->name());
@@ -252,6 +254,18 @@ TEST(JsonReaderTest, JsonParseTest23) {
 
     ASSERT_EQ(1, reader.m_elements.size());
     auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::string_element, e.type());
+
+    EXPECT_EQ(2, get<element_type::string_element>(e).size());
+    EXPECT_EQ("κ", get<element_type::string_element>(e));
+}
+
+TEST(JsonReaderTest, JsonLiteralTest1) {
+    auto elements = R"({"utf" : "κ"})"_json;
+    static_assert(std::is_same<decltype(elements), document_set>::value,"");
+
+    ASSERT_EQ(1, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::string_element, e.type());
 
     EXPECT_EQ(2, get<element_type::string_element>(e).size());
