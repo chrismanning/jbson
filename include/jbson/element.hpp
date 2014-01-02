@@ -185,13 +185,11 @@ void basic_element<Container>::write_to_container(OutContainer& c) const {
     if(!m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     c.push_back(static_cast<uint8_t>(m_type));
-    if(m_name.empty())
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(0));
     boost::range::push_back(c, m_name);
     c.push_back('\0');
-    if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(m_data.size()))
+    if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
         BOOST_THROW_EXCEPTION(
-            invalid_element_size{} << actual_size(m_data.size())
+            invalid_element_size{} << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
                                    << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
     boost::range::push_back(c, m_data);
 }
@@ -279,7 +277,7 @@ basic_element<Container>::basic_element(std::string name, element_type type)
 }
 
 template <class Container> size_t basic_element<Container>::size() const noexcept {
-    return sizeof(m_type) + m_data.size() + m_name.size() + sizeof('\0');
+    return sizeof(m_type) + boost::distance(m_data) + m_name.size() + sizeof('\0');
 }
 
 namespace detail {

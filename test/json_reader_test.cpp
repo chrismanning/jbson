@@ -260,9 +260,54 @@ TEST(JsonReaderTest, JsonParseTest23) {
     EXPECT_EQ("κ", get<element_type::string_element>(e));
 }
 
+TEST(JsonReaderTest, JsonParseTest24) {
+    auto json = boost::string_ref{R"({"a doc" : {}, "some int": 123})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(2, reader.m_elements.size());
+    auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::document_element, e.type());
+    EXPECT_EQ(5, get<element_type::document_element>(e).size());
+
+    e = *++reader.m_elements.begin();
+    ASSERT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(123, get<element_type::int32_element>(e));
+}
+
+TEST(JsonReaderTest, JsonParseTest25) {
+    auto json = boost::string_ref{R"({"a doc" : [], "some int": 123})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(2, reader.m_elements.size());
+    auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::array_element, e.type());
+    EXPECT_EQ(5, get<element_type::array_element>(e).size());
+
+    e = *++reader.m_elements.begin();
+    ASSERT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(123, get<element_type::int32_element>(e));
+}
+
+TEST(JsonReaderTest, JsonParseTest26) {
+    auto json = boost::string_ref{R"({"a doc" : [123, "str"], "some int": 123})"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    ASSERT_EQ(2, reader.m_elements.size());
+    auto e = *reader.m_elements.begin();
+    ASSERT_EQ(element_type::array_element, e.type());
+    EXPECT_EQ(23, get<element_type::array_element>(e).size());
+
+    e = *++reader.m_elements.begin();
+    ASSERT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(123, get<element_type::int32_element>(e));
+}
+
 TEST(JsonReaderTest, JsonLiteralTest1) {
     auto elements = R"({"utf" : "κ"})"_json;
-    static_assert(std::is_same<decltype(elements), document_set>::value,"");
+//    static_assert(std::is_same<decltype(elements), document_set>::value,"");
 
     ASSERT_EQ(1, elements.size());
     auto e = *elements.begin();

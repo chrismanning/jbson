@@ -29,7 +29,12 @@ struct json_parse_error;
 enum class json_error_num;
 
 struct json_reader {
-    explicit json_reader(const std::locale& locale = std::locale()) : m_locale(locale) {}
+    explicit json_reader(const std::locale& locale = std::locale("en_US.UTF8")) : m_locale(locale) {}
+
+    using element = basic_element<std::vector<char>>;
+    using document_set = basic_document_set<element::container_type>;
+    using document = basic_document<element::container_type>;
+    using array = basic_array<element::container_type>;
 
     json_reader(const json_reader&) = delete;
     json_reader& operator=(const json_reader&) = delete;
@@ -124,11 +129,18 @@ template <typename ForwardIterator>
 json_parse_error
 json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
                                   const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
+    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
     auto e = make_parse_exception(err, expected);
     if(m_start) {
         auto start = *static_cast<line_pos_iterator<ForwardIterator>*>(m_start.get());
-        e << current_line(boost::lexical_cast<std::string>(boost::spirit::get_current_line(start, current, last)));
-        e << line_pos(boost::spirit::get_column(start, current));
+        auto begin = boost::spirit::get_line_start(start, current);
+        if(begin != current && begin != last && (*begin == '\n' || *begin == '\r'))
+            std::advance(begin, 1);
+        auto range = boost::range::find_first_of<boost::return_begin_found>(boost::make_iterator_range(begin, last),
+                                                                            boost::as_literal("\n\r"));
+
+        e << current_line(boost::lexical_cast<std::string>(range));
+        e << line_pos(boost::spirit::get_column(begin, current));
     } else
         std::abort();
     return e;
@@ -171,17 +183,21 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
     skip_space(++first, last);
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
-    if(*first == '}')
+    if(*first == '}') {
+        ++first;
         return;
+    }
 
     while(true) {
+        skip_space(first, last);
         auto field_name = parse_string(first, last);
         element el{field_name, element_type::null_element};
         skip_space(first, last);
 
         if(*first != ':')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ":"));
-        skip_space(++first, last);
+        ++first;
+        skip_space(first, last);
         parse_value(first, last, el);
         elements.emplace(std::move(el));
 
@@ -192,8 +208,10 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
         }
         if(*first != '}')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "}"));
-        else
+        else {
+            ++first;
             return;
+        }
     }
 }
 
@@ -205,8 +223,10 @@ void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const l
     skip_space(++first, last);
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
-    if(*first == ']')
+    if(*first == ']') {
+        ++first;
         return;
+    }
 
     int32_t idx{0};
     while(true) {
@@ -223,8 +243,10 @@ void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const l
         }
         if(*first != ']')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ", or ]"));
-        else
+        else {
+            ++first;
             return;
+        }
     }
 }
 
@@ -239,9 +261,10 @@ void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const l
                 auto name = edoc.begin()->name();
                 if(!name.empty() && name[0] == '$' && parse_extended_value(el, edoc)) {
                 } else {
-                    auto doc = document{edoc};
-                    el.value<element_type::document_element>(std::move(doc));
+                    el.value<element_type::document_element>(document{edoc});
                 }
+            } else {
+                el.value<element_type::document_element>(document{edoc});
             }
             break;
         }
@@ -324,7 +347,7 @@ bool json_reader::parse_extended_value(element& e, const document_set& edoc) {
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
         std::array<char, 12> oid;
         for(auto i = 0; i < 24; i += 2)
-            oid[i / 2] = static_cast<char>(std::stoi(str.substr(i, 2).to_string(), nullptr, 16));
+            oid[i / 2] = static_cast<char>(std::stoi(boost::lexical_cast<std::string>(str.substr(i, 2)), nullptr, 16));
 
         e.value<element_type::oid_element>(oid);
     } else if(name == "$ref" || name == "$id") {
@@ -338,7 +361,7 @@ bool json_reader::parse_extended_value(element& e, const document_set& edoc) {
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
         std::array<char, 12> oid;
         for(auto i = 0; i < 24; i += 2)
-            oid[i / 2] = static_cast<char>(std::stoi(str.substr(i, 2).to_string(), nullptr, 16));
+            oid[i / 2] = static_cast<char>(std::stoi(boost::lexical_cast<std::string>(str.substr(i, 2)), nullptr, 16));
 
         it = edoc.find("$ref");
         if(it == edoc.end() || it->type() != element_type::string_element)
@@ -397,6 +420,8 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
                 c = '\n';
             else if(c == 'r')
                 c = '\r';
+            else if(c == 't')
+                c = '\t';
             else if(c == 'u') {
                 ++first;
                 auto idx = size_t{0};
@@ -470,7 +495,7 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 }
 
 inline namespace literal {
-document_set operator"" _json(const char* str, size_t len) {
+json_reader::document_set operator"" _json(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
     return reader;
