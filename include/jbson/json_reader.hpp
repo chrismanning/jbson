@@ -18,8 +18,9 @@
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 #include <boost/algorithm/string/classification.hpp>
 
-#include <jbson/element.hpp>
-#include <jbson/builder.hpp>
+#include "element.hpp"
+#include "builder.hpp"
+#include "detail/traits.hpp"
 
 namespace jbson {
 
@@ -31,7 +32,7 @@ enum class json_error_num;
 struct json_reader {
     explicit json_reader(const std::locale& locale = std::locale("en_US.UTF8")) : m_locale(locale) {}
 
-    using element = basic_element<std::vector<char>>;
+    using element = basic_element<boost::iterator_range<std::vector<char>::const_iterator>>;
     using document_set = basic_document_set<element::container_type>;
     using document = basic_document<element::container_type>;
     using array = basic_array<element::container_type>;
@@ -45,36 +46,56 @@ struct json_reader {
     ~json_reader() {}
 
     template <typename ForwardIterator> void parse(ForwardIterator, ForwardIterator);
+    template <typename ForwardIterator>
+    void parse(line_pos_iterator<ForwardIterator>, line_pos_iterator<ForwardIterator>);
 
     template <typename ForwardRange_> void parse(ForwardRange_&& range_) {
         auto range = boost::as_literal(std::forward<ForwardRange_>(range_));
         using ForwardRange = decltype(range);
         BOOST_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
         using line_it = line_pos_iterator<typename boost::range_const_iterator<std::decay_t<ForwardRange>>::type>;
-        parse(line_it{std::begin(range)}, line_it{std::end(range)});
+        parse(line_it{std::cbegin(range)}, line_it{std::cend(range)});
     }
 
-    operator document_set() const { return m_elements; }
+    operator document_set() const {
+        if(m_data.size() < 5)
+            return document_set{};
+        return document_set(document(*this));
+    }
+
+    operator document() const {
+        if(m_data.size() < 5)
+            return document{};
+        return document{boost::make_iterator_range(m_data)};
+    }
 
   private:
-    template <typename ForwardIterator>
-    void parse_document(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, document_set&);
-    template <typename ForwardIterator>
-    void parse_array(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, document_set&);
+    template <element_type EType, typename T> using setter = detail::set_impl<EType, element::container_type, T>;
 
-    template <typename ForwardIterator>
-    void parse_value(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
+    template <typename ForwardIterator, typename OutputIterator>
+    OutputIterator parse_document(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
+                                  OutputIterator);
+    template <typename ForwardIterator, typename OutputIterator>
+    OutputIterator parse_array(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
+                               OutputIterator);
 
-    bool parse_extended_value(element&, const document_set&);
+    template <typename ForwardIterator, typename OutputIterator>
+    std::tuple<OutputIterator, element_type> parse_value(line_pos_iterator<ForwardIterator>&,
+                                                         const line_pos_iterator<ForwardIterator>&, OutputIterator);
 
-    template <typename ForwardIterator>
-    std::string parse_string(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&);
-    template <typename ForwardIterator>
-    void parse_number(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
-    template <typename ForwardIterator>
-    bool parse_int(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
-    template <typename ForwardIterator>
-    bool parse_float(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&, element&);
+    template <typename OutputIterator>
+    std::tuple<boost::optional<OutputIterator>, element_type> parse_extended_value(const document&, OutputIterator);
+
+    template <typename ForwardIterator, typename OutputIterator>
+    OutputIterator parse_name(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
+                              OutputIterator);
+
+    template <typename ForwardIterator, typename OutputIterator>
+    OutputIterator parse_string(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
+                                OutputIterator);
+    template <typename ForwardIterator, typename OutputIterator>
+    std::tuple<OutputIterator, element_type> parse_number(line_pos_iterator<ForwardIterator>&,
+                                                          const line_pos_iterator<ForwardIterator>&, OutputIterator);
 
     template <typename ForwardIterator>
     void skip_space(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&);
@@ -87,8 +108,8 @@ struct json_reader {
 
   private:
     std::locale m_locale;
-    document_set m_elements;
     std::shared_ptr<void> m_start;
+    std::vector<char> m_data; // TODO: pre allocate & use this for data
 };
 
 enum class json_error_num {
@@ -154,30 +175,46 @@ json_parse_error json_reader::make_parse_exception(json_error_num err, const std
     return e;
 }
 
-template <typename ForwardIterator> void json_reader::parse(ForwardIterator first_, ForwardIterator last_) {
+template <typename ForwardIterator> void json_reader::parse(ForwardIterator first, ForwardIterator last) {
     BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
+    parse(line_pos_iterator<ForwardIterator>{first}, line_pos_iterator<ForwardIterator>{last});
+}
 
-    line_pos_iterator<ForwardIterator> first{first_}, last{last_};
+template <typename ForwardIterator>
+void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
+    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
+    static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
+    m_data.clear();
+    m_data.reserve(+std::distance(first, last));
+
     m_start = std::make_shared<line_pos_iterator<ForwardIterator>>(first);
     skip_space(first, last);
     if(first == last || *first == '\0')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+    decltype(m_data.begin()) end;
     switch(*first) {
         case '{':
-            parse_document(first, last, m_elements);
-            return;
+            end = parse_document(first, last, m_data.end());
+            break;
         case '[':
-            parse_array(first, last, m_elements);
-            return;
+            end = parse_array(first, last, m_data.end());
+            break;
         default:
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::invalid_root_element, first, last));
     };
+    m_data.shrink_to_fit();
 }
 
-template <typename ForwardIterator>
-void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
-                                 const line_pos_iterator<ForwardIterator>& last, document_set& elements) {
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
+                                           const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+    assert(last != first);
+    assert(&*first != nullptr);
+    auto start_idx = std::distance(m_data.begin(), out);
+    out = std::next(m_data.insert(out, 4, '\0'), 4);
     if(*first != '{')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "{"));
     skip_space(++first, last);
@@ -185,21 +222,31 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     if(*first == '}') {
         ++first;
-        return;
+        out = std::next(m_data.insert(out, '\0'));
+        auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+        if(size != 5)
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+        boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+        return out;
     }
 
     while(true) {
+        if(first == last)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+        auto type_it = m_data.insert(out, static_cast<char>(element_type::null_element));
+        auto type_idx = std::distance(m_data.begin(), type_it);
+        out = std::next(type_it);
         skip_space(first, last);
-        auto field_name = parse_string(first, last);
-        element el{field_name, element_type::null_element};
+        out = parse_name(first, last, out);
         skip_space(first, last);
 
         if(*first != ':')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ":"));
         ++first;
         skip_space(first, last);
-        parse_value(first, last, el);
-        elements.emplace(std::move(el));
+        element_type type;
+        std::tie(out, type) = parse_value(first, last, out);
+        m_data[type_idx] = static_cast<char>(type);
 
         skip_space(first, last);
         if(*first == ',') {
@@ -210,14 +257,25 @@ void json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "}"));
         else {
             ++first;
-            return;
+            out = std::next(m_data.insert(out, '\0'));
+            auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+            if(size < 5)
+                BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+            boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+            return out;
         }
     }
 }
 
-template <typename ForwardIterator>
-void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
-                              document_set& elements) {
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& first,
+                                        const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+    assert(last != first);
+    assert(&*first != nullptr);
+    auto start_idx = std::distance(m_data.begin(), out);
+    out = std::next(m_data.insert(out, 4, '\0'), 4);
     if(*first != '[')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "["));
     skip_space(++first, last);
@@ -225,16 +283,29 @@ void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const l
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     if(*first == ']') {
         ++first;
-        return;
+        out = std::next(m_data.insert(out, '\0'));
+        auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+        if(size != 5)
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+        boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+        return out;
     }
 
     int32_t idx{0};
     while(true) {
-        element el{std::to_string(idx++), element_type::null_element};
+        if(first == last)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+        auto type_it = m_data.insert(out, static_cast<char>(element_type::null_element));
+        auto type_idx = std::distance(m_data.begin(), type_it);
+        auto sidx = std::to_string(idx++);
+        out = std::next(type_it);
+        out = m_data.insert(out, sidx.size() + 1, '\0');
+        out = std::next(boost::range::copy(sidx, out));
         skip_space(first, last);
 
-        parse_value(first, last, el);
-        elements.emplace(std::move(el));
+        element_type type;
+        std::tie(out, type) = parse_value(first, last, out);
+        m_data[type_idx] = static_cast<char>(type);
 
         skip_space(first, last);
         if(*first == ',') {
@@ -245,116 +316,149 @@ void json_reader::parse_array(line_pos_iterator<ForwardIterator>& first, const l
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, ", or ]"));
         else {
             ++first;
-            return;
+            out = std::next(m_data.insert(out, '\0'));
+            auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+            if(size < 5)
+                BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+            boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+            return out;
         }
     }
 }
 
-template <typename ForwardIterator>
-void json_reader::parse_value(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
-                              element& el) {
+template <typename ForwardIterator, typename OutputIterator>
+std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_iterator<ForwardIterator>& first,
+                                                                  const line_pos_iterator<ForwardIterator>& last,
+                                                                  OutputIterator out) {
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+    assert(last != first);
+    assert(&*first != nullptr);
+    auto type = element_type::null_element;
     switch(*first) {
-        case '{': {
-            document_set edoc;
-            parse_document(first, last, edoc);
-            if(!edoc.empty()) {
-                auto name = edoc.begin()->name();
-                if(!name.empty() && name[0] == '$' && parse_extended_value(el, edoc)) {
-                } else {
-                    el.value<element_type::document_element>(document{edoc});
-                }
-            } else {
-                el.value<element_type::document_element>(document{edoc});
-            }
-            break;
-        }
-        case '[': {
-            document_set earr;
-            parse_array(first, last, earr);
-            auto arr = array{earr};
-            el.value<element_type::array_element>(std::move(arr));
-            break;
-        }
         case '"':
-            el.value<element_type::string_element>(parse_string(first, last));
+            type = element_type::string_element;
+            out = parse_string(first, last, out);
             break;
-        case 't':
-            if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)))) {
-                el.value<element_type::boolean_element>(true);
-                std::advance(first, 4);
-                break;
-            }
-            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "true"));
+        case '[':
+            type = element_type::array_element;
+            out = parse_array(first, last, out);
+            break;
         case 'f':
+            type = element_type::boolean_element;
             if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)))) {
-                el.value<element_type::boolean_element>(false);
+                m_data.insert(out++, false);
                 std::advance(first, 5);
                 break;
             }
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "false"));
         case 'n':
+            type = element_type::null_element;
             if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4))))
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "null"));
             std::advance(first, 4);
             break;
+        case 't':
+            type = element_type::boolean_element;
+            if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)))) {
+                m_data.insert(out++, true);
+                std::advance(first, 4);
+                break;
+            }
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "true"));
+        case '{': {
+            auto idx = std::distance(m_data.begin(), out);
+            auto r = parse_document(first, last, out);
+            document doc{std::next(m_data.begin(), idx), r};
+            assert(std::distance(std::next(m_data.begin(), idx), r) >= 5);
+            assert(doc.size() >= 5);
+            boost::string_ref name;
+            if(doc.begin() != doc.end())
+                name = doc.begin()->name();
+            if(!name.empty() && name[0] == '$') {
+                boost::optional<OutputIterator> o_out;
+                std::tie(o_out, type) = parse_extended_value(doc, std::next(m_data.begin(), idx));
+                if(o_out) {
+                    out = *o_out;
+                    m_data.resize(std::distance(m_data.begin(), out));
+                    break;
+                }
+            }
+            type = element_type::document_element;
+            out = r;
+        } break;
         default:
-            parse_number(first, last, el);
+            std::tie(out, type) = parse_number(first, last, out);
     }
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
+    return std::make_tuple(out, type);
 }
 
-bool json_reader::parse_extended_value(element& e, const document_set& edoc) {
-    if(edoc.empty())
-        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value"));
-    auto name = edoc.begin()->name();
+template <typename OutputIterator>
+std::tuple<boost::optional<OutputIterator>, element_type> json_reader::parse_extended_value(const document& doc,
+                                                                                            OutputIterator out) {
+    if(doc.size() < 5)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value")
+                              << expected_size(5) << actual_size(doc.size()));
+    auto type = element_type::null_element;
+    auto name = doc.begin()->name();
     if(name == "$binary" || name == "$type") {
-        if(edoc.size() != 2)
+        if(doc.size() != 2)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "binary element"));
+        type = element_type::binary_element;
         // TODO: implement binary value
     } else if(name == "$date") {
-        if(edoc.size() != 1 ||
-           (edoc.begin()->type() != element_type::int32_element && edoc.begin()->type() != element_type::int64_element))
+        if(doc.size() != 1 ||
+           (doc.begin()->type() != element_type::int32_element && doc.begin()->type() != element_type::int64_element))
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
         using DateT = detail::ElementTypeMap<element_type::date_element, element::container_type>;
-        if(edoc.begin()->type() == element_type::int32_element)
-            e.value<element_type::date_element>(
-                DateT{std::chrono::milliseconds{get<element_type::int32_element>(*edoc.begin())}});
-        else if(edoc.begin()->type() == element_type::int64_element)
-            e.value<element_type::date_element>(
-                DateT{std::chrono::milliseconds{get<element_type::int64_element>(*edoc.begin())}});
+        if(doc.begin()->type() == element_type::int32_element)
+            out = setter<element_type::date_element, DateT>::call(
+                out, DateT{std::chrono::milliseconds{get<element_type::int32_element>(*doc.begin())}});
+        else if(doc.begin()->type() == element_type::int64_element)
+            out = setter<element_type::date_element, DateT>::call(
+                out, DateT{std::chrono::milliseconds{get<element_type::int64_element>(*doc.begin())}});
         else
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
+        type = element_type::date_element;
     } else if(name == "$timestamp") {
-        if(edoc.size() != 1)
+        if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "timestamp element"));
+        type = element_type::timestamp_element;
         // TODO: implement timestamp
     } else if(name == "$regex" || name == "$options") {
-        if(edoc.size() != 2)
+        if(doc.size() != 2)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
-        auto it = edoc.find("$regex");
-        if(it == edoc.end() || it->type() != element_type::string_element)
+        auto it = doc.find("$regex");
+        if(it == doc.end() || it->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
         auto re = get<element_type::string_element>(*it);
-        it = edoc.find("$options");
-        if(it == edoc.end() || it->type() != element_type::string_element)
+        it = doc.find("$options");
+        if(it == doc.end() || it->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "regex element"));
         auto options = get<element_type::string_element>(*it);
-        e.value<element_type::regex_element>(std::make_tuple(re, options));
+
+        type = element_type::regex_element;
+        out = setter<element_type::regex_element, decltype(std::make_tuple(re, options))>::call(
+            out, std::make_tuple(re, options));
     } else if(name == "$oid") {
-        if(edoc.size() != 1 || edoc.begin()->type() != element_type::string_element)
+        if(doc.size() != 40 || doc.begin()->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
-        auto str = get<element_type::string_element>(*edoc.begin());
+        auto str = get<element_type::string_element>(*doc.begin());
         if(str.size() != 24)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
         std::array<char, 12> oid;
         for(auto i = 0; i < 24; i += 2)
             oid[i / 2] = static_cast<char>(std::stoi(boost::lexical_cast<std::string>(str.substr(i, 2)), nullptr, 16));
 
-        e.value<element_type::oid_element>(oid);
+        type = element_type::oid_element;
+        out = setter<element_type::oid_element, decltype(oid)>::call(out, oid);
     } else if(name == "$ref" || name == "$id") {
-        if(edoc.size() != 2)
+        if(doc.size() != 2)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
-        auto it = edoc.find("$id");
-        if(it == edoc.end() || it->type() != element_type::string_element)
+        auto it = doc.find("$id");
+        if(it == doc.end() || it->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
         auto str = get<element_type::string_element>(*it);
         if(str.size() != 24)
@@ -363,37 +467,55 @@ bool json_reader::parse_extended_value(element& e, const document_set& edoc) {
         for(auto i = 0; i < 24; i += 2)
             oid[i / 2] = static_cast<char>(std::stoi(boost::lexical_cast<std::string>(str.substr(i, 2)), nullptr, 16));
 
-        it = edoc.find("$ref");
-        if(it == edoc.end() || it->type() != element_type::string_element)
+        it = doc.find("$ref");
+        if(it == doc.end() || it->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
         auto coll = get<element_type::string_element>(*it);
-        e.value<element_type::db_pointer_element>(std::make_tuple(coll, oid));
+        type = element_type::db_pointer_element;
+        out = setter<element_type::db_pointer_element, decltype(std::make_tuple(coll, oid))>::call(
+            out, std::make_tuple(coll, oid));
     } else if(name == "$undefined") {
-        if(edoc.size() != 1)
+        if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "undefined element"));
-        e.type(element_type::undefined_element);
+        type = element_type::undefined_element;
     } else if(name == "$minkey") {
-        if(edoc.size() != 1)
+        if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "minkey element"));
-        e.type(element_type::min_key);
+        type = element_type::min_key;
     } else if(name == "$maxkey") {
-        if(edoc.size() != 1)
+        if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "maxkey element"));
-        e.type(element_type::max_key);
+        type = element_type::max_key;
     } else
-        return false;
-    return true;
+        return std::make_tuple(boost::none, (element_type)0);
+    return std::make_tuple(out, type);
 }
 
-template <typename ForwardIterator>
-std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
-                                      const line_pos_iterator<ForwardIterator>& last) {
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
+                                         const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+    assert(last != first);
+    assert(&*first != nullptr);
+    out = m_data.insert(out, 4, '\0');
+    auto size = std::distance(m_data.begin(), std::next(out, 4));
+    out = parse_name(first, last, std::next(out, 4));
+    boost::range::copy(detail::native_to_little_endian<int32_t>(m_data.size() - size),
+                       std::next(m_data.begin(), size - 4));
+    return out;
+}
+
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first,
+                                       const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+    assert(last != first);
+    assert(&*first != nullptr);
     if(*first != '"')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "\""));
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     ++first;
-    std::string str;
+    if(first == last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     while(true) {
         if(*first == '"') {
             ++first;
@@ -401,7 +523,7 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
         }
 
         auto c = *first;
-        if(*first == '\\') {
+        if(c == '\\') {
             ++first;
             if(first == last || *first == '\0')
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
@@ -436,69 +558,66 @@ std::string json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
             else
                 break;
         }
-        str.push_back(c);
+        out = std::next(m_data.insert(out, c));
+        if(first == last)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
         ++first;
         if(first == last || *first == '\0')
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     }
-    return str;
+    return std::next(m_data.insert(out, '\0'));
 }
 
-template <typename ForwardIterator>
-void json_reader::parse_number(line_pos_iterator<ForwardIterator>& first,
-                               const line_pos_iterator<ForwardIterator>& last_, element& e) {
+template <typename ForwardIterator, typename OutputIterator>
+std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first,
+                                                                   const line_pos_iterator<ForwardIterator>& last_,
+                                                                   OutputIterator out) {
+    static_assert(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value, "");
+    assert(last_ != first);
+    assert(&*first != nullptr);
     if(!std::isdigit(*first) && *first != '-')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last_, "number"));
-    auto last = std::find_if_not(first, last_, boost::algorithm::is_any_of(boost::as_literal(".+-eE")) ||
-                                                   boost::algorithm::is_digit());
+    auto last = std::find_if_not(
+        first, last_, [](char c) { return ::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E'; });
+    auto type = element_type::null_element;
+    using namespace boost::spirit;
+    char* pos;
+    auto val = ::strtold(&*first, &pos);
 
-    if(parse_int(first, last, e) || parse_float(first, last, e)) {
-        first = last;
-        return;
-    }
-    BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
-}
+    if(val == HUGE_VALL || pos == &*first)
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
+    std::advance(first, std::distance(const_cast<const char*>(&*first), const_cast<const char*>(pos)));
 
-template <typename ForwardIterator>
-bool json_reader::parse_int(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
-                            element& e) {
-    try {
-        auto val = boost::lexical_cast<int64_t>(boost::make_iterator_range(first, last));
-        if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max())
-            e.value<element_type::int32_element>(static_cast<int32_t>(val));
-        else
-            e.value<element_type::int64_element>(val);
-        return true;
+    int64_t i = std::llrint(val);
+    if(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT) {
+        type = element_type::double_element;
+        out = m_data.insert(out, sizeof(double), '\0');
+        out = detail::set_impl<element_type::double_element, decltype(m_data), double>::call(out, val);
+        ::feclearexcept(FE_ALL_EXCEPT);
+    } else if(i > std::numeric_limits<int32_t>::min() && i < std::numeric_limits<int32_t>::max()) {
+        out = m_data.insert(out, sizeof(int32_t), '\0');
+        out = detail::set_impl<element_type::int32_element, decltype(m_data), int32_t>::call(out, i);
+        type = element_type::int32_element;
+    } else {
+        out = m_data.insert(out, sizeof(int64_t), '\0');
+        out = detail::set_impl<element_type::int64_element, decltype(m_data), int64_t>::call(out, i);
+        type = element_type::int64_element;
     }
-    catch(boost::bad_lexical_cast&) {
-        return false;
-    }
-}
 
-template <typename ForwardIterator>
-bool json_reader::parse_float(line_pos_iterator<ForwardIterator>& first, const line_pos_iterator<ForwardIterator>& last,
-                              element& e) {
-    try {
-        auto val = boost::lexical_cast<double>(boost::make_iterator_range(first, last));
-        e.value<element_type::double_element>(val);
-        return true;
-    }
-    catch(boost::bad_lexical_cast&) {
-        return false;
-    }
+    return std::make_tuple(out, type);
 }
 
 template <typename ForwardIterator>
 void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
                              const line_pos_iterator<ForwardIterator>& last) {
-    first = std::find_if_not(first, last, [this](char c) { return std::isspace(c, m_locale); });
+    first = std::find_if_not(first, last, &::isspace);
 }
 
 inline namespace literal {
-json_reader::document_set operator"" _json(const char* str, size_t len) {
+document_set operator"" _json(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return reader;
+    return static_cast<document_set>(json_reader::document(reader));
 }
 } // namespace literal
 

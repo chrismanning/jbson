@@ -109,9 +109,12 @@ template <class Container, class ElementContainer> class basic_document {
     explicit basic_document(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
-        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)) ||
-           static_cast<ptrdiff_t>(boost::distance(m_data)) !=
+        if(static_cast<ptrdiff_t>(boost::distance(m_data)) !=
                detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+            BOOST_THROW_EXCEPTION(invalid_document_size{}
+                                  << expected_size(detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+                                  << actual_size(boost::distance(m_data)));
+        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
             BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
@@ -174,6 +177,26 @@ template <class Container, class ElementContainer> class basic_document {
             e.write_to_container(m_data);
         }
         m_data.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_data.begin());
+    }
+
+    template <typename ForwardRange>
+    explicit basic_document(
+        ForwardRange&& rng,
+        std::enable_if_t<
+            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
+                             detail::is_iterator_range<container_type>,
+                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
+        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value,"");
+        std::array<char, 4> arr{{0, 0, 0, 0}};
+        auto out = boost::range::copy(arr, m_data.begin());
+        for(auto&& e : rng) {
+            e.write_to_container(m_data);
+        }
+        *out++ = '\0';
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
         static_assert(4 == size.size(), "");
 
@@ -335,6 +358,25 @@ class basic_array : basic_document<Container, ElementContainer> {
 
         boost::range::copy(size, m_data.begin());
     }
+
+  template <typename ForwardRange>
+  explicit basic_array(
+      ForwardRange&& rng,
+      std::enable_if_t<
+          boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
+                           detail::is_iterator_range<container_type>,
+                           boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
+      std::array<char, 4> arr{{0, 0, 0, 0}};
+      auto out = boost::range::copy(arr, m_data.begin());
+      for(auto&& e : rng) {
+          e.write_to_container(m_data);
+      }
+      *out++ = '\0';
+      auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+      static_assert(4 == size.size(), "");
+
+      boost::range::copy(size, m_data.begin());
+  }
 
     template <typename ForwardIterator>
     basic_array(ForwardIterator first, ForwardIterator last,

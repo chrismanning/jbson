@@ -168,7 +168,7 @@ template <class Container> struct basic_element {
     template <typename T> bool valid_type() const { return valid_type<T>(type()); }
 
     template <typename ReturnT, typename> friend struct detail::get_impl;
-    template <element_type EType, typename T, typename> friend struct detail::set_impl;
+    template <element_type EType, typename C, typename T, typename> friend struct detail::set_impl;
 
     template <typename> friend struct basic_element;
     template <element_type EType, typename T>

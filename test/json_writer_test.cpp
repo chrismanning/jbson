@@ -9,12 +9,12 @@ using namespace std::literals;
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/range/as_array.hpp>
 
+#include <gtest/gtest.h>
+
 #include <jbson/json_reader.hpp>
 #include <jbson/json_writer.hpp>
 #include <jbson/builder.hpp>
 using namespace jbson;
-
-#include <gtest/gtest.h>
 
 TEST(JsonWriterTest, StringifyTest0) {
     auto json = std::string{};
@@ -24,9 +24,9 @@ TEST(JsonWriterTest, StringifyTest0) {
 
 TEST(JsonWriterTest, StringifyTest1) {
     auto json = std::string{};
-    auto doc = document{R"({ "hello"
-               : "world" })"_json};
-    detail::stringify(doc, std::back_inserter(json));
+    auto doc = R"({ "hello"
+               : "world" })"_json;
+    detail::stringify(document(doc), std::back_inserter(json));
     EXPECT_EQ(R"({ "hello" : "world" })", json);
 }
 

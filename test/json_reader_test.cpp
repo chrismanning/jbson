@@ -8,11 +8,11 @@ using namespace std::literals;
 
 #include <boost/exception/diagnostic_information.hpp>
 
+#include <gtest/gtest.h>
+
 #define private public
 #include <jbson/json_reader.hpp>
 using namespace jbson;
-
-#include <gtest/gtest.h>
 
 TEST(JsonReaderTest, JsonParseTest1) {
     auto json = boost::string_ref{R"({})"};
@@ -37,10 +37,11 @@ TEST(JsonReaderTest, JsonParseTest4) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::string_element, reader.m_elements.begin()->type());
-    EXPECT_EQ("value", get<element_type::string_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::string_element, elements.begin()->type());
+    EXPECT_EQ("value", get<element_type::string_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest5) {
@@ -48,10 +49,11 @@ TEST(JsonReaderTest, JsonParseTest5) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::string_element, reader.m_elements.begin()->type());
-    EXPECT_EQ("value", get<element_type::string_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::string_element, elements.begin()->type());
+    EXPECT_EQ("value", get<element_type::string_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest6) {
@@ -60,10 +62,11 @@ TEST(JsonReaderTest, JsonParseTest6) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json.data()));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::boolean_element, reader.m_elements.begin()->type());
-    EXPECT_TRUE(get<element_type::boolean_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::boolean_element, elements.begin()->type());
+    EXPECT_TRUE(get<element_type::boolean_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest7) {
@@ -71,10 +74,11 @@ TEST(JsonReaderTest, JsonParseTest7) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::int32_element, reader.m_elements.begin()->type());
-    EXPECT_EQ(123, get<element_type::int32_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::int32_element, elements.begin()->type());
+    EXPECT_EQ(123, get<element_type::int32_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest8) {
@@ -82,9 +86,10 @@ TEST(JsonReaderTest, JsonParseTest8) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::null_element, reader.m_elements.begin()->type());
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::null_element, elements.begin()->type());
 }
 
 TEST(JsonReaderTest, JsonParseTest9) {
@@ -92,10 +97,11 @@ TEST(JsonReaderTest, JsonParseTest9) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::boolean_element, reader.m_elements.begin()->type());
-    EXPECT_FALSE(get<element_type::boolean_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::boolean_element, elements.begin()->type());
+    EXPECT_FALSE(get<element_type::boolean_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest10) {
@@ -103,10 +109,11 @@ TEST(JsonReaderTest, JsonParseTest10) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::double_element, reader.m_elements.begin()->type());
-    EXPECT_EQ(3.141, get<element_type::double_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::double_element, elements.begin()->type());
+    EXPECT_EQ(3.141, get<element_type::double_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest11) {
@@ -114,10 +121,11 @@ TEST(JsonReaderTest, JsonParseTest11) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::int32_element, reader.m_elements.begin()->type());
-    EXPECT_EQ(-123, get<element_type::int32_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::int32_element, elements.begin()->type());
+    EXPECT_EQ(-123, get<element_type::int32_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest12) {
@@ -125,10 +133,11 @@ TEST(JsonReaderTest, JsonParseTest12) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::int64_element, reader.m_elements.begin()->type());
-    EXPECT_EQ(4294967296, get<element_type::int64_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::int64_element, elements.begin()->type());
+    EXPECT_EQ(4294967296, get<element_type::int64_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest13) {
@@ -136,10 +145,11 @@ TEST(JsonReaderTest, JsonParseTest13) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("key", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::document_element, reader.m_elements.begin()->type());
-    auto set = static_cast<document_set>(get<element_type::document_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("key", elements.begin()->name());
+    ASSERT_EQ(element_type::document_element, elements.begin()->type());
+    auto set = static_cast<document_set>(get<element_type::document_element>(*elements.begin()));
     EXPECT_EQ("nested key", set.begin()->name());
     EXPECT_EQ("nested value", get<element_type::string_element>(*set.begin()));
 }
@@ -149,10 +159,11 @@ TEST(JsonReaderTest, JsonParseTest14) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    EXPECT_EQ("ke\ny", reader.m_elements.begin()->name());
-    ASSERT_EQ(element_type::string_element, reader.m_elements.begin()->type());
-    EXPECT_EQ("value", get<element_type::string_element>(*reader.m_elements.begin()));
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    EXPECT_EQ("ke\ny", elements.begin()->name());
+    ASSERT_EQ(element_type::string_element, elements.begin()->type());
+    EXPECT_EQ("value", get<element_type::string_element>(*elements.begin()));
 }
 
 TEST(JsonReaderTest, JsonParseTest15) {
@@ -166,24 +177,25 @@ TEST(JsonReaderTest, JsonParseTest16) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(3, reader.m_elements.size());
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(3, elements.size());
 
-    auto it = reader.m_elements.begin();
+    auto it = elements.begin();
     EXPECT_EQ("0", it->name());
     ASSERT_EQ(element_type::int64_element, it->type());
     EXPECT_EQ(4294967296, get<element_type::int64_element>(*it));
     ++it;
-    ASSERT_NE(reader.m_elements.end(), it);
+    ASSERT_NE(elements.end(), it);
     EXPECT_EQ("1", it->name());
     ASSERT_EQ(element_type::string_element, it->type());
     EXPECT_EQ("some string", get<element_type::string_element>(*it));
     ++it;
-    ASSERT_NE(reader.m_elements.end(), it);
+    ASSERT_NE(elements.end(), it);
     EXPECT_EQ("2", it->name());
     ASSERT_EQ(element_type::boolean_element, it->type());
     EXPECT_TRUE(get<element_type::boolean_element>(*it));
     ++it;
-    ASSERT_EQ(reader.m_elements.end(), it);
+    ASSERT_EQ(elements.end(), it);
 }
 
 TEST(JsonReaderTest, JsonParseTest17) {
@@ -203,8 +215,9 @@ TEST(JsonReaderTest, JsonParseTest19) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::oid_element, e.type());
 
     std::array<char, 12> oid{{static_cast<char>(0x50),
@@ -228,8 +241,9 @@ TEST(JsonReaderTest, JsonParseTest20) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::string_element, e.type());
 
     EXPECT_EQ("$", get<element_type::string_element>(e));
@@ -252,8 +266,9 @@ TEST(JsonReaderTest, JsonParseTest23) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(1, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(1, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::string_element, e.type());
 
     EXPECT_EQ(2, get<element_type::string_element>(e).size());
@@ -265,12 +280,13 @@ TEST(JsonReaderTest, JsonParseTest24) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(2, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(2, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::document_element, e.type());
     EXPECT_EQ(5, get<element_type::document_element>(e).size());
 
-    e = *++reader.m_elements.begin();
+    e = *++elements.begin();
     ASSERT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(123, get<element_type::int32_element>(e));
 }
@@ -280,12 +296,13 @@ TEST(JsonReaderTest, JsonParseTest25) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(2, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(2, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::array_element, e.type());
     EXPECT_EQ(5, get<element_type::array_element>(e).size());
 
-    e = *++reader.m_elements.begin();
+    e = *++elements.begin();
     ASSERT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(123, get<element_type::int32_element>(e));
 }
@@ -295,12 +312,13 @@ TEST(JsonReaderTest, JsonParseTest26) {
     auto reader = json_reader{};
     ASSERT_NO_THROW(reader.parse(json));
 
-    ASSERT_EQ(2, reader.m_elements.size());
-    auto e = *reader.m_elements.begin();
+    auto elements = json_reader::document_set(reader);
+    ASSERT_EQ(2, elements.size());
+    auto e = *elements.begin();
     ASSERT_EQ(element_type::array_element, e.type());
     EXPECT_EQ(23, get<element_type::array_element>(e).size());
 
-    e = *++reader.m_elements.begin();
+    e = *++elements.begin();
     ASSERT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(123, get<element_type::int32_element>(e));
 }
@@ -315,4 +333,17 @@ TEST(JsonReaderTest, JsonLiteralTest1) {
 
     EXPECT_EQ(2, get<element_type::string_element>(e).size());
     EXPECT_EQ("κ", get<element_type::string_element>(e));
+}
+
+TEST(JsonReaderTest, JsonParseErrorTest1) {
+    auto json = boost::string_ref{R"({{})"};
+    auto reader = json_reader{};
+    try {
+        reader.parse(json);
+        FAIL();
+    }
+    catch(json_parse_error& e) {
+//        std::clog << boost::diagnostic_information(e) << std::endl;
+//        FAIL();
+    }
 }
