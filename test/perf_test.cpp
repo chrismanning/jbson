@@ -38,7 +38,7 @@ public:
 
         json_reader r;
         ASSERT_NO_THROW(r.parse(json_));
-        doc = document(json_reader::document(r));
+        doc = document(std::move(r));
     }
 
     virtual void TearDown() {
@@ -53,15 +53,15 @@ protected:
 };
 
 TEST_F(PerfTest, ParseTest) {
+    json_reader reader;
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
         ASSERT_NO_THROW(reader.parse(json_));
     }
 }
 
 TEST_F(PerfTest, WhitespaceTest) {
+    json_reader reader;
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
         ASSERT_NO_THROW(reader.parse(whitespace_));
     }
 }

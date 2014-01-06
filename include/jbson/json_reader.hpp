@@ -30,10 +30,8 @@ enum class json_error_num;
 struct json_reader {
     explicit json_reader(const std::locale& locale = std::locale("en_US.UTF8")) : m_locale(locale) {}
 
-    using element = basic_element<boost::iterator_range<std::vector<char>::const_iterator>>;
-    using document_set = basic_document_set<element::container_type>;
-    using document = basic_document<element::container_type>;
-    using array = basic_array<element::container_type>;
+    using container_type = std::vector<char>;
+    using range_type = boost::iterator_range<container_type::const_iterator>;
 
     json_reader(const json_reader&) = delete;
     json_reader& operator=(const json_reader&) = delete;
@@ -55,16 +53,46 @@ struct json_reader {
         parse(line_it{std::cbegin(range)}, line_it{std::cend(range)});
     }
 
-    operator document_set() const {
+    operator basic_document_set<range_type>() const& {
         if(m_data.size() < 5)
-            return document_set{};
-        return document_set(document(*this));
+            return basic_document_set<range_type>{};
+        return basic_document_set<range_type>(basic_document<range_type>(*this));
     }
 
-    operator document() const {
+    operator basic_document<range_type>() const& {
+        if(m_data.size() < 5)
+            return basic_document<range_type>{};
+        return basic_document<range_type>{boost::make_iterator_range(m_data)};
+    }
+
+    operator basic_array<range_type>() const& {
+        if(m_data.size() < 5)
+            return basic_array<range_type>{};
+        return basic_array<range_type>{boost::make_iterator_range(m_data)};
+    }
+
+    operator document() const& {
         if(m_data.size() < 5)
             return document{};
-        return document{boost::make_iterator_range(m_data)};
+        return document{m_data};
+    }
+
+    operator document() && {
+        if(m_data.size() < 5)
+            return document{};
+        return document{std::move(m_data)};
+    }
+
+    operator array() const& {
+        if(m_data.size() < 5)
+            return array{};
+        return array{m_data};
+    }
+
+    operator array() && {
+        if(m_data.size() < 5)
+            return array{};
+        return array{std::move(m_data)};
     }
 
   private:
@@ -82,7 +110,8 @@ struct json_reader {
                                                          const line_pos_iterator<ForwardIterator>&, OutputIterator);
 
     template <typename OutputIterator>
-    std::tuple<boost::optional<OutputIterator>, element_type> parse_extended_value(const document&, OutputIterator);
+    std::tuple<boost::optional<OutputIterator>, element_type> parse_extended_value(const basic_document<range_type>&,
+                                                                                   OutputIterator);
 
     template <typename ForwardIterator, typename OutputIterator>
     OutputIterator parse_name(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
@@ -107,7 +136,7 @@ struct json_reader {
   private:
     std::locale m_locale;
     std::shared_ptr<void> m_start;
-    std::vector<char> m_data; // TODO: pre allocate & use this for data
+    container_type m_data;
 };
 
 enum class json_error_num {
@@ -370,7 +399,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
         case '{': {
             auto idx = std::distance(m_data.begin(), out);
             auto r = parse_document(first, last, out);
-            document doc{std::next(m_data.begin(), idx), r};
+            basic_document<range_type> doc{std::next(m_data.begin(), idx), r};
             assert(std::distance(std::next(m_data.begin(), idx), r) >= 5);
             assert(doc.size() >= 5);
             boost::string_ref name;
@@ -397,8 +426,8 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
 }
 
 template <typename OutputIterator>
-std::tuple<boost::optional<OutputIterator>, element_type> json_reader::parse_extended_value(const document& doc,
-                                                                                            OutputIterator out) {
+std::tuple<boost::optional<OutputIterator>, element_type>
+json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputIterator out) {
     if(doc.size() < 5)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value")
                               << expected_size(5) << actual_size(doc.size()));
@@ -558,21 +587,19 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                     // Handle UTF-16 surrogate pair
                     std::advance(first, 4);
                     if(*first++ != '\\' || *first++ != 'u')
-                        BOOST_THROW_EXCEPTION(
-                            make_parse_exception(json_error_num::unexpected_token, first, last));
+                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
                     auto codepoint2 = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
                     if(codepoint2 < 0xDC00 || codepoint2 > 0xDFFF)
-                        BOOST_THROW_EXCEPTION(
-                            make_parse_exception(json_error_num::unexpected_token, first, last));
+                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
                     codepoint = (((codepoint - 0xD800) << 10) | (codepoint2 - 0xDC00)) + 0x10000;
                 }
                 c = std::char_traits<char>::to_char_type(codepoint);
                 std::advance(first, 3);
             } else
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
-        }
-        else if(::iscntrl(c) && c != '\x7f')
-            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "non-control char"));
+        } else if(::iscntrl(c) && c != '\x7f')
+            BOOST_THROW_EXCEPTION(
+                make_parse_exception(json_error_num::unexpected_token, first, last, "non-control char"));
 
         out = std::next(m_data.insert(out, c));
         std::advance(first, 1);
@@ -629,11 +656,25 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 }
 
 inline namespace literal {
-document_set operator"" _json(const char* str, size_t len) {
+
+document_set operator"" _json_set(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return static_cast<document_set>(json_reader::document(reader));
+    return document_set(document(std::move(reader)));
 }
+
+document operator"" _json_doc(const char* str, size_t len) {
+    auto reader = json_reader{};
+    reader.parse(str, str + len);
+    return std::move(reader);
+}
+
+array operator"" _json_arr(const char* str, size_t len) {
+    auto reader = json_reader{};
+    reader.parse(str, str + len);
+    return std::move(reader);
+}
+
 } // namespace literal
 
 } // namesapce jbson

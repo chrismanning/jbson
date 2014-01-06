@@ -25,14 +25,14 @@ TEST(JsonWriterTest, StringifyTest0) {
 TEST(JsonWriterTest, StringifyTest1) {
     auto json = std::string{};
     auto doc = R"({ "hello"
-               : "world" })"_json;
-    detail::stringify(document(doc), std::back_inserter(json));
+               : "world" })"_json_doc;
+    detail::stringify(doc, std::back_inserter(json));
     EXPECT_EQ(R"({ "hello" : "world" })", json);
 }
 
 TEST(JsonWriterTest, StringifyTest2) {
     auto json = std::string{};
-    auto arr = array{R"(["hello"   , "world" ])"_json};
+    auto arr = R"(["hello"   , "world" ])"_json_arr;
     detail::stringify(arr, std::back_inserter(json));
     EXPECT_EQ(R"([ "hello", "world" ])", json);
 }
@@ -66,7 +66,7 @@ TEST(JsonWriterTest, StringifyTest6) {
 
 TEST(JsonWriterTest, JsonWriteTest1) {
     auto json = std::string{};
-    auto doc = document{R"({ "hello" : "world" })"_json};
+    auto doc = R"({ "hello" : "world" })"_json_doc;
     write_json(doc, std::back_inserter(json));
 
     EXPECT_EQ(R"({ "hello" : "world" })", json);
@@ -83,7 +83,7 @@ TEST(JsonWriterTest, JsonWriteTest2) {
 
 TEST(JsonWriterTest, JsonWriteTest3) {
     auto json = std::array<char, 22>{};
-    auto doc = document{R"({ "hello" : "world" })"_json};
+    auto doc = R"({ "hello" : "world" })"_json_doc;
     write_json(doc, json.begin());
 
     EXPECT_EQ(boost::as_array(R"({ "hello" : "world" })"), json);
