@@ -190,13 +190,12 @@ void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_itera
     skip_space(first, last);
     if(first == last || *first == '\0')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
-    decltype(m_data.begin()) end;
     switch(*first) {
         case '{':
-            end = parse_document(first, last, m_data.end());
+            parse_document(first, last, m_data.end());
             break;
         case '[':
-            end = parse_array(first, last, m_data.end());
+            parse_array(first, last, m_data.end());
             break;
         default:
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::invalid_root_element, first, last));

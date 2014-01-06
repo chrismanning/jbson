@@ -3,28 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <fstream>
+
 #include <gtest/gtest.h>
 
 #include <jbson/json_reader.hpp>
+#include <jbson/json_writer.hpp>
 using namespace jbson;
 
 class PerfTest : public ::testing::Test {
 public:
     virtual void SetUp() {
-        FILE *fp = fopen(filename_ = JBSON_FILES"rapidjson_sample.json", "rb");
-        ASSERT_NE(nullptr, fp);
+        std::ifstream ifs(JBSON_FILES"rapidjson_sample.json");
+        ASSERT_FALSE(ifs.fail());
 
-        fseek(fp, 0, SEEK_END);
-        json_.resize((size_t)ftell(fp)+1);
-        fseek(fp, 0, SEEK_SET);
-        ASSERT_EQ(json_.size()-1, fread(json_.data(), 1, json_.size()-1, fp));
-        json_.back() = '\0';
-        fclose(fp);
+        ifs.seekg(0, std::ios::end);
+        auto n = static_cast<std::streamoff>(ifs.tellg());
+        json_.resize(n);
+        ifs.seekg(0, std::ios::beg);
+        ifs.read(json_.data(), n);
 
         // whitespace test
-        whitespace_.resize((1024 * 1024) + 4);
+        whitespace_.resize((1024 * 1024) + 3);
         char *p = whitespace_.data();
-        for(size_t i = 0; i < whitespace_.size()-4; i += 4) {
+        for(size_t i = 0; i < whitespace_.size()-3; i += 4) {
             *p++ = ' ';
             *p++ = '\n';
             *p++ = '\r';
@@ -33,16 +35,19 @@ public:
         *p++ = '[';
         *p++ = '0';
         *p++ = ']';
-        *p++ = '\0';
+
+        json_reader r;
+        ASSERT_NO_THROW(r.parse(json_));
+        doc = document(json_reader::document(r));
     }
 
     virtual void TearDown() {
     }
 
 protected:
-    const char* filename_;
     std::vector<char> json_;
     std::vector<char> whitespace_;
+    document doc;
 
     static const size_t kTrialCount = 1000;
 };
@@ -50,13 +55,13 @@ protected:
 TEST_F(PerfTest, ParseTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
-        EXPECT_NO_THROW(reader.parse(json_));
+        ASSERT_NO_THROW(reader.parse(json_));
     }
 }
 
 TEST_F(PerfTest, WhitespaceTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
-        EXPECT_NO_THROW(reader.parse(whitespace_));
+        ASSERT_NO_THROW(reader.parse(whitespace_));
     }
 }
