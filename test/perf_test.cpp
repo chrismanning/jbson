@@ -52,6 +52,13 @@ protected:
     static const size_t kTrialCount = 1000;
 };
 
+TEST_F(PerfTest, WriteTest) {
+    for (size_t i = 0; i < kTrialCount; i++) {
+        auto str = std::string{};
+        ASSERT_NO_THROW(write_json(doc, std::back_inserter(str)));
+    }
+}
+
 TEST_F(PerfTest, ParseTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
@@ -63,5 +70,21 @@ TEST_F(PerfTest, WhitespaceTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
         ASSERT_NO_THROW(reader.parse(whitespace_));
+    }
+}
+
+TEST_F(PerfTest, LvalueTest) {
+    for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
+        ASSERT_NO_THROW(reader.parse(json_));
+        auto d = document(reader);
+    }
+}
+
+TEST_F(PerfTest, RvalueTest) {
+    for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
+        ASSERT_NO_THROW(reader.parse(json_));
+        auto d = document(std::move(reader));
     }
 }
