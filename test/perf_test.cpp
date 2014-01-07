@@ -53,15 +53,15 @@ protected:
 };
 
 TEST_F(PerfTest, ParseTest) {
-    json_reader reader;
     for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
         ASSERT_NO_THROW(reader.parse(json_));
     }
 }
 
 TEST_F(PerfTest, WhitespaceTest) {
-    json_reader reader;
     for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
         ASSERT_NO_THROW(reader.parse(whitespace_));
     }
 }

@@ -18,6 +18,7 @@ using namespace jbson;
 TEST(JsonReaderTest, LongDoubleConv) {
     int64_t val = std::numeric_limits<int64_t>::max();
     long double dbl = static_cast<long double>(val);
+    ::feclearexcept(FE_ALL_EXCEPT);
     ASSERT_EQ(val, std::llrint(dbl));
     if(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT) {
         ::feclearexcept(FE_ALL_EXCEPT);
