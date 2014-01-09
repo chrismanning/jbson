@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <iterator>
 #include <memory>
+#include <codecvt>
 
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -245,7 +246,6 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
     assert(out >= m_data.begin() && out <= m_data.end());
     out = std::next(m_data.insert(out, 4, '\0'), 4);
-    assert(out >= m_data.begin() && out <= m_data.end());
 
     if(*first != '{')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "{"));
@@ -257,12 +257,11 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
         assert(out >= m_data.begin() && out <= m_data.end());
         out = std::next(m_data.insert(out, '\0'));
-        assert(out >= m_data.begin() && out <= m_data.end());
 
-        auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+        int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
         if(size != 5)
             BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
-        boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+        boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
         return out;
     }
 
@@ -272,7 +271,6 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, static_cast<char>(element_type::null_element));
-        assert(out >= m_data.begin() && out <= m_data.end());
 
         auto type_idx = std::distance(m_data.begin(), out);
         ++out;
@@ -300,12 +298,11 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
             assert(out >= m_data.begin() && out <= m_data.end());
             out = std::next(m_data.insert(out, '\0'));
-            assert(out >= m_data.begin() && out <= m_data.end());
 
-            auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+            int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
             if(size < 5)
                 BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
-            boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+            boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
             return out;
         }
     }
@@ -323,7 +320,6 @@ OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& firs
 
     assert(out >= m_data.begin() && out <= m_data.end());
     out = std::next(m_data.insert(out, 4, '\0'), 4);
-    assert(out >= m_data.begin() && out <= m_data.end());
 
     if(*first != '[')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "["));
@@ -336,10 +332,10 @@ OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& firs
         assert(out >= m_data.begin() && out <= m_data.end());
         out = std::next(m_data.insert(out, '\0'));
 
-        auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+        int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
         if(size != 5)
             BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
-        boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+        boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
         return out;
     }
 
@@ -379,10 +375,10 @@ OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& firs
             assert(out >= m_data.begin() && out <= m_data.end());
             out = std::next(m_data.insert(out, '\0'));
 
-            auto size = std::distance(std::next(m_data.begin(), start_idx), out);
+            int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
             if(size < 5)
                 BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
-            boost::range::copy(detail::native_to_little_endian<int32_t>(size), std::next(m_data.begin(), start_idx));
+            boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
             return out;
         }
     }
@@ -624,18 +620,26 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 if(idx != 4)
                     BOOST_THROW_EXCEPTION(
                         make_parse_exception(json_error_num::unexpected_token, std::next(first, idx), last));
+                std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt{};
+                std::string str;
                 if(codepoint >= 0xD800 && codepoint <= 0xDBFF) {
-                    // Handle UTF-16 surrogate pair
+                    // Handle UTF-16 surrogate pair. Adapted from rapidjson
                     std::advance(first, 4);
                     if(*first++ != '\\' || *first++ != 'u')
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
                     auto codepoint2 = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
                     if(codepoint2 < 0xDC00 || codepoint2 > 0xDFFF)
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
-                    codepoint = (((codepoint - 0xD800) << 10) | (codepoint2 - 0xDC00)) + 0x10000;
-                }
-                c = std::char_traits<char>::to_char_type(codepoint);
-                std::advance(first, 3);
+                    codepoint2 = (((codepoint - 0xD800) << 10) | (codepoint2 - 0xDC00)) + 0x10000;
+                    str = cvt.to_bytes(codepoint2);
+                } else if(codepoint == 0x0000)
+                    str = std::string{R"(\u0000)"};
+                else
+                    str = cvt.to_bytes(codepoint);
+                std::advance(first, 4);
+                out = m_data.insert(out, str.size(), '\0');
+                out = boost::range::copy(str, out);
+                continue;
             } else
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
         } else if(::iscntrl(c) && c != '\x7f')
@@ -676,7 +680,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 
     ::feclearexcept(FE_ALL_EXCEPT);
     int64_t i = std::llrint(val);
-    if(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT) {
+    if(::fetestexcept(FE_ALL_EXCEPT)) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(double), '\0');
         out = detail::set_impl<element_type::double_element, decltype(m_data), double>::call(out, val);

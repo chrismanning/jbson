@@ -386,6 +386,18 @@ TEST(JsonReaderTest, JsonParseUnicode) {
     }
 }
 
+TEST(JsonReaderTest, JsonParseSurrogateUnicode) {
+    auto json = boost::string_ref{R"(["\uD834\uDD1E"])"};
+    auto reader = json_reader{};
+    auto str = std::string{};
+    str.resize(2);
+    using line_it = line_pos_iterator<boost::string_ref::const_iterator>;
+    ASSERT_NO_THROW(reader.parse(json));
+    auto doc = document(reader);
+    str = doc.begin()->value<std::string>();
+    EXPECT_EQ("\xF0\x9D\x84\x9E", str);
+}
+
 TEST(JsonReaderTest, JsonCheckerFail1) {
     auto ifs = std::ifstream{JBSON_FILES"json_checker_test_suite/fail1.json", std::ios::in};
     auto json = std::vector<char>{};
@@ -826,13 +838,7 @@ TEST(JsonReaderTest, JsonCheckerPass1) {
     ifs.read(json.data(), n);
 
     auto reader = json_reader{};
-    try{
-    (reader.parse(json));
-    }
-    catch(...) {
-        std::clog << boost::current_exception_diagnostic_information() << std::endl;
-        FAIL();
-    }
+    EXPECT_NO_THROW(reader.parse(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerPass2) {

@@ -34,17 +34,73 @@ namespace {
 
 template <typename T, typename OutputIterator>
 std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
-                                       std::enable_if_t<std::is_arithmetic<std::decay_t<T>>::value>* = nullptr) {
-    if(std::is_same<std::decay_t<T>, bool>::value)
-        out = boost::range::copy(boost::as_literal(!!v ? "true" : "false"), out);
-    else
-        out = boost::range::copy(std::to_string(v), out);
+                                       std::enable_if_t<std::is_integral<std::decay_t<T>>::value>* = nullptr) {
+    if(std::is_same<T, bool>::value)
+        return boost::range::copy(boost::as_literal(!!v ? "true" : "false"), out);
+    std::array<char, std::numeric_limits<T>::digits10 + 2> int_str;
+    auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", static_cast<ptrdiff_t>(v));
+    assert(n > 0);
+    assert(n <= int_str.size());
+    return boost::range::copy(boost::string_ref{int_str.data(), static_cast<size_t>(n)}, out);
+}
+
+template <typename T, typename OutputIterator>
+std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
+                                       std::enable_if_t<std::is_floating_point<std::decay_t<T>>::value>* = nullptr) {
+    std::array<char, std::numeric_limits<T>::digits10 + 2> float_str;
+    auto n = std::snprintf(float_str.data(), float_str.size(), "%.8g", v);
+    assert(n > 0);
+    assert(n <= float_str.size());
+    out = boost::range::copy(boost::string_ref{float_str.data(), static_cast<size_t>(n)}, out);
     return out;
 }
 
 template <typename OutputIterator> std::decay_t<OutputIterator> stringify(boost::string_ref v, OutputIterator out) {
+    auto str = std::vector<char>(v.begin(), v.end());
+    for(auto i = str.begin(); i != str.end(); ++i) {
+        switch(*i) {
+            case '"':
+                i = ++str.insert(i, '\\');
+                break;
+            case '\\':
+                i = ++str.insert(i, '\\');
+                break;
+            case '/':
+                i = ++str.insert(i, '\\');
+                break;
+            case '\b':
+                i = ++str.insert(i, '\\');
+                *i = 'b';
+                break;
+            case '\f':
+                i = ++str.insert(i, '\\');
+                *i = 'f';
+                break;
+            case '\n':
+                i = ++str.insert(i, '\\');
+                *i = 'n';
+                break;
+            case '\r':
+                i = ++str.insert(i, '\\');
+                *i = 'r';
+                break;
+            case '\t':
+                i = ++str.insert(i, '\\');
+                *i = 't';
+                break;
+            default:
+                if(::iscntrl(*i)) {
+                    std::array<char, 7> hex;
+                    auto n = std::snprintf(hex.data(), hex.size(), "\\u%04x", std::char_traits<char>::to_int_type(*i));
+                    assert(n == 6);
+                    i = str.erase(i);
+                    i = str.insert(i, hex.begin(), std::next(hex.begin(), n));
+                }
+                break;
+        }
+    }
     *out++ = '"';
-    out = boost::range::copy(v, out);
+    out = boost::range::copy(str, out);
     *out++ = '"';
     return out;
 }
@@ -55,9 +111,7 @@ std::decay_t<OutputIterator> stringify(const basic_document<C, EC>& doc, OutputI
 
     auto end = doc.end();
     for(auto it = doc.begin(); it != end;) {
-        *out++ = '"';
-        out = boost::range::copy(it->name(), out);
-        *out++ = '"';
+        out = stringify(it->name(), out);
         out = boost::range::copy(boost::as_literal(" : "), out);
         out = detail::visit<detail::json_element_visitor>(it->type(), *it, out);
         if(++it != end)
@@ -101,9 +155,10 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
         auto oid = get<element_type::oid_element>(e);
         std::array<char, 25> buf;
         for(size_t i = 0; i < oid.size(); ++i)
-            std::snprintf(&buf[i*2], 3, "%0.2x", static_cast<unsigned char>(oid[i]));
-        return stringify(static_cast<document>(builder("$oid", element_type::string_element,
-                                                       boost::string_ref(buf.data(), 24))), out);
+            std::snprintf(&buf[i * 2], 3, "%0.2x", static_cast<unsigned char>(oid[i]));
+        return stringify(
+            static_cast<document>(builder("$oid", element_type::string_element, boost::string_ref(buf.data(), 24))),
+            out);
     }
 };
 
@@ -127,7 +182,7 @@ template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::date_element, Element, OutputIterator> {
     std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
         auto date = get<element_type::date_element>(e);
-        return stringify(date.time_since_epoch().count(), out);
+        return stringify(static_cast<int64_t>(date.time_since_epoch().count()), out);
     }
 };
 
