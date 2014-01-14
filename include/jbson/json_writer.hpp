@@ -15,6 +15,7 @@
 
 #include "element.hpp"
 #include "document.hpp"
+#include "builder.hpp"
 #include "detail/visit.hpp"
 
 namespace jbson {
@@ -40,7 +41,7 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
     std::array<char, std::numeric_limits<T>::digits10 + 2> int_str;
     auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", static_cast<ptrdiff_t>(v));
     assert(n > 0);
-    assert(n <= int_str.size());
+    assert(static_cast<size_t>(n) <= int_str.size());
     return boost::range::copy(boost::string_ref{int_str.data(), static_cast<size_t>(n)}, out);
 }
 
@@ -50,7 +51,7 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
     std::array<char, std::numeric_limits<T>::digits10 + 2> float_str;
     auto n = std::snprintf(float_str.data(), float_str.size(), "%.8g", v);
     assert(n > 0);
-    assert(n <= float_str.size());
+    assert(static_cast<size_t>(n) <= float_str.size());
     out = boost::range::copy(boost::string_ref{float_str.data(), static_cast<size_t>(n)}, out);
     return out;
 }
