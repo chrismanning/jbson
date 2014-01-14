@@ -191,7 +191,7 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
     return e;
 }
 
-json_parse_error json_reader::make_parse_exception(json_error_num err, const std::string& expected) const {
+inline json_parse_error json_reader::make_parse_exception(json_error_num err, const std::string& expected) const {
     auto e = json_parse_error{};
     e << parse_error(err);
     if(!expected.empty())
@@ -709,19 +709,19 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 
 inline namespace literal {
 
-document_set operator"" _json_set(const char* str, size_t len) {
+inline document_set operator"" _json_set(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
     return document_set(document(std::move(reader)));
 }
 
-document operator"" _json_doc(const char* str, size_t len) {
+inline document operator"" _json_doc(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
-array operator"" _json_arr(const char* str, size_t len) {
+inline array operator"" _json_arr(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
