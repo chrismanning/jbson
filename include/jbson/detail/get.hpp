@@ -67,7 +67,7 @@ struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<std::decay_t<Retur
 
 // embedded document
 template <typename ReturnT>
-struct get_impl<ReturnT, typename std::enable_if<is_document<std::decay_t<ReturnT>>::value>::type> {
+struct get_impl<ReturnT, std::enable_if_t<is_document<std::decay_t<ReturnT>>::value>> {
     template <typename RangeT> static ReturnT call(const RangeT& data) {
         return ReturnT{data};
     }

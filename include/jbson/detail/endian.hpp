@@ -37,7 +37,7 @@ template <typename T, typename ForwardIterator> T little_endian_to_native(Forwar
 }
 
 template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T&& val) {
-    using T2 = typename std::decay<T>::type;
+    using T2 = std::decay_t<T>;
     static_assert(std::is_pod<T2>::value, "Can only byte swap POD types");
 
     union {

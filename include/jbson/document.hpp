@@ -79,7 +79,7 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
 
     BaseIterator m_start;
     BaseIterator m_end;
-    boost::optional<typename std::decay<Value>::type> m_cur;
+    boost::optional<std::decay_t<Value>> m_cur;
 };
 
 } // namespace detail
@@ -406,7 +406,7 @@ namespace detail {
 
 template <typename T, typename Container>
 struct is_valid_func<T, Container,
-                     std::enable_if_t<std::is_convertible<typename std::decay<T>::type, document>::value>> {
+                     std::enable_if_t<std::is_convertible<std::decay_t<T>, document>::value>> {
     template <element_type EType, typename... Args> struct inner : std::false_type {
         static_assert(sizeof...(Args) == 0, "");
     };

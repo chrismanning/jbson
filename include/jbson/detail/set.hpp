@@ -26,7 +26,7 @@ struct set_impl<EType, Container, T, std::enable_if_t<std::is_arithmetic<std::de
 // string
 template <element_type EType, typename Container, typename T>
 struct set_impl<EType, Container, T, std::enable_if_t<std::is_constructible<boost::string_ref, std::decay_t<T>>::value &&
-                                           !is_document<typename std::decay<T>::type>::value>> {
+                                           !is_document<std::decay_t<T>>::value>> {
     template <typename OutIterator> static OutIterator call(OutIterator out, boost::string_ref val) {
         BOOST_CONCEPT_ASSERT((boost::OutputIterator<OutIterator, char>));
 //        auto old_size = out.size();

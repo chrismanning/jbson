@@ -37,7 +37,7 @@ template <element_type EType, typename Element> struct typeid_visitor {
 } // namespace detail
 
 template <class Container> struct basic_element {
-    using container_type = typename std::decay<Container>::type;
+    using container_type = std::decay_t<Container>;
     static_assert(!std::is_convertible<container_type, std::string>::value, "");
     static_assert(std::is_same<typename container_type::value_type, char>::value, "");
 
