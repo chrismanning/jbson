@@ -10,8 +10,10 @@
 
 namespace jbson {
 
-template <class Container, class ElementContainer = Container> class basic_document;
-template <class Container, class ElementContainer = Container> class basic_array;
+template <class Container, class ElementContainer = boost::iterator_range<typename Container::const_iterator>>
+class basic_document;
+template <class Container, class ElementContainer = boost::iterator_range<typename Container::const_iterator>>
+class basic_array;
 
 using document = basic_document<std::vector<char>>;
 using array = basic_array<std::vector<char>>;

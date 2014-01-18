@@ -34,22 +34,25 @@ struct builder {
         return *this;
     }
 
-    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
-                                      Container, void, boost::mpl::vector<const char&>>::value>>
-    operator basic_document<Container>() const {
-        return basic_document<Container>(m_elements);
+    template <typename Container, typename EContainer,
+              typename = std::enable_if_t<
+                  detail::has_member_function_push_back<Container, void, boost::mpl::vector<const char&>>::value>>
+    operator basic_document<Container, EContainer>() const {
+        return basic_document<Container, EContainer>(m_elements);
     }
 
-    template <typename Container, typename = std::enable_if_t<detail::has_member_function_push_back<
-                                      Container, void, boost::mpl::vector<const char&>>::value>>
-    operator basic_array<Container>() const {
-        return basic_array<Container>{m_elements};
+    template <typename Container, typename EContainer,
+              typename = std::enable_if_t<
+                  detail::has_member_function_push_back<Container, void, boost::mpl::vector<const char&>>::value>>
+    operator basic_array<Container, EContainer>() const {
+        return basic_array<Container, EContainer>(m_elements);
     }
 
   private:
     basic_document_set<std::deque<char>> m_elements;
 };
 static_assert(std::is_convertible<builder, document>::value, "");
+static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 static_assert(!std::is_convertible<builder, basic_document<boost::iterator_range<const char*>>>::value, "");
 
 } // namespace jbson
