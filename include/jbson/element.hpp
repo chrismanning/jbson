@@ -182,7 +182,7 @@ template <class Container>
 template <typename OutContainer>
 void basic_element<Container>::write_to_container(OutContainer& c) const {
     static_assert(std::is_same<typename OutContainer::value_type, char>::value, "");
-    if(!m_type)
+    if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     c.push_back(static_cast<uint8_t>(m_type));
     boost::range::push_back(c, m_name);
@@ -234,7 +234,7 @@ basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem,
 template <class Container> basic_element<Container>::basic_element(const container_type& c) {
     auto first = c.begin(), last = c.end();
     m_type = static_cast<element_type>(*first++);
-    if(!m_type)
+    if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     auto str_end = std::find(first, last, '\0');
     m_name.assign(first, str_end++);
@@ -263,7 +263,7 @@ template <typename ForwardIterator>
 basic_element<Container>::basic_element(std::string name, element_type type, ForwardIterator first,
                                         ForwardIterator last)
     : m_name(std::move(name)), m_type(type) {
-    if(!m_type)
+    if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
     last = std::next(first, detail::detect_size(m_type, first, last));
     m_data = Container{first, last};
@@ -272,7 +272,7 @@ basic_element<Container>::basic_element(std::string name, element_type type, For
 template <class Container>
 basic_element<Container>::basic_element(std::string name, element_type type)
     : m_name(std::move(name)), m_type(type) {
-    if(!m_type)
+    if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 }
 
