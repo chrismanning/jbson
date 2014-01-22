@@ -96,6 +96,7 @@ template <class Container, class ElementContainer> class basic_document {
     using element_type = basic_element<ElementContainer>;
     using iterator = typename detail::document_iter<element_type, typename container_type::const_iterator>;
     using const_iterator = iterator;
+    using value_type = element_type;
 
     basic_document() = default;
 
@@ -270,6 +271,7 @@ class basic_array : basic_document<Container, ElementContainer> {
     using typename base::element_type;
     using typename base::iterator;
     using typename base::const_iterator;
+    using typename base::value_type;
 
     using base::m_data;
     using base::begin;

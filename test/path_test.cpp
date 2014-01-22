@@ -74,7 +74,7 @@ TEST(PathTest, JbsonPathTest4) {
     ASSERT_EQ(1, res.size());
     EXPECT_EQ(element_type::document_element, res.front().type());
 
-    res = path_select(R"({"elem": {"nest" : 321}})"_json_doc, R"($.elem["nest"])");
+    res = path_select(R"({"elem": {"nest" : 321}})"_json_doc, R"($.elem['nest'])");
     ASSERT_EQ(1, res.size());
     EXPECT_EQ(element_type::int32_element, res.front().type());
     EXPECT_EQ(321, res.front().value<int32_t>());
@@ -139,6 +139,15 @@ TEST(PathTest, JbsonPathTest9) {
 }
 
 TEST(PathTest, JbsonPathTest10) {
+    auto res = path_select(R"({"arr": [76, [923], {"obj":12}, 7654, {"obj":96}]})"_json_doc, "$.arr[*].obj");
+    ASSERT_EQ(2, res.size());
+    EXPECT_EQ(element_type::int32_element, res.front().type());
+    EXPECT_EQ(12, res.front().value<int32_t>());
+    EXPECT_EQ(element_type::int32_element, res.back().type());
+    EXPECT_EQ(96, res.back().value<int32_t>());
+}
+
+TEST(PathTest, JbsonPathTest11) {
     auto res = path_select(R"({"arr": [76, [923], {"obj":12}, 765]})"_json_doc, "$.arr..obj");
     ASSERT_EQ(1, res.size());
     EXPECT_EQ(element_type::int32_element, res.front().type());
@@ -150,4 +159,31 @@ TEST(PathTest, JbsonPathTest10) {
     EXPECT_EQ(12, res.front().value<int32_t>());
     EXPECT_EQ(element_type::int32_element, res.back().type());
     EXPECT_EQ(24, res.back().value<int32_t>());
+}
+
+TEST(PathTest, JbsonPathExprTest1) {
+    auto res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc, R"($.arr[?(@.obj != "ghgf")].obj)");
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(element_type::string_element, res.front().type());
+    EXPECT_EQ("some string", get<element_type::string_element>(res.front()));
+
+    res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc, R"($.arr[?(@.obj == "some string")].obj)");
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(element_type::string_element, res.front().type());
+    EXPECT_EQ("some string", get<element_type::string_element>(res.front()));
+}
+
+TEST(PathTest, JbsonPathExprTest2) {
+    try {
+    auto res = path_select(R"({"arr": [{"key":"firstname", "value":"Chris"},
+                                       {"key":"surname", "value":"Manning"}]})"_json_doc,
+                           R"($.arr[?(@.key == "firstname")].value)");
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(element_type::string_element, res.front().type());
+    EXPECT_EQ("Chris", get<element_type::string_element>(res.front()));
+    }
+    catch(...) {
+        std::clog << boost::current_exception_diagnostic_information();
+        FAIL();
+    }
 }
