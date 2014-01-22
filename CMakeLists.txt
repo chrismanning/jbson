@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 2.8)
 
 option(JBSON_ENABLE_TESTING "Enables testing of jbson" OFF)
 
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 FILE(GLOB_RECURSE jbson_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/jbson/*.hpp)
 
 add_library(jbson_headers_lib STATIC ${jbson_headers})
