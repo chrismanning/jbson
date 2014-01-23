@@ -251,8 +251,7 @@ template <typename... Args> auto Visitor::operator()(Args&&... args) const {
 
 struct EqualVariant : public boost::static_visitor<bool> {
     template <typename C, typename U>
-    bool operator()(const basic_element<C>& e, const U& v, std::enable_if_t<!is_element<U>::value>* = nullptr) const
-        __attribute((enable_if(!is_element<U>::value, "this function only compares elements to non-elements"))) {
+    bool operator()(const basic_element<C>& e, const U& v, std::enable_if_t<!is_element<U>::value>* = nullptr) const {
         switch(e.type()) {
             case element_type::boolean_element:
                 return (*this)(e.template value<bool>(), v);
@@ -268,19 +267,17 @@ struct EqualVariant : public boost::static_visitor<bool> {
         return false;
     }
     template <typename U, typename C>
-    bool operator()(const U& v, const basic_element<C>& e) const
-        __attribute((enable_if(!is_element<U>::value, "this function only compares elements to non-elements"))) {
+    bool operator()(const U& v, const basic_element<C>& e, std::enable_if_t<!is_element<U>::value>* = nullptr) const {
         return (*this)(e, v);
     }
 
     template <typename T, typename U>
-    bool operator()(const T&, const U&) const __attribute((enable_if(!boost::has_equal_to<T, U>::value, ""))) {
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_equal_to<T, U>::value>* = nullptr) const {
         return false;
     }
 
     template <typename T, typename U>
-    bool operator()(const T& lhs, const U& rhs) const
-        __attribute((enable_if(boost::has_equal_to<T, U>::value, "must be able to compare values for equality"))) {
+    bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_equal_to<T, U>::value>* = nullptr) const {
         return lhs == rhs;
     }
 };
