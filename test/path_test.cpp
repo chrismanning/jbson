@@ -174,16 +174,55 @@ TEST(PathTest, JbsonPathExprTest1) {
 }
 
 TEST(PathTest, JbsonPathExprTest2) {
-    try {
     auto res = path_select(R"({"arr": [{"key":"firstname", "value":"Chris"},
                                        {"key":"surname", "value":"Manning"}]})"_json_doc,
                            R"($.arr[?(@.key == "firstname")].value)");
     ASSERT_EQ(1, res.size());
     ASSERT_EQ(element_type::string_element, res.front().type());
     EXPECT_EQ("Chris", get<element_type::string_element>(res.front()));
-    }
-    catch(...) {
-        std::clog << boost::current_exception_diagnostic_information();
-        FAIL();
-    }
+}
+
+TEST(PathTest, JbsonPathExprTest3) {
+    auto res = path_select(R"({"arr": [{"key":"name", "value":"Chris"},
+                                       {"key":"ame", "value":"Chris"},
+                                       {"key":"name", "value":"Tom"},
+                                       {"key":"ame", "value":"Tom"}]})"_json_doc,
+                           R"($.arr[?(@.key == "name")].value)");
+    ASSERT_EQ(2, res.size());
+    ASSERT_EQ(element_type::string_element, res.front().type());
+    EXPECT_EQ("Chris", get<element_type::string_element>(res.front()));
+    ASSERT_EQ(element_type::string_element, res.back().type());
+    EXPECT_EQ("Tom", get<element_type::string_element>(res.back()));
+}
+
+TEST(PathTest, JbsonPathExprTest4) {
+    auto res = path_select(R"({"arr": [{"key":"year", "value":2014},
+                                       {"key":"year", "value":2012},
+                                       {"key":"year", "value":2013}]})"_json_doc,
+                           R"($.arr[?(@.value != 2014)].value)");
+    ASSERT_EQ(2, res.size());
+    ASSERT_EQ(element_type::int32_element, res.front().type());
+    EXPECT_EQ(2012, get<element_type::int32_element>(res.front()));
+    ASSERT_EQ(element_type::int32_element, res.back().type());
+    EXPECT_EQ(2013, get<element_type::int32_element>(res.back()));
+}
+
+TEST(PathTest, JbsonPathExprTest5) {
+    auto res = path_select(R"({"arr": [{"key":"year", "value":2014},
+                                       {"key":"year", "value":2012},
+                                       {"key":"year", "value":2013}]})"_json_doc,
+                           R"($.arr[?((@.value < 2014) && (@.value > 2012))].value)");
+    ASSERT_EQ(1, res.size());
+    ASSERT_EQ(element_type::int32_element, res.front().type());
+    EXPECT_EQ(2013, get<element_type::int32_element>(res.front()));
+
+    res = path_select(R"({"arr": [{"key":"year", "value":2014},
+                                  {"key":"year", "value":2012},
+                                  {"key":"year", "value":2013}]})"_json_doc,
+                           R"($.arr[?(@.value <= 2013)].value)");
+    ASSERT_EQ(2, res.size());
+    ASSERT_EQ(element_type::int32_element, res.front().type());
+    EXPECT_EQ(2012, get<element_type::int32_element>(res.front()));
+    ASSERT_EQ(element_type::int32_element, res.back().type());
+    EXPECT_EQ(2013, get<element_type::int32_element>(res.back()));
 }

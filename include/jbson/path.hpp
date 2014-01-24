@@ -10,7 +10,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/type_traits/has_equal_to.hpp>
+#include <boost/type_traits/has_operator.hpp>
 
 #include "document.hpp"
 #include "expression_parser.hpp"
@@ -90,7 +90,7 @@ void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator o
         }
 
         if(!subscript.empty() && range::binary_search("(?", subscript.front())) {
-            elem_name = range::find<return_begin_next>(subscript, ')');
+            elem_name = range::find_if<return_begin_next>(subscript, boost::is_any_of(",]"));
             subscript.advance_begin(elem_name.size());
             select_expr(std::forward<ElemRangeT>(doc), path, elem_name, out);
         } else
@@ -249,17 +249,18 @@ template <typename... Args> auto Visitor::operator()(Args&&... args) const {
     return compile_expr(std::forward<Args>(args)...);
 }
 
-struct EqualVariant : public boost::static_visitor<bool> {
+template <typename Derived> struct CompareVariable_impl : boost::static_visitor<bool> {
     template <typename C, typename U>
     bool operator()(const basic_element<C>& e, const U& v, std::enable_if_t<!is_element<U>::value>* = nullptr) const {
         switch(e.type()) {
             case element_type::boolean_element:
-                return (*this)(e.template value<bool>(), v);
+                return (*static_cast<const Derived*>(this))(e.template value<bool>(), v);
             case element_type::int32_element:
+                return (*static_cast<const Derived*>(this))(e.template value<int32_t>(), v);
             case element_type::int64_element:
-                return (*this)(e.template value<int64_t>(), v);
+                return (*static_cast<const Derived*>(this))(e.template value<int64_t>(), v);
             case element_type::string_element:
-                return (*this)(get<element_type::string_element>(e), v);
+                return (*static_cast<const Derived*>(this))(get<element_type::string_element>(e), v);
             default:
                 break;
         }
@@ -268,17 +269,83 @@ struct EqualVariant : public boost::static_visitor<bool> {
     }
     template <typename U, typename C>
     bool operator()(const U& v, const basic_element<C>& e, std::enable_if_t<!is_element<U>::value>* = nullptr) const {
-        return (*this)(e, v);
+        return (*static_cast<const Derived*>(this))(e, v);
     }
+};
 
+template <byte_code op> struct CompareVariable;
+
+template <> struct CompareVariable<op_eq> : CompareVariable_impl<CompareVariable<op_eq>> {
+    using CompareVariable_impl<CompareVariable<op_eq>>::operator();
     template <typename T, typename U>
     bool operator()(const T&, const U&, std::enable_if_t<!boost::has_equal_to<T, U>::value>* = nullptr) const {
         return false;
     }
-
     template <typename T, typename U>
     bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_equal_to<T, U>::value>* = nullptr) const {
         return lhs == rhs;
+    }
+};
+
+template <> struct CompareVariable<op_neq> : CompareVariable_impl<CompareVariable<op_neq>> {
+    using CompareVariable_impl<CompareVariable<op_neq>>::operator();
+    template <typename T, typename U>
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_equal_to<T, U>::value>* = nullptr) const {
+        return false;
+    }
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_equal_to<T, U>::value>* = nullptr) const {
+        assert(false);
+        return !(lhs == rhs);
+    }
+};
+
+template <> struct CompareVariable<op_lt> : CompareVariable_impl<CompareVariable<op_lt>> {
+    using CompareVariable_impl<CompareVariable<op_lt>>::operator();
+    template <typename T, typename U>
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_less<T, U>::value>* = nullptr) const {
+        return false;
+    }
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_less<T, U>::value>* = nullptr) const {
+        return lhs < rhs;
+    }
+};
+
+template <> struct CompareVariable<op_lte> : CompareVariable_impl<CompareVariable<op_lte>> {
+    using CompareVariable_impl<CompareVariable<op_lte>>::operator();
+    template <typename T, typename U>
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_less_equal<T, U>::value>* = nullptr) const {
+        return false;
+    }
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_less_equal<T, U>::value>* = nullptr) const {
+        return lhs <= rhs;
+    }
+};
+
+template <> struct CompareVariable<op_gt> : CompareVariable_impl<CompareVariable<op_gt>> {
+    using CompareVariable_impl<CompareVariable<op_gt>>::operator();
+    template <typename T, typename U>
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_greater<T, U>::value>* = nullptr) const {
+        return false;
+    }
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_greater<T, U>::value>* = nullptr) const {
+        return lhs > rhs;
+    }
+};
+
+template <> struct CompareVariable<op_gte> : CompareVariable_impl<CompareVariable<op_gte>> {
+    using CompareVariable_impl<CompareVariable<op_gte>>::operator();
+    template <typename T, typename U>
+    bool operator()(const T&, const U&, std::enable_if_t<!boost::has_greater_equal<T, U>::value>* = nullptr) const {
+        return false;
+    }
+    template <typename T, typename U>
+    bool operator()(const T& lhs, const U& rhs,
+                    std::enable_if_t<boost::has_greater_equal<T, U>::value>* = nullptr) const {
+        return lhs >= rhs;
     }
 };
 
@@ -287,6 +354,7 @@ template <typename ElemRangeT> auto eval_expr(ElemRangeT&& doc, const std::vecto
     std::array<variable_type, 32> stack;
     auto stack_ptr = stack.begin();
     auto pc = code.begin();
+
     while(pc != code.end()) {
         BOOST_ASSERT(pc != code.end());
         switch(*pc++) {
@@ -342,61 +410,37 @@ template <typename ElemRangeT> auto eval_expr(ElemRangeT&& doc, const std::vecto
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                stack_ptr[-1] = boost::apply_visitor(EqualVariant{}, stack_ptr[-1], stack_ptr[0]);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_eq>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_neq:
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                stack_ptr[-1] = !boost::apply_visitor(EqualVariant{}, stack_ptr[-1], stack_ptr[0]);
+                stack_ptr[-1] = !boost::apply_visitor(CompareVariable<op_eq>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_lt:
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                assert(stack_ptr[-1].which() == stack_ptr[0].which());
-                if(stack_ptr[-1].which() == 1)
-                    stack_ptr[-1] = boost::get<int64_t>(stack_ptr[-1]) < boost::get<int64_t>(stack_ptr[0]);
-                else if(stack_ptr[-1].which() == 2)
-                    stack_ptr[-1] = boost::get<std::string>(stack_ptr[-1]) < boost::get<std::string>(stack_ptr[0]);
-                else
-                    assert(false);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_lt>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_lte:
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                assert(stack_ptr[-1].which() == stack_ptr[0].which());
-                if(stack_ptr[-1].which() == 1)
-                    stack_ptr[-1] = boost::get<int64_t>(stack_ptr[-1]) <= boost::get<int64_t>(stack_ptr[0]);
-                else if(stack_ptr[-1].which() == 2)
-                    stack_ptr[-1] = boost::get<std::string>(stack_ptr[-1]) <= boost::get<std::string>(stack_ptr[0]);
-                else
-                    assert(false);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_lte>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_gt:
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                assert(stack_ptr[-1].which() == stack_ptr[0].which());
-                if(stack_ptr[-1].which() == 1)
-                    stack_ptr[-1] = boost::get<int64_t>(stack_ptr[-1]) > boost::get<int64_t>(stack_ptr[0]);
-                else if(stack_ptr[-1].which() == 2)
-                    stack_ptr[-1] = boost::get<std::string>(stack_ptr[-1]) > boost::get<std::string>(stack_ptr[0]);
-                else
-                    assert(false);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_gt>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_gte:
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                assert(stack_ptr[-1].which() == stack_ptr[0].which());
-                if(stack_ptr[-1].which() == 1)
-                    stack_ptr[-1] = boost::get<int64_t>(stack_ptr[-1]) >= boost::get<int64_t>(stack_ptr[0]);
-                else if(stack_ptr[-1].which() == 2)
-                    stack_ptr[-1] = boost::get<std::string>(stack_ptr[-1]) >= boost::get<std::string>(stack_ptr[0]);
-                else
-                    assert(false);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_gte>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_and:
                 --stack_ptr;
