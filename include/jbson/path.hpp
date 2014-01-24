@@ -14,7 +14,6 @@
 
 #include "document.hpp"
 #include "expression_parser.hpp"
-#include "expression_compiler.hpp"
 
 namespace jbson {
 
