@@ -7,6 +7,7 @@
 #define JBSON_DOCUMENT_FWD_HPP
 
 #include <vector>
+#include <boost/range/iterator_range.hpp>
 
 namespace jbson {
 
