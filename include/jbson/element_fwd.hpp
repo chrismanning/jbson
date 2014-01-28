@@ -39,7 +39,7 @@ enum class element_type : uint8_t {
 
 namespace detail {
 
-struct elem_string_compare;
+struct elem_compare;
 
 template <typename> struct is_element : std::false_type {};
 template <typename Container> struct is_element<basic_element<Container>> : std::true_type {};
@@ -47,7 +47,7 @@ template <typename Container> struct is_element<basic_element<Container>> : std:
 } // namespace detail
 
 template <typename Container>
-using basic_document_set = std::multiset<basic_element<Container>, detail::elem_string_compare>;
+using basic_document_set = std::multiset<basic_element<Container>, detail::elem_compare>;
 
 using document_set = basic_document_set<std::vector<char>>;
 

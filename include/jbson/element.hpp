@@ -36,6 +36,9 @@ template <element_type EType, typename Element> struct typeid_visitor {
 
 } // namespace detail
 
+template <element_type EType, typename Container>
+auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
+
 template <class Container> struct basic_element {
     using container_type = std::decay_t<Container>;
     static_assert(!std::is_convertible<container_type, std::string>::value, "");
@@ -158,6 +161,18 @@ template <class Container> struct basic_element {
     }
     bool operator!=(const basic_element& other) const { return !(*this == other); }
 
+    bool operator<(const basic_element& other) const {
+        auto res = name().compare(other.name());
+        if(res == 0 && type() == other.type()) {
+            if(type() == element_type::double_element)
+                return value<double>() < other.value<double>();
+            if(type() == element_type::string_element)
+                return get<element_type::string_element>(*this) < get<element_type::string_element>(other);
+            return m_data < other.m_data;
+        }
+        return res < 0;
+    }
+
   private:
     std::string m_name;
     element_type m_type;
@@ -174,9 +189,6 @@ template <class Container> struct basic_element {
     template <element_type EType, typename T>
     friend auto get(const basic_element<T>& elem) -> detail::ElementTypeMap<EType, T>;
 };
-
-template <element_type EType, typename Container>
-auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
 
 template <class Container>
 template <typename OutContainer>
@@ -222,7 +234,7 @@ basic_element<Container>::basic_element(
     std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*)
     : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)) {
     boost::range::push_back(m_data, elem.m_data);
-    elem.m_data.clear();
+    elem.m_data = OtherContainer{};
 }
 
 template <class Container>
@@ -341,11 +353,11 @@ template <class Container> template <typename T> bool basic_element<Container>::
 
 namespace detail {
 
-struct elem_string_compare {
+struct elem_compare {
     using is_transparent = std::true_type;
     template <typename EContainer, typename EContainer2>
     bool operator()(const basic_element<EContainer>& lhs, const basic_element<EContainer2>& rhs) const {
-        return lhs.name() < rhs.name();
+        return lhs < rhs;
     }
     template <typename EContainer> bool operator()(const basic_element<EContainer>& lhs, boost::string_ref rhs) const {
         return lhs.name() < rhs;
