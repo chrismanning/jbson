@@ -185,27 +185,6 @@ template <class Container, class ElementContainer> class basic_document {
         boost::range::copy(size, m_data.begin());
     }
 
-    template <typename ForwardRange>
-    explicit basic_document(
-        ForwardRange&& rng,
-        std::enable_if_t<
-            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
-                             detail::is_iterator_range<container_type>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
-            nullptr) {
-        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value, "");
-        std::array<char, 4> arr{{0, 0, 0, 0}};
-        auto out = boost::range::copy(arr, m_data.begin());
-        for(auto&& e : rng) {
-            e.write_to_container(m_data);
-        }
-        *out++ = '\0';
-        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
-
-        boost::range::copy(size, m_data.begin());
-    }
-
     template <typename ForwardIterator>
     basic_document(ForwardIterator first, ForwardIterator last,
                    std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
@@ -262,9 +241,6 @@ template <class Container, class ElementContainer> class basic_document {
     container_type m_data;
     template <typename, typename> friend class basic_document;
     template <typename, typename> friend class basic_array;
-    static_assert(!std::is_constructible<basic_document, int>::value, "");
-    static_assert(!std::is_constructible<basic_document, double>::value, "");
-    static_assert(!std::is_constructible<basic_document, builder>::value, "");
 };
 
 template <class Container, class ElementContainer> class basic_array : basic_document<Container, ElementContainer> {
@@ -292,106 +268,8 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     basic_array(basic_array&&) = default;
     basic_array& operator=(basic_array&&) = default;
 
-    template <typename SomeType>
-    explicit basic_array(SomeType&& c,
-                         std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
-        : base(std::forward<SomeType>(c)) {
-        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)) ||
-           static_cast<ptrdiff_t>(boost::distance(m_data)) !=
-               detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
-    }
-
-    template <typename OtherContainer>
-    basic_array(const basic_array<OtherContainer>& other,
-                std::enable_if_t<std::is_constructible<Container, OtherContainer>::value>* = nullptr)
-        : base(other.m_data) {}
-
-    template <typename OtherContainer>
-    basic_array(const basic_array<OtherContainer>& other,
-                std::enable_if_t<!std::is_constructible<Container, OtherContainer>::value>* = nullptr) {
-        boost::range::push_back(m_data, other.m_data);
-    }
-
-    template <typename CharT, size_t N> explicit basic_array(CharT (&rng)[N]) = delete;
-
-    template <typename CharT, size_t N> explicit basic_array(const CharT (&rng)[N]) = delete;
-
-    template <
-        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
-        typename =
-            std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
-                             detail::is_range_of_iterator<
-                                 ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
-                                                                boost::mpl::_1, boost::mpl::_1>>::value>>
-    explicit basic_array(ForwardRange&& rng)
-        : basic_array(container_type(std::begin(rng), std::end(rng))) {}
-
-    template <
-        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-        typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>,
-        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
-        typename =
-            std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
-                ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
-                                               boost::mpl::_1>>::value>>
-    explicit basic_array(ForwardRange&& rng, std::enable_if_t<true>* = nullptr)
-        : basic_array(container_type(rng)) {}
-
-    template <typename ForwardIterator>
-    basic_array(
-        ForwardIterator first, ForwardIterator last,
-        std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
-            nullptr,
-        std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* = nullptr)
-        : basic_array(container_type{first, last}) {}
-
-    template <typename ForwardRange>
-    explicit basic_array(
-        ForwardRange&& rng,
-        std::enable_if_t<
-            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
-                             boost::mpl::not_<detail::is_iterator_range<container_type>>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
-            nullptr) {
-        std::array<char, 4> arr{{0, 0, 0, 0}};
-        boost::range::push_back(m_data, arr);
-        for(auto&& e : rng) {
-            e.write_to_container(m_data);
-        }
-        m_data.push_back('\0');
-        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
-
-        boost::range::copy(size, m_data.begin());
-    }
-
-    template <typename ForwardRange>
-    explicit basic_array(
-        ForwardRange&& rng,
-        std::enable_if_t<
-            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
-                             detail::is_iterator_range<container_type>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
-            nullptr) {
-        std::array<char, 4> arr{{0, 0, 0, 0}};
-        auto out = boost::range::copy(arr, m_data.begin());
-        for(auto&& e : rng) {
-            e.write_to_container(m_data);
-        }
-        *out++ = '\0';
-        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
-
-        boost::range::copy(size, m_data.begin());
-    }
-
-    template <typename ForwardIterator>
-    basic_array(ForwardIterator first, ForwardIterator last,
-                std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
-                                 !detail::is_iterator_range<container_type>::value>* = nullptr)
-        : basic_array(boost::make_iterator_range(first, last)) {}
+    template <typename ...Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
+    basic_array(Args&&... args) : base(std::forward<Args>(args)...) {}
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
