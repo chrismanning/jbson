@@ -86,6 +86,15 @@ template <typename IteratorT> struct is_iterator_range<boost::iterator_range<Ite
 
 template <typename T, typename T2> using lazy_enable_if = typename boost::lazy_enable_if<T, T2>;
 
+template <typename T>
+struct is_string_literal : std::false_type {};
+
+template <typename CharT, size_t N>
+struct is_string_literal<CharT(&)[N]> : std::true_type {};
+
+template <typename CharT, size_t N>
+struct is_string_literal<const CharT(&)[N]> : std::true_type {};
+
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
 

@@ -69,7 +69,12 @@ template <class Container> struct basic_element {
     template <typename ForwardRange>
     explicit basic_element(const ForwardRange&,
                            std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr);
-    template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
+
+    template <typename ForwardIterator1, typename ForwardIterator2>
+    basic_element(ForwardIterator1 first, ForwardIterator2 last,
+                  std::enable_if_t<!detail::is_string_literal<ForwardIterator1>::value>* = nullptr,
+                  std::enable_if_t<std::is_same<ForwardIterator1, ForwardIterator2>::value>* = nullptr)
+        : basic_element(container_type{first, last}) {}
 
     template <typename T> basic_element(std::string name, element_type type, T&& val) : basic_element(std::move(name)) {
         value(type, std::forward<T>(val));
@@ -77,8 +82,20 @@ template <class Container> struct basic_element {
     template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
     basic_element(std::string, element_type = element_type::null_element);
 
+    template <size_t N> basic_element(const char(&name)[N], element_type type)
+        : basic_element(std::string(name), type) {}
+
     template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
+    }
+
+    template <size_t N, typename T> basic_element(const char(&name)[N], T&& val) : basic_element(std::move(name)) {
+        value(std::forward<T>(val));
+    }
+
+    template <size_t N1, size_t N2> basic_element(const char(&name)[N1], const char(&val)[N2])
+        : basic_element(std::move(name)) {
+        value(val);
     }
 
     // field name
@@ -99,6 +116,11 @@ template <class Container> struct basic_element {
     }
 
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
+    template <size_t N>
+    void value(char(&val)[N]) { value(boost::string_ref(val, N)); }
+    template <size_t N>
+    void value(const char(&val)[N]) { value(boost::string_ref(val, N)); }
+    void value(const char* val) { value(boost::string_ref(val)); }
     void value(bool val) { value<element_type::boolean_element>(val); }
     void value(double val) { value<element_type::double_element>(val); }
     void value(int64_t val) { value<element_type::int64_element>(val); }
@@ -116,8 +138,12 @@ template <class Container> struct basic_element {
     }
 
     template <typename T> void value(element_type type, T&& val) {
-        this->type(type);
+        m_type = type;
         value<T>(std::forward<T>(val));
+        if(m_type != type)
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
+                                  << actual_type(typeid(T))
+                                  << expected_type(detail::visit<detail::typeid_visitor>(type, *this)));
     }
 
     template <element_type EType, typename T>
@@ -272,11 +298,6 @@ template <typename ForwardRange>
 basic_element<Container>::basic_element(const ForwardRange& range,
                                         std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*)
     : basic_element(std::begin(range), std::end(range)) {}
-
-template <class Container>
-template <typename ForwardIterator>
-basic_element<Container>::basic_element(ForwardIterator first, ForwardIterator last)
-    : basic_element(container_type{first, last}) {}
 
 template <class Container>
 template <typename ForwardIterator>
