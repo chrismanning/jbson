@@ -34,7 +34,7 @@ TEST(ElementTest, ElementParseTest1) {
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
-    el1.value(432);
+    el1.value(element_type::boolean_element, 432);
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_TRUE(get<element_type::boolean_element>(el1));
     EXPECT_EQ(8, el1.size());
@@ -50,6 +50,7 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_NO_THROW(el1.value<bool>());
     EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
     EXPECT_NO_THROW(el1.value<element_type::int64_element>(24));
+    EXPECT_THROW(el1.value<int32_t>(), invalid_element_size);
     ASSERT_EQ(element_type::int64_element, el1.type());
     EXPECT_EQ(24, get<element_type::int64_element>(el1));
     EXPECT_EQ(15, el1.size());

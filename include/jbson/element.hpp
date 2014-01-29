@@ -71,13 +71,15 @@ template <class Container> struct basic_element {
                            std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr);
     template <typename ForwardIterator> basic_element(ForwardIterator, ForwardIterator);
 
-    template <typename T>
-    basic_element(std::string name, element_type type, T&& val)
-        : basic_element(std::move(name), type) {
-        value(std::forward<T>(val));
+    template <typename T> basic_element(std::string name, element_type type, T&& val) : basic_element(std::move(name)) {
+        value(type, std::forward<T>(val));
     }
     template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
     basic_element(std::string, element_type = element_type::null_element);
+
+    template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
+        value(std::forward<T>(val));
+    }
 
     // field name
     boost::string_ref name() const { return m_name; }
@@ -96,6 +98,12 @@ template <class Container> struct basic_element {
         return detail::get_impl<T>::call(m_data);
     }
 
+    void value(boost::string_ref val) { value<element_type::string_element>(val); }
+    void value(bool val) { value<element_type::boolean_element>(val); }
+    void value(double val) { value<element_type::double_element>(val); }
+    void value(int64_t val) { value<element_type::int64_element>(val); }
+    void value(int32_t val) { value<element_type::int32_element>(val); }
+
     template <typename T> void value(T&& val) {
         if(!valid_type<T>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
@@ -109,7 +117,7 @@ template <class Container> struct basic_element {
 
     template <typename T> void value(element_type type, T&& val) {
         this->type(type);
-        value(std::forward<T>(val));
+        value<T>(std::forward<T>(val));
     }
 
     template <element_type EType, typename T>
@@ -200,9 +208,9 @@ void basic_element<Container>::write_to_container(OutContainer& c) const {
     boost::range::push_back(c, m_name);
     c.push_back('\0');
     if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
-        BOOST_THROW_EXCEPTION(
-            invalid_element_size{} << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
-                                   << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
+        BOOST_THROW_EXCEPTION(invalid_element_size{}
+                              << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
+                              << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
     boost::range::push_back(c, m_data);
 }
 
@@ -295,9 +303,7 @@ template <class Container> size_t basic_element<Container>::size() const noexcep
 namespace detail {
 
 template <element_type EType, typename Visitor, typename Element> struct element_visitor {
-    auto operator()(Visitor&& visitor, Element&& elem) const {
-        return visitor(elem.name(), get<EType>(elem), EType);
-    }
+    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), get<EType>(elem), EType); }
 };
 
 template <typename Visitor, typename Element>
@@ -372,9 +378,7 @@ template <typename T, typename Container, typename Enable> struct is_valid_func 
     struct inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
                             std::is_constructible<detail::ElementTypeMap<EType, Container>, T>> {
         static_assert(sizeof...(Args) == 0, "");
-        constexpr bool operator()() const {
-            return inner::value;
-        }
+        constexpr bool operator()() const { return inner::value; }
     };
 };
 

@@ -86,8 +86,7 @@ void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator o
         } else if(subscript.front() == '*') {
             elem_name = {subscript.begin(), std::next(subscript.begin())};
             subscript.pop_front();
-        }
-        else if(!range::binary_search("(?", subscript.front()))
+        } else if(!range::binary_search("(?", subscript.front()))
             BOOST_THROW_EXCEPTION(jbson_error());
 
         if(!subscript.empty() && range::binary_search("(?", subscript.front())) {
@@ -614,24 +613,6 @@ void select(ElemRangeT&& doc, StrRngT path, OutIterator out) {
 } // namespace detail
 
 template <typename Container, typename EContainer, typename StrRngT>
-auto path_select(const basic_document<Container, EContainer>& doc, StrRngT&& path_rng) {
-    auto path = boost::as_literal(path_rng);
-    std::vector<basic_element<EContainer>> vec;
-
-    if(path.empty() || (path.size() == 1 && path.front() == '$')) {
-        boost::range::push_back(vec, doc);
-
-        return std::move(vec);
-    }
-
-    path = boost::range::find_if<boost::return_found_end>(path, [](auto c) { return c != '$'; });
-
-    detail::select(doc, path, std::back_inserter(vec));
-
-    return std::move(vec);
-}
-
-template <typename Container, typename EContainer, typename StrRngT>
 auto path_select(basic_document<Container, EContainer>&& doc, StrRngT&& path_rng) {
     auto path = boost::as_literal(path_rng);
     std::vector<basic_element<Container>> vec;
@@ -649,12 +630,12 @@ auto path_select(basic_document<Container, EContainer>&& doc, StrRngT&& path_rng
     return std::move(vec);
 }
 
-template <typename Container, typename StrRngT>
-auto path_select(const basic_document_set<Container>& doc, StrRngT&& path_rng) {
-    static_assert(detail::has_member_function_push_back<std::remove_reference_t<Container>, void,
-                  boost::mpl::vector<const char&>>::value, "");
+template <typename ElemRangeT, typename StrRngT>
+auto path_select(
+    ElemRangeT&& doc, StrRngT&& path_rng,
+    std::enable_if_t<detail::is_range_of_value<ElemRangeT, boost::mpl::quote1<detail::is_element>>::value>* = nullptr) {
     auto path = boost::as_literal(path_rng);
-    std::vector<basic_element<Container>> vec;
+    std::vector<typename std::decay_t<ElemRangeT>::value_type> vec;
 
     if(path.empty() || (path.size() == 1 && path.front() == '$')) {
         boost::range::push_back(vec, doc);
@@ -665,6 +646,27 @@ auto path_select(const basic_document_set<Container>& doc, StrRngT&& path_rng) {
     path = boost::range::find_if<boost::return_found_end>(path, [](auto c) { return c != '$'; });
 
     detail::select(doc, path, std::back_inserter(vec));
+
+    return std::move(vec);
+}
+
+template <typename DocRangeT, typename StrRngT>
+auto path_select(DocRangeT&& docs, StrRngT&& path_rng,
+                 std::enable_if_t<detail::is_range_of_value<
+                     DocRangeT, boost::mpl::bind<boost::mpl::quote2<detail::is_range_of_value>, boost::mpl::arg<1>,
+                                                 boost::mpl::quote1<detail::is_element>>>::value>* = nullptr) {
+    auto path = boost::as_literal(path_rng);
+    std::vector<typename std::decay_t<DocRangeT>::value_type> vec;
+
+    for(auto&& doc : docs) {
+        if(path.empty() || (path.size() == 1 && path.front() == '$')) {
+            boost::range::push_back(vec, doc);
+            return std::move(vec);
+        }
+
+        path = boost::range::find_if<boost::return_found_end>(path, [](auto c) { return c != '$'; });
+        detail::select(doc, path, std::back_inserter(vec));
+    }
 
     return std::move(vec);
 }

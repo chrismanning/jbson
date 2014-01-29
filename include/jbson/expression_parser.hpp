@@ -168,7 +168,6 @@ struct parser : boost::spirit::qi::grammar<Iterator, ast::expression(), boost::s
 
         qi::char_type char_;
         qi::any_int_parser<int64_t> int_;
-        qi::_val_type _val;
         qi::raw_type raw;
         qi::lexeme_type lexeme;
         qi::alpha_type alpha;

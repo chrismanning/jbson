@@ -111,10 +111,10 @@ template <class Container, class ElementContainer> class basic_document {
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
         if(static_cast<ptrdiff_t>(boost::distance(m_data)) !=
-               detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
-            BOOST_THROW_EXCEPTION(invalid_document_size{}
-                                  << expected_size(detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
-                                  << actual_size(boost::distance(m_data)));
+           detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(detail::little_endian_to_native<int32_t>(
+                                                                 m_data.begin(), m_data.end()))
+                                                          << actual_size(boost::distance(m_data)));
         if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
             BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
@@ -170,8 +170,9 @@ template <class Container, class ElementContainer> class basic_document {
         std::enable_if_t<
             boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
                              boost::mpl::not_<detail::is_iterator_range<container_type>>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
-        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value,"");
+                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
+            nullptr) {
+        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value, "");
         std::array<char, 4> arr{{0, 0, 0, 0}};
         boost::range::push_back(m_data, arr);
         for(auto&& e : rng) {
@@ -190,8 +191,9 @@ template <class Container, class ElementContainer> class basic_document {
         std::enable_if_t<
             boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
                              detail::is_iterator_range<container_type>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
-        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value,"");
+                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
+            nullptr) {
+        static_assert(!detail::is_document<std::decay_t<ForwardRange>>::value, "");
         std::array<char, 4> arr{{0, 0, 0, 0}};
         auto out = boost::range::copy(arr, m_data.begin());
         for(auto&& e : rng) {
@@ -252,6 +254,10 @@ template <class Container, class ElementContainer> class basic_document {
         return std::move(set);
     }
 
+    template <typename C, typename EC> bool operator==(const basic_document<C, EC>& other) const {
+        return boost::equal(m_data, other.m_data);
+    }
+
   private:
     container_type m_data;
     template <typename, typename> friend class basic_document;
@@ -261,8 +267,7 @@ template <class Container, class ElementContainer> class basic_document {
     static_assert(!std::is_constructible<basic_document, builder>::value, "");
 };
 
-template <class Container, class ElementContainer>
-class basic_array : basic_document<Container, ElementContainer> {
+template <class Container, class ElementContainer> class basic_array : basic_document<Container, ElementContainer> {
     using base = basic_document<Container, ElementContainer>;
     template <typename, typename> friend class basic_array;
 
@@ -335,11 +340,11 @@ class basic_array : basic_document<Container, ElementContainer> {
         : basic_array(container_type(rng)) {}
 
     template <typename ForwardIterator>
-    basic_array(ForwardIterator first, ForwardIterator last,
-                std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
-                    nullptr,
-                std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* =
-                    nullptr)
+    basic_array(
+        ForwardIterator first, ForwardIterator last,
+        std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
+            nullptr,
+        std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* = nullptr)
         : basic_array(container_type{first, last}) {}
 
     template <typename ForwardRange>
@@ -348,7 +353,8 @@ class basic_array : basic_document<Container, ElementContainer> {
         std::enable_if_t<
             boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
                              boost::mpl::not_<detail::is_iterator_range<container_type>>,
-                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
+                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
+            nullptr) {
         std::array<char, 4> arr{{0, 0, 0, 0}};
         boost::range::push_back(m_data, arr);
         for(auto&& e : rng) {
@@ -361,24 +367,25 @@ class basic_array : basic_document<Container, ElementContainer> {
         boost::range::copy(size, m_data.begin());
     }
 
-  template <typename ForwardRange>
-  explicit basic_array(
-      ForwardRange&& rng,
-      std::enable_if_t<
-          boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
-                           detail::is_iterator_range<container_type>,
-                           boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* = nullptr) {
-      std::array<char, 4> arr{{0, 0, 0, 0}};
-      auto out = boost::range::copy(arr, m_data.begin());
-      for(auto&& e : rng) {
-          e.write_to_container(m_data);
-      }
-      *out++ = '\0';
-      auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-      static_assert(4 == size.size(), "");
+    template <typename ForwardRange>
+    explicit basic_array(
+        ForwardRange&& rng,
+        std::enable_if_t<
+            boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
+                             detail::is_iterator_range<container_type>,
+                             boost::mpl::not_<detail::is_document<std::decay_t<ForwardRange>>>>::type::value>* =
+            nullptr) {
+        std::array<char, 4> arr{{0, 0, 0, 0}};
+        auto out = boost::range::copy(arr, m_data.begin());
+        for(auto&& e : rng) {
+            e.write_to_container(m_data);
+        }
+        *out++ = '\0';
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
 
-      boost::range::copy(size, m_data.begin());
-  }
+        boost::range::copy(size, m_data.begin());
+    }
 
     template <typename ForwardIterator>
     basic_array(ForwardIterator first, ForwardIterator last,
@@ -388,11 +395,11 @@ class basic_array : basic_document<Container, ElementContainer> {
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
-    template <typename RandomAccessContainer,
-              typename =
-                  std::enable_if_t<std::is_same<typename boost::iterator_category_to_traversal<
-                                                    typename boost::range_category<RandomAccessContainer>::type>::type,
-                                                boost::random_access_traversal_tag>::value>>
+    template <
+        typename RandomAccessContainer,
+        typename = std::enable_if_t<std::is_same<typename boost::iterator_category_to_traversal<
+                                                     typename boost::range_category<RandomAccessContainer>::type>::type,
+                                                 boost::random_access_traversal_tag>::value>>
     explicit operator RandomAccessContainer() const {
         auto vec = RandomAccessContainer{};
         for(auto&& e : *this)
@@ -407,8 +414,7 @@ class basic_array : basic_document<Container, ElementContainer> {
 namespace detail {
 
 template <typename T, typename Container>
-struct is_valid_func<T, Container,
-                     std::enable_if_t<std::is_convertible<std::decay_t<T>, document>::value>> {
+struct is_valid_func<T, Container, std::enable_if_t<std::is_convertible<std::decay_t<T>, document>::value>> {
     template <element_type EType, typename... Args> struct inner : std::false_type {
         static_assert(sizeof...(Args) == 0, "");
     };
