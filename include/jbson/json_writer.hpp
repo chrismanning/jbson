@@ -23,9 +23,9 @@ namespace jbson {
 struct json_writer;
 
 template <typename OutputIterator, typename Container>
-std::decay_t<OutputIterator> write_json(OutputIterator, const basic_array<Container>&);
+std::decay_t<OutputIterator> write_json(const basic_array<Container>&, OutputIterator);
 template <typename OutputIterator, typename Container>
-std::decay_t<OutputIterator> write_json(OutputIterator, const basic_document<Container>&);
+std::decay_t<OutputIterator> write_json(const basic_document<Container>&, OutputIterator);
 
 namespace detail {
 
