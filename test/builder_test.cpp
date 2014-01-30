@@ -10,6 +10,7 @@ using namespace std::literals;
 
 #include <jbson/document.hpp>
 #include <jbson/builder.hpp>
+#include <jbson/json_reader.hpp>
 using namespace jbson;
 
 #include <gtest/gtest.h>
@@ -280,4 +281,64 @@ TEST(BuilderTest, BuildNestTest4) {
     EXPECT_EQ(57, get<element_type::int32_element>(*it));
     it++;
     ASSERT_EQ(it, end);
+}
+
+TEST(BuilderTest, BuildNestTest5) {
+    document root_doc;
+    EXPECT_NO_THROW(root_doc = builder
+                               ("hello", element_type::string_element, "world")
+                               ("embedded doc", element_type::document_element, builder
+                                ("a", "awesome")
+                                ("b", 5.05)
+                                ("c", element_type::document_element, R"({"y":"sauce","z":57})"_json_set)
+                               ));
+
+    EXPECT_NO_THROW((void)document(R"({"y":"sauce","z":57})"_json_set));
+    EXPECT_NO_THROW(root_doc = builder
+                               ("hello", element_type::string_element, "world")
+                               ("embedded doc", element_type::document_element, builder
+                                ("a", "awesome")
+                                ("b", 5.05)
+                                ("c", element_type::document_element, R"({"y":"sauce","z":57})"_json_doc)
+                               ));
+    std::vector<element> elems;
+    elems.emplace_back("y", "sauce");
+    elems.emplace_back("z", 57);
+    EXPECT_NO_THROW(root_doc = builder
+                               ("hello", element_type::string_element, "world")
+                               ("embedded doc", element_type::document_element, builder
+                                ("a", "awesome")
+                                ("b", 5.05)
+                                ("c", element_type::document_element, document(elems))
+                               ));
+    auto it = root_doc.find("embedded doc");
+    ASSERT_NE(root_doc.end(), it);
+    ASSERT_EQ(element_type::document_element, it->type());
+    auto doc = get<element_type::document_element>(*it);
+    it = doc.find("c");
+    ASSERT_NE(doc.end(), it);
+    ASSERT_EQ(element_type::document_element, it->type());
+    ASSERT_NO_THROW(doc = get<element_type::document_element>(*it));
+
+    it = doc.begin();
+    ASSERT_NE(doc.end(), it);
+    EXPECT_EQ("y", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("sauce", get<element_type::string_element>(*it));
+    it++;
+    EXPECT_EQ("z", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(57, get<element_type::int32_element>(*it));
+    it++;
+    ASSERT_EQ(it, doc.end());
+
+    std::vector<document> doc_vec;
+    EXPECT_NO_THROW((void)array(doc_vec));
+    EXPECT_NO_THROW(root_doc = builder
+                               ("hello", element_type::string_element, "world")
+                               ("embedded doc", element_type::document_element, builder
+                                ("a", "awesome")
+                                ("b", 5.05)
+                                ("c", element_type::array_element, doc_vec)
+                               ));
 }

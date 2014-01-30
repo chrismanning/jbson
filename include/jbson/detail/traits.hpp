@@ -46,9 +46,10 @@ struct is_iterator_pointer<
     boost::iterator_range<Iterator>,
     std::enable_if_t<std::is_pointer<std::decay_t<typename Iterator::iterator_type>>::value>> : std::true_type {};
 
-template <typename Container> struct TypeMap {
-    using container_type = boost::iterator_range<typename Container::const_iterator>;
-    using string_type = std::conditional_t<is_iterator_pointer<typename container_type::iterator>::value,
+template <typename Container, bool set = false> struct TypeMap {
+    using container_type = std::conditional_t<set, Container,
+                                              boost::iterator_range<typename Container::const_iterator>>;
+    using string_type = std::conditional_t<!set && is_iterator_pointer<typename container_type::iterator>::value,
                                            boost::string_ref, std::string>;
     typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
@@ -78,6 +79,9 @@ template <typename Container> struct TypeMap {
 template <element_type EType, typename Container>
 using ElementTypeMap = typename mpl::at<typename TypeMap<Container>::map_type, element_type_c<EType>>::type;
 
+template <element_type EType, typename Container>
+using ElementTypeMapSet = typename mpl::at<typename TypeMap<Container, true>::map_type, element_type_c<EType>>::type;
+
 BOOST_TTI_HAS_MEMBER_FUNCTION(push_back);
 
 template <typename T> struct is_iterator_range : std::false_type {};
@@ -94,6 +98,11 @@ struct is_string_literal<CharT(&)[N]> : std::true_type {};
 
 template <typename CharT, size_t N>
 struct is_string_literal<const CharT(&)[N]> : std::true_type {};
+
+template <typename RandomAccessContainer>
+using is_random_access_container = typename std::is_same<typename boost::iterator_category_to_traversal<
+                                                     typename boost::range_category<RandomAccessContainer>::type>::type,
+                                                 boost::random_access_traversal_tag>;
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)

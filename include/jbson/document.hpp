@@ -268,43 +268,46 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     basic_array(basic_array&&) = default;
     basic_array& operator=(basic_array&&) = default;
 
-    template <typename ...Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
-    basic_array(Args&&... args) : base(std::forward<Args>(args)...) {}
+    template <typename... Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
+    basic_array(Args&&... args)
+        : base(std::forward<Args>(args)...) {}
+
+    template <typename SomeRangeT, typename = std::enable_if_t<!detail::is_document<std::decay_t<SomeRangeT>>::value>,
+              typename = std::enable_if_t<
+                  detail::is_range_of_value<SomeRangeT, boost::mpl::quote1<detail::is_document>>::value>>
+    explicit basic_array(SomeRangeT&& range) {
+        std::vector<element> vec;
+        size_t i{0};
+        for(auto&& v : range) {
+            vec.emplace_back(std::to_string(i++), v);
+        }
+        auto other = basic_array(std::move(vec));
+        std::swap(m_data, other.m_data);
+    }
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
-    template <
-        typename RandomAccessContainer,
-        typename = std::enable_if_t<std::is_same<typename boost::iterator_category_to_traversal<
-                                                     typename boost::range_category<RandomAccessContainer>::type>::type,
-                                                 boost::random_access_traversal_tag>::value>>
+    template <typename RandomAccessContainer,
+              typename = std::enable_if_t<detail::is_random_access_container<RandomAccessContainer>::value>>
     explicit operator RandomAccessContainer() const {
+        auto fun = [](auto&& a, auto&& b) {
+#ifdef _GNU_SOURCE
+            // natural sort
+            return strverscmp(a.name().data(), b.name().data());
+#else
+            return a.name().compare(b.name());
+#endif
+        };
         auto vec = RandomAccessContainer{};
         for(auto&& e : *this)
             vec.push_back(e);
-        boost::range::stable_sort(vec, [](auto&& e1, auto&& e2) {
-            return std::strtol(e1.name().begin(), nullptr, 0) < std::strtol(e2.name().begin(), nullptr, 0);
-        });
+        boost::range::sort(vec, [fun](auto&& e1, auto&& e2) { return fun(e1, e2) < 0; });
+        assert(std::unique(vec.begin(), vec.end(), [fun](auto&& e1, auto&& e2) { return fun(e1, e2) == 0; }) ==
+               vec.end());
         return std::move(vec);
     }
 };
 
-namespace detail {
-
-template <typename T, typename Container>
-struct is_valid_func<T, Container, std::enable_if_t<std::is_convertible<std::decay_t<T>, document>::value>> {
-    template <element_type EType, typename... Args> struct inner : std::false_type {
-        static_assert(sizeof...(Args) == 0, "");
-    };
-    template <typename... Args> struct inner<element_type::document_element, Args...> : std::true_type {
-        static_assert(sizeof...(Args) == 0, "");
-    };
-    template <typename... Args> struct inner<element_type::array_element, Args...> : std::true_type {
-        static_assert(sizeof...(Args) == 0, "");
-    };
-};
-
-} // namespace detail
 } // namespace jbson
 
 #endif // JBSON_DOCUMENT_HPP

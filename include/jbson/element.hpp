@@ -82,18 +82,20 @@ template <class Container> struct basic_element {
     template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
     basic_element(std::string, element_type = element_type::null_element);
 
-    template <size_t N> basic_element(const char(&name)[N], element_type type)
+    template <size_t N>
+    basic_element(const char (&name)[N], element_type type)
         : basic_element(std::string(name), type) {}
 
     template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
     }
 
-    template <size_t N, typename T> basic_element(const char(&name)[N], T&& val) : basic_element(std::move(name)) {
+    template <size_t N, typename T> basic_element(const char (&name)[N], T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
     }
 
-    template <size_t N1, size_t N2> basic_element(const char(&name)[N1], const char(&val)[N2])
+    template <size_t N1, size_t N2>
+    basic_element(const char (&name)[N1], const char (&val)[N2])
         : basic_element(std::move(name)) {
         value(val);
     }
@@ -116,10 +118,8 @@ template <class Container> struct basic_element {
     }
 
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
-    template <size_t N>
-    void value(char(&val)[N]) { value(boost::string_ref(val, N)); }
-    template <size_t N>
-    void value(const char(&val)[N]) { value(boost::string_ref(val, N)); }
+    template <size_t N> void value(char (&val)[N]) { value(boost::string_ref(val, N)); }
+    template <size_t N> void value(const char (&val)[N]) { value(boost::string_ref(val, N)); }
     void value(const char* val) { value(boost::string_ref(val)); }
     void value(bool val) { value<element_type::boolean_element>(val); }
     void value(double val) { value<element_type::double_element>(val); }
@@ -127,7 +127,7 @@ template <class Container> struct basic_element {
     void value(int32_t val) { value<element_type::int32_element>(val); }
 
     template <typename T> void value(T&& val) {
-        if(!valid_type<T>())
+        if(!valid_set_type<T>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
                                   << actual_type(typeid(T))
                                   << expected_type(detail::visit<detail::typeid_visitor>(m_type, *this)));
@@ -147,10 +147,11 @@ template <class Container> struct basic_element {
     }
 
     template <element_type EType, typename T>
-    void value(T&& val,
-               std::enable_if_t<std::is_same<std::decay_t<T>, detail::ElementTypeMap<EType, container_type>>::value>* =
-                   nullptr) {
-        using T2 = ElementTypeMap<EType>;
+    void
+    value(T&& val,
+          std::enable_if_t<std::is_same<std::decay_t<T>, detail::ElementTypeMapSet<EType, container_type>>::value>* =
+              nullptr) {
+        using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_same<std::decay_t<T>, T2>::value, "");
         type(EType);
         decltype(m_data) data;
@@ -161,10 +162,11 @@ template <class Container> struct basic_element {
     }
 
     template <element_type EType, typename T>
-    void value(T&& val,
-               std::enable_if_t<!std::is_same<std::decay_t<T>, detail::ElementTypeMap<EType, container_type>>::value>* =
-                   nullptr) {
-        using T2 = ElementTypeMap<EType>;
+    void
+    value(T&& val,
+          std::enable_if_t<!std::is_same<std::decay_t<T>, detail::ElementTypeMapSet<EType, container_type>>::value>* =
+              nullptr) {
+        using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
         type(EType);
         decltype(m_data) data;
@@ -213,8 +215,11 @@ template <class Container> struct basic_element {
     container_type m_data;
 
     template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
+    template <element_type EType> using ElementTypeMapSet = detail::ElementTypeMapSet<EType, container_type>;
     template <typename T> static bool valid_type(element_type);
     template <typename T> bool valid_type() const { return valid_type<T>(type()); }
+    template <typename T> static bool valid_set_type(element_type);
+    template <typename T> bool valid_set_type() const { return valid_set_type<T>(type()); }
 
     template <typename ReturnT, typename> friend struct detail::get_impl;
     template <element_type EType, typename C, typename T, typename> friend struct detail::set_impl;
@@ -378,6 +383,10 @@ template <class Container> template <typename T> bool basic_element<Container>::
     return detail::visit<detail::is_valid_func<T, Container>::template inner>(type);
 }
 
+template <class Container> template <typename T> bool basic_element<Container>::valid_set_type(element_type type) {
+    return detail::visit<detail::is_valid_func<T, Container>::template set_inner>(type);
+}
+
 namespace detail {
 
 struct elem_compare {
@@ -400,6 +409,12 @@ template <typename T, typename Container, typename Enable> struct is_valid_func 
                             std::is_constructible<detail::ElementTypeMap<EType, Container>, T>> {
         static_assert(sizeof...(Args) == 0, "");
         constexpr bool operator()() const { return inner::value; }
+    };
+    template <element_type EType, typename... Args>
+    struct set_inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
+                                std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>> {
+        static_assert(sizeof...(Args) == 0, "");
+        constexpr bool operator()() const { return set_inner::value; }
     };
 };
 

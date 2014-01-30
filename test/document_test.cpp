@@ -14,6 +14,9 @@ using namespace std::literals;
 #include <jbson/builder.hpp>
 using namespace jbson;
 
+static_assert(std::is_constructible<std::vector<element>, array>::value,"");
+static_assert(!std::is_constructible<std::list<element>, array>::value,"");
+
 #include <gtest/gtest.h>
 
 TEST(DocumentTest, DocumentParseTest1) {
