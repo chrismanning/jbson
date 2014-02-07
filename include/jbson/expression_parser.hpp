@@ -6,11 +6,6 @@
 #ifndef JBSON_EXPRESSION_PARSER_HPP
 #define JBSON_EXPRESSION_PARSER_HPP
 
-#ifdef BOOST_SPIRIT_DEBUG
-#undef BOOST_SPIRIT_DEBUG
-#endif
-#define BOOST_SPIRIT_DEBUG 1
-
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/spirit/home/qi.hpp>
@@ -214,24 +209,14 @@ struct parser : boost::spirit::qi::grammar<Iterator, ast::expression(), boost::s
 
         primary_expr = int_ | quoted_string | identifier | bool_ | '(' > expr > ')';
 
-        quoted_string = lexeme['"' >> +(char_ - '"') >> '"'];
+        quoted_string = lexeme['"' >> +(char_ - '"') >> '"'] | lexeme['\'' >> +(char_ - '\'') >> '\''];
 
         identifier = !keywords >> raw[lexeme[(alpha | '_' | '@' | '.') >> *(alnum | '_' | '@' | '.')]];
 
         ///////////////////////////////////////////////////////////////////////
         // Debugging and error handling and reporting support.
-        //        BOOST_SPIRIT_DEBUG_NODES(
-        //            (expr)
-        //            (equality_expr)
-        //            (relational_expr)
-        //            (logical_expr)
-        //            (additive_expr)
-        //            (multiplicative_expr)
-        //            (unary_expr)
-        //            (primary_expr)
-        //            (identifier)
-        //            (quoted_string)
-        //        );
+        BOOST_SPIRIT_DEBUG_NODES((expr)(equality_expr)(relational_expr)(logical_expr)(additive_expr)(
+            multiplicative_expr)(unary_expr)(primary_expr)(identifier)(quoted_string));
 
         ///////////////////////////////////////////////////////////////////////
         // Error handling: on error in expr, call error_handler.
