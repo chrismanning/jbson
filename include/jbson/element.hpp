@@ -203,7 +203,8 @@ template <class Container> struct basic_element {
             if(type() == element_type::double_element)
                 return value<double>() < other.value<double>();
             if(type() == element_type::string_element)
-                return ::strcoll(get<element_type::string_element>(*this).data(), get<element_type::string_element>(other).data());
+                return ::strcoll(get<element_type::string_element>(*this).data(),
+                                 get<element_type::string_element>(other).data()) < 0;
             return m_data < other.m_data;
         }
         return res < 0;
