@@ -156,8 +156,6 @@ struct parser : boost::spirit::qi::grammar<Iterator, ast::expression(), boost::s
 
     explicit parser(error_handler<Iterator>& error_handle) : parser::base_type(expr) {
         namespace qi = boost::spirit::qi;
-        qi::_1_type _1;
-        qi::_2_type _2;
         qi::_3_type _3;
         qi::_4_type _4;
 

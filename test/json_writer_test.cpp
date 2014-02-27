@@ -89,6 +89,7 @@ TEST(JsonWriterTest, StringifyTest8) {
     int64_t i = std::llrint(std::stold("23456789012E66"s));
     EXPECT_TRUE(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT);
     ::feclearexcept(FE_ALL_EXCEPT);
+    (void) i;
 }
 
 TEST(JsonWriterTest, StringifyTest9) {

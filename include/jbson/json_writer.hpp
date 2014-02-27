@@ -138,13 +138,28 @@ std::decay_t<OutputIterator> stringify(const basic_array<C, EC>& arr, OutputIter
 
 } // namespace
 
-template <element_type EType, typename Element, typename OutputIterator> struct json_element_visitor {
+namespace details {
+#include <boost/concept/detail/concept_def.hpp>
+BOOST_concept(OutputIterator,(TT)(ValueT)) {
+    BOOST_CONCEPT_USAGE(OutputIterator) {
+        ++i;                // require preincrement operator
+        i++;                // require postincrement operator
+        *i++ = t;           // require postincrement and assignment
+    }
+  private:
+    TT i{std::declval<TT>()}, j{std::declval<TT>()};
+    ValueT t = ValueT();
+};
+#include <boost/concept/detail/concept_undef.hpp>
+} // namespace concepts
+
+template <element_type EType, typename Element, typename OutputIteratorT> struct json_element_visitor {
     static_assert(detail::is_element<std::decay_t<Element>>::value, "");
-    BOOST_CONCEPT_ASSERT((boost::OutputIterator<OutputIterator, char>));
+    BOOST_CONCEPT_ASSERT((details::OutputIteratorConcept<OutputIteratorT, char>));
 
     json_element_visitor() = default;
 
-    std::decay_t<OutputIterator> operator()(Element&& e, OutputIterator out) const {
+    std::decay_t<OutputIteratorT> operator()(Element&& e, OutputIteratorT out) const {
         return stringify(get<EType>(e), out);
     }
 };

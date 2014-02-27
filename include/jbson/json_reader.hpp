@@ -174,7 +174,7 @@ template <typename ForwardIterator>
 json_parse_error
 json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
                                   const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
-    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
+    BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     auto e = make_parse_exception(err, expected);
     if(m_start) {
         auto start = *static_cast<line_pos_iterator<ForwardIterator>*>(m_start.get());
@@ -200,14 +200,14 @@ inline json_parse_error json_reader::make_parse_exception(json_error_num err, co
 }
 
 template <typename ForwardIterator> void json_reader::parse(ForwardIterator first, ForwardIterator last) {
-    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
+    BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
     parse(line_pos_iterator<ForwardIterator>{first}, line_pos_iterator<ForwardIterator>{last});
 }
 
 template <typename ForwardIterator>
 void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
-    BOOST_CONCEPT_ASSERT((boost::ForwardIterator<ForwardIterator>));
+    BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
     container_type c;
     m_data.swap(c);
