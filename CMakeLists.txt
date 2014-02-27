@@ -1,7 +1,18 @@
 project(jbson CXX)
 cmake_minimum_required(VERSION 2.8)
 
-option(JBSON_ENABLE_TESTING "Enables testing of jbson" OFF)
+option(JBSON_ENABLE_TESTING "Enables testing of jbson" ON)
+option(JBSON_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
+option(JBSON_LEAK_CHECKER "Enable memory leak checking where available" OFF)
+
+if(${JBSON_SANITIZE_ADDRESS})
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+ if(${JBSON_LEAK_CHECKER})
+  SET(ENV{ASAN_OPTIONS} "detect_leaks=1")
+ endif(${JBSON_LEAK_CHECKER})
+elseif(${JBSON_LEAK_CHECKER})
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+endif()
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -13,7 +24,7 @@ set_target_properties(jbson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -stdlib=libc++ -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -std=c++1y -pthread")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
