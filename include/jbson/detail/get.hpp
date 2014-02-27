@@ -11,7 +11,6 @@
 #include <chrono>
 
 #include <boost/utility/string_ref.hpp>
-#include <boost/predef/other/endian.h>
 
 #include "traits.hpp"
 #include "endian.hpp"

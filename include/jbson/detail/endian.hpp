@@ -8,6 +8,8 @@
 
 #include <type_traits>
 
+#include <boost/predef/other/endian.h>
+
 namespace jbson {
 namespace detail {
 
