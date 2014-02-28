@@ -20,18 +20,32 @@ struct builder {
     builder& operator=(const builder&) = default;
 
     builder(builder&&) = default;
-    builder& operator=(builder&&) = default;
+    builder& operator=(builder&&)& = default;
 
     template <typename... Args> builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
-    template <typename... Args> builder& operator()(Args&&... args) {
+    // lvalue funcs
+
+    template <typename... Args> builder& operator()(Args&&... args) & {
         emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename... Args> builder& emplace(Args&&... args) {
+    template <typename... Args> builder& emplace(Args&&... args) & {
         m_elements.emplace(std::forward<Args>(args)...);
         return *this;
+    }
+
+    // rvalue funcs
+
+    template <typename... Args> builder&& operator()(Args&&... args) && {
+        emplace(std::forward<Args>(args)...);
+        return std::move(*this);
+    }
+
+    template <typename... Args> builder&& emplace(Args&&... args) && {
+        m_elements.emplace(std::forward<Args>(args)...);
+        return std::move(*this);
     }
 
     template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const {
@@ -51,23 +65,42 @@ struct array_builder {
     array_builder& operator=(const array_builder&) = default;
 
     array_builder(array_builder&&) = default;
-    array_builder& operator=(array_builder&&) = default;
+    array_builder& operator=(array_builder&&)& = default;
 
     template <typename... Args> array_builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
-    template <typename... Args> array_builder& operator()(Args&&... args) {
+    // lvalue funcs
+
+    template <typename... Args> array_builder& operator()(Args&&... args) & {
         emplace(std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename... Args> array_builder& emplace(Args&&... args) {
+    template <typename... Args> array_builder& emplace(Args&&... args) & {
         m_elements.emplace_back(std::to_string(m_elements.size()), std::forward<Args>(args)...);
         return *this;
     }
 
-    template <typename... Args> array_builder& emplace(size_t idx, Args&&... args) {
+    template <typename... Args> array_builder& emplace(size_t idx, Args&&... args) & {
         m_elements.emplace_back(std::to_string(idx), std::forward<Args>(args)...);
         return *this;
+    }
+
+    // rvalue funcs
+
+    template <typename... Args> array_builder&& operator()(Args&&... args) && {
+        emplace(std::forward<Args>(args)...);
+        return std::move(*this);
+    }
+
+    template <typename... Args> array_builder&& emplace(Args&&... args) && {
+        m_elements.emplace_back(std::to_string(m_elements.size()), std::forward<Args>(args)...);
+        return std::move(*this);
+    }
+
+    template <typename... Args> array_builder&& emplace(size_t idx, Args&&... args) && {
+        m_elements.emplace_back(std::to_string(idx), std::forward<Args>(args)...);
+        return std::move(*this);
     }
 
     template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const {
