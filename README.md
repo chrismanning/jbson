@@ -1,4 +1,3 @@
-# jbson
 jbson is a library for building & iterating BSON data, and JSON documents in C++14.
 
 ## Features
