@@ -136,7 +136,7 @@ Performance of the JSON parser is decent, as measured by [json_benchmark](https:
 
 jbson uses BSON-like terminology. Eg. a document is not only the root object, but also all embedded objects.
 
-BSON is incompatible with JSON in that element names cannot contain `'\\0'`, making names not fully UTF-8 compliant, which JSON requires.
+BSON is incompatible with JSON in that element names cannot contain `'\0'`, making names not fully UTF-8 compliant, which JSON requires.
 
 Requires `<codecvt>` header (C++11, missing in gcc-4.8's stdlib), various template aliases (C++14), probably more where gcc's stdlib is behind on the standard.  
 Known only to work with an up-to-date libc++ currently.
