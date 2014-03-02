@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="jbson : JSON &amp; BSON parser/writer" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>jbson</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/chrismanning/jbson">View on GitHub</a>
+
+          <h1 id="project_title">jbson</h1>
+          <h2 id="project_tagline">JSON &amp; BSON parser/writer</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/chrismanning/jbson/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/chrismanning/jbson/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>jbson is a library for building &amp; iterating BSON data, and JSON documents in C++14.</p>
+
+<h2>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
+
+<ul>
+<li>UTF-8 support only (currently).</li>
+<li>Header only.</li>
+<li>Depends only on Boost headers &amp; C++14 standard library. <a href="#notes">note</a>
+</li>
+<li>Fully compatible with documented BSON specs.</li>
+<li>A strict, iterator-based JSON parser. Mostly compliant with JSON standard. <a href="#notes">note</a>
+</li>
+<li>Parses <a href="http://docs.mongodb.org/manual/reference/mongodb-extended-json/">MongoDB extended JSON</a>.</li>
+<li>User-defined JSON literals <code>""_json_set</code>, <code>""_json_doc</code>, <code>""_json_arr</code>.</li>
+<li>An implementation of <a href="http://goessner.net/articles/JsonPath/">JSONPath</a>, with some support for filtering with boolean expressions.</li>
+</ul><h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>All types are under the <code>jbson</code> namespace.</p>
+
+<h3>
+<a name="documents" class="anchor" href="#documents"><span class="octicon octicon-link"></span></a>Documents</h3>
+
+<p>The main classes of jbson are the templates <code>basic_document</code>, <code>basic_array</code> &amp; <code>basic_element</code>. These types are parameterised with their underlying container or range. It's generally recommended to use a random-access range. Their default aliases i.e. <code>document</code> &amp; <code>element</code> are parameterised with <code>std::vector&lt;char&gt;</code>. The second template parameter of <code>basic_document</code> defines the parameter of child <code>basic_element</code>s. By default this is defined as a <code>boost::iterator_range</code> to avoid copying data, though care should be taken that this element does <strong>not</strong> outlive the container/document which owns the data, else it can be copied to its own element.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">document</span> <span class="n">doc</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="k">for</span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;&amp;</span> <span class="n">element</span><span class="o">:</span> <span class="n">doc</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">for_each</span><span class="p">(</span><span class="n">doc</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">doc</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="p">[](</span><span class="k">auto</span><span class="o">&amp;&amp;</span> <span class="n">v</span><span class="p">)</span> <span class="p">{</span> <span class="n">something</span><span class="p">(</span><span class="n">v</span><span class="p">);</span> <span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+
+<p><code>basic_array</code> is implemented using <code>basic_document</code> and the classes can usually be interchanged freely. Of course, <code>basic_document</code> is for documents and <code>basic_array</code> is for arrays and should be used as such.</p>
+
+<p><code>basic_document</code> is simply a constant wrapper around its BSON data container, allowing iteration of elements in the form of a <code>basic_element</code>. It can be used with C++11s range-based for loop, and non-modifying standard algorithms.<br>
+Iterators retain a copy of elements. This does not mean that an iterator contains a copy of an element's data, however.</p>
+
+<h3>
+<a name="document-set" class="anchor" href="#document-set"><span class="octicon octicon-link"></span></a>Document Set</h3>
+
+<p><code>basic_document_set</code> is an alias template to <code>std::multi_set&lt;basic_element,...&gt;</code> which <code>basic_document</code> and <code>basic_array</code> is explicitly convertible to. This can be used to modify an existing document, at the cost of copying/converting the entire document into its constituent elements. The type parameter of <code>basic_document_set</code> should be a <em>container</em> not a <em>range</em>, i.e. it should own the data. The default alias <code>document_set</code> is <code>basic_document_set&lt;std::vector&lt;char&gt;&gt;</code> making it a set of <code>basic_element&lt;std::vector&lt;char&gt;&gt;</code>.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">document</span> <span class="n">doc</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">document_set</span> <span class="n">set</span><span class="p">(</span><span class="n">doc</span><span class="p">);</span>
+    <span class="p">...</span> <span class="n">modify</span> <span class="n">set</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">set</span><span class="p">;</span> <span class="c1">// convert back</span>
+<span class="p">}</span>
+</pre></div>
+
+<h3>
+<a name="elements" class="anchor" href="#elements"><span class="octicon octicon-link"></span></a>Elements</h3>
+
+<p><code>basic_element</code> is the class through which elements' names &amp; values are accessed. The names are <em>always</em> copied (may change in the future). Value data may or may not be, depending on the container template parameter.<br>
+The type of an element can be determined through comparison with the <code>element_type</code> enum class values.<br>
+Values can be accessed through the <code>value()</code> member function or the <code>get()</code> free function.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="k">using</span> <span class="n">jbson</span><span class="o">::</span><span class="n">element_type</span><span class="p">;</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">element</span> <span class="n">elem</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">string_element</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">auto</span> <span class="n">str</span> <span class="o">=</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">();</span>
+        <span class="c1">//OR</span>
+        <span class="k">auto</span> <span class="n">str</span> <span class="o">=</span> <span class="n">jbson</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">elem</span><span class="p">);</span>
+        <span class="c1">//OR if container is contiguous</span>
+        <span class="k">auto</span> <span class="n">str</span> <span class="o">=</span> <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="o">&lt;</span><span class="n">boost</span><span class="o">::</span><span class="n">string_ref</span><span class="o">&gt;</span><span class="p">();</span>
+        <span class="c1">//OR</span>
+        <span class="k">auto</span> <span class="n">str</span> <span class="o">=</span> <span class="n">jbson</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="n">boost</span><span class="o">::</span><span class="n">string_ref</span><span class="o">&gt;</span><span class="p">(</span><span class="n">elem</span><span class="p">);</span>
+        <span class="c1">//OR returns either std::string or boost::string_ref, depending on container</span>
+        <span class="k">auto</span> <span class="n">str</span> <span class="o">=</span> <span class="n">jbson</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="n">element_type</span><span class="o">::</span><span class="n">string_element</span><span class="o">&gt;</span><span class="p">(</span><span class="n">elem</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Elements can be modified using the <code>value()</code> member function.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="k">using</span> <span class="n">jbson</span><span class="o">::</span><span class="n">element_type</span><span class="p">;</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">element</span> <span class="n">elem</span><span class="p">;</span>
+    <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="s">"some string"</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">string_element</span><span class="p">);</span>
+    <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="mi">123</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">int32_element</span><span class="p">);</span>
+    <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">123</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">boolean_element</span><span class="p">);</span>
+    <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="o">&lt;</span><span class="n">element_type</span><span class="o">::</span><span class="n">boolean_element</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">123</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">boolean_element</span><span class="p">);</span>
+    <span class="n">elem</span><span class="p">.</span><span class="n">value</span><span class="p">(</span><span class="n">element_type</span><span class="o">::</span><span class="n">boolean_element</span><span class="p">,</span> <span class="mi">123</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">elem</span><span class="p">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">element_type</span><span class="o">::</span><span class="n">boolean_element</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Elements can also be accessed via the visitor pattern.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+<span class="p">}</span>
+</pre></div>
+
+<h3>
+<a name="json-parsing" class="anchor" href="#json-parsing"><span class="octicon octicon-link"></span></a>JSON Parsing</h3>
+
+<p>JSON documents can be parse with the <code>json_reader</code> class, which parses directly to BSON data and can be implicitly converted to any valid <code>basic_document</code>, <code>basic_array</code> or <code>basic_document_set</code>. It can also be move-converted to a <code>document</code> or <code>array</code> for efficient conversion.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="n">jbson</span><span class="o">::</span><span class="n">json_reader</span> <span class="n">reader</span><span class="p">{};</span>
+    <span class="n">reader</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="s">"{</span><span class="se">\"</span><span class="s">some json</span><span class="se">\"</span><span class="s">: 123 }"</span><span class="p">);</span>
+    <span class="n">reader</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="n">R</span><span class="s">"({"</span><span class="n">some</span> <span class="n">json</span><span class="s">": 123 })"</span><span class="p">);</span> <span class="c1">// C++11 raw string</span>
+    <span class="k">auto</span> <span class="n">doc</span> <span class="o">=</span> <span class="n">jbson</span><span class="o">::</span><span class="n">document</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">reader</span><span class="p">));</span>
+<span class="p">}</span>
+</pre></div>
+
+<p><code>json_reader</code> can parse string literals, or any range of UTF-8 codepoints e.g. <code>std::string</code>, <code>boost::string_ref</code>, <code>boost::iterator_range&lt;...&gt;</code>, <code>QByteArray</code>, etc.<br>
+For convenience, user-defined literals have been implemented for JSON documents.</p>
+
+<div class="highlight highlight-C++"><pre><span class="p">{</span>
+    <span class="k">using</span> <span class="n">jbson</span><span class="o">::</span><span class="n">literal</span><span class="p">;</span>
+    <span class="k">auto</span> <span class="n">doc</span> <span class="o">=</span> <span class="n">R</span><span class="s">"({</span>
+        <span class="s">"some json"</span><span class="o">:</span> <span class="mi">123</span>
+    <span class="p">})</span><span class="s">"_json_doc;</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>This is equivalent to the above example.</p>
+
+<h2>
+<a name="performance" class="anchor" href="#performance"><span class="octicon octicon-link"></span></a>Performance</h2>
+
+<p>Performance of the JSON parser is decent, as measured by <a href="https://github.com/mloskot/json_benchmark">json_benchmark</a>, it's 2nd only to rapidjson:</p>
+
+<blockquote>
+<p>QJsonDocument.small: 1000 iterations of 500 parsings in 8.36422 to 8.36658 sec based on 2 benchmarks<br>
+QJsonDocument.large: 1000 iterations of 1 parsings in 311.287 to 311.843 sec based on 2 benchmarks</p>
+
+<p>jsoncpp.small: 1000 iterations of 500 parsings in 13.7716 to 13.782 sec based on 2 benchmarks<br>
+jsoncpp.large: 1000 iterations of 1 parsings in 283.477 to 284.996 sec based on 2 benchmarks</p>
+
+<p>rapidjson.small: 1000 iterations of 500 parsings in 0.99631 to 1.00371 sec based on 2 benchmarks<br>
+rapidjson.large: 1000 iterations of 1 parsings in 13.4129 to 13.4314 sec based on 2 benchmarks</p>
+
+<p>jbson.small: 1000 iterations of 500 parsings in 4.88315 to 4.89001 sec based on 2 benchmarks<br>
+jbson.large: 1000 iterations of 1 parsings in 131.038 to 131.099 sec based on 2 benchmarks</p>
+
+<p>jsoncons.small: 1000 iterations of 500 parsings in 10.8905 to 10.9053 sec based on 2 benchmarks<br>
+jsoncons.large: 1000 iterations of 1 parsings in 551.351 to 552.098 sec based on 2 benchmarks</p>
+</blockquote>
+
+<h2>
+<a name="notes" class="anchor" href="#notes"><span class="octicon octicon-link"></span></a>Notes</h2>
+
+<p>jbson uses BSON-like terminology. Eg. a document is not only the root object, but also all embedded objects.</p>
+
+<p>BSON is incompatible with JSON in that element names cannot contain <code>'\0'</code>, making names not fully UTF-8 compliant, which JSON requires.</p>
+
+<p>Requires <code>&lt;codecvt&gt;</code> header (C++11, missing in gcc-4.8's stdlib), various template aliases (C++14), probably more where gcc's stdlib is behind on the standard.<br>
+Known only to work with an up-to-date libc++ currently.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">jbson maintained by <a href="https://github.com/chrismanning">chrismanning</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
