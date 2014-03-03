@@ -22,7 +22,7 @@ All types are under the `jbson` namespace.
 ### Documents
 
 The main classes of jbson are the templates `basic_document`, `basic_array` & `basic_element`. These types are parameterised with their underlying container or range. It's generally recommended to use a random-access range. Their default aliases i.e. `document` & `element` are parameterised with `std::vector<char>`. The second template parameter of `basic_document` defines the parameter of child `basic_element`s. By default this is defined as a `boost::iterator_range` to avoid copying data, though care should be taken that this element does **not** outlive the container/document which owns the data, else it can be copied to its own element.
-```C++
+```cpp
 {
     jbson::document doc;
     ...
@@ -40,7 +40,7 @@ Iterators retain a copy of elements. This does not mean that an iterator contain
 ### Document Set
 
 `basic_document_set` is an alias template to `std::multi_set<basic_element,...>` which `basic_document` and `basic_array` is explicitly convertible to. This can be used to modify an existing document, at the cost of copying/converting the entire document into its constituent elements. The type parameter of `basic_document_set` should be a *container* not a *range*, i.e. it should own the data. The default alias `document_set` is `basic_document_set<std::vector<char>>` making it a set of `basic_element<std::vector<char>>`.
-```C++
+```cpp
 {
     jbson::document doc;
     ...
@@ -55,7 +55,7 @@ Iterators retain a copy of elements. This does not mean that an iterator contain
 `basic_element` is the class through which elements' names & values are accessed. The names are *always* copied (may change in the future). Value data may or may not be, depending on the container template parameter.  
 The type of an element can be determined through comparison with the `element_type` enum class values.  
 Values can be accessed through the `value()` member function or the `get()` free function.
-```C++
+```cpp
 {
     using jbson::element_type;
     jbson::element elem;
@@ -74,7 +74,7 @@ Values can be accessed through the `value()` member function or the `get()` free
 }
 ```
 Elements can be modified using the `value()` member function.
-```C++
+```cpp
 {
     using jbson::element_type;
     jbson::element elem;
@@ -91,7 +91,7 @@ Elements can be modified using the `value()` member function.
 }
 ```
 Elements can also be accessed via the visitor pattern.
-```C++
+```cpp
 {
 }
 ```
@@ -99,7 +99,7 @@ Elements can also be accessed via the visitor pattern.
 ### JSON Parsing
 
 JSON documents can be parse with the `json_reader` class, which parses directly to BSON data and can be implicitly converted to any valid `basic_document`, `basic_array` or `basic_document_set`. It can also be move-converted to a `document` or `array` for efficient conversion.
-```C++
+```cpp
 {
     jbson::json_reader reader{};
     reader.parse("{\"some json\": 123 }");
@@ -109,7 +109,7 @@ JSON documents can be parse with the `json_reader` class, which parses directly 
 ```
 `json_reader` can parse string literals, or any range of UTF-8 codepoints e.g. `std::string`, `boost::string_ref`, `boost::iterator_range<...>`, `QByteArray`, etc.  
 For convenience, user-defined literals have been implemented for JSON documents.
-```C++
+```cpp
 {
     using jbson::literal;
     auto doc = R"({
