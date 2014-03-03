@@ -421,3 +421,47 @@ Small Device Styles
   }
 
 }
+
+div.maruku_toc {
+  position: absolute;
+  left: 0;
+}
+
+#project_menu {
+  float: left;
+  padding: 10px 15px 10px 15px;
+  border-radius: 0px 10px 10px 0px;
+  background-color: #212121;
+  margin-top: 30px;
+}
+
+#project_menu h6 {
+  color: #aaa;
+  margin: 0 6;
+}
+
+#project_menu ul {
+  padding: 0;
+  margin: 0;
+}
+
+#project_menu li {
+  margin: 0;
+  list-style-type: none;
+}
+
+#project_menu a {
+  color: #aaa;
+}
+
+#project_menu li.selected {
+  background-color: #2a2a2a;
+}
+
+#project_menu li.selected a {
+  color: #fff;
+}
+
+#project_menu a:hover {
+  color: #eee;
+}
