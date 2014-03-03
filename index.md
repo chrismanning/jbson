@@ -22,14 +22,14 @@ All types are under the `jbson` namespace.
 ### Documents
 
 The main classes of jbson are the templates `basic_document`, `basic_array` & `basic_element`. These types are parameterised with their underlying container or range. It's generally recommended to use a random-access range. Their default aliases i.e. `document` & `element` are parameterised with `std::vector<char>`. The second template parameter of `basic_document` defines the parameter of child `basic_element`s. By default this is defined as a `boost::iterator_range` to avoid copying data, though care should be taken that this element does **not** outlive the container/document which owns the data, else it can be copied to its own element.
-```cpp
-jbson::document doc;
-//...
-for(auto&& element: doc) {
+
+    jbson::document doc;
     //...
-}
-std::for_each(doc.begin(), doc.end(), [](auto&& v) { something(v); });
-```
+    for(auto&& element: doc) {
+        //...
+    }
+    std::for_each(doc.begin(), doc.end(), [](auto&& v) { something(v); });
+
 `basic_array` is implemented using `basic_document` and the classes can usually be interchanged freely. Of course, `basic_document` is for documents and `basic_array` is for arrays and should be used as such.
 
 `basic_document` is simply a constant wrapper around its BSON data container, allowing iteration of elements in the form of a `basic_element`. It can be used with C++11s range-based for loop, and non-modifying standard algorithms.  
@@ -38,71 +38,70 @@ Iterators retain a copy of elements. This does not mean that an iterator contain
 ### Document Set
 
 `basic_document_set` is an alias template to `std::multi_set<basic_element,...>` which `basic_document` and `basic_array` is explicitly convertible to. This can be used to modify an existing document, at the cost of copying/converting the entire document into its constituent elements. The type parameter of `basic_document_set` should be a *container* not a *range*, i.e. it should own the data. The default alias `document_set` is `basic_document_set<std::vector<char>>` making it a set of `basic_element<std::vector<char>>`.
-```cpp
-jbson::document doc;
-//...
-jbson::document_set set(doc);
-//... modify set
-doc = set; // convert back
-```
+
+    jbson::document doc;
+    //...
+    jbson::document_set set(doc);
+    //... modify set
+    doc = set; // convert back
 
 ### Elements
 
 `basic_element` is the class through which elements' names & values are accessed. The names are *always* copied (may change in the future). Value data may or may not be, depending on the container template parameter.  
 The type of an element can be determined through comparison with the `element_type` enum class values.  
 Values can be accessed through the `value()` member function or the `get()` free function.
-```cpp
-using jbson::element_type;
-jbson::element elem;
-//...
-if(elem.type() == element_type::string_element) {
-    auto str = elem.value<std::string>();
-    //OR
-    auto str = jbson::get<std::string>(elem);
-    //OR if container is contiguous
-    auto str = elem.value<boost::string_ref>();
-    //OR
-    auto str = jbson::get<boost::string_ref>(elem);
-    //OR returns either std::string or boost::string_ref, depending on container
-    auto str = jbson::get<element_type::string_element>(elem);
-}
-```
+
+    using jbson::element_type;
+    jbson::element elem;
+    //...
+    if(elem.type() == element_type::string_element) {
+        auto str = elem.value<std::string>();
+        //OR
+        auto str = jbson::get<std::string>(elem);
+        //OR if container is contiguous
+        auto str = elem.value<boost::string_ref>();
+        //OR
+        auto str = jbson::get<boost::string_ref>(elem);
+        //OR returns either std::string or boost::string_ref, depending on container
+        auto str = jbson::get<element_type::string_element>(elem);
+    }
+
 Elements can be modified using the `value()` member function.
-```cpp
-using jbson::element_type;
-jbson::element elem;
-elem.value("some string");
-assert(elem.type() == element_type::string_element);
-elem.value(123);
-assert(elem.type() == element_type::int32_element);
-elem.value<bool>(123);
-assert(elem.type() == element_type::boolean_element);
-elem.value<element_type::boolean_element>(123);
-assert(elem.type() == element_type::boolean_element);
-elem.value(element_type::boolean_element, 123);
-assert(elem.type() == element_type::boolean_element);
-```
+
+    using jbson::element_type;
+    jbson::element elem;
+    elem.value("some string");
+    assert(elem.type() == element_type::string_element);
+    elem.value(123);
+    assert(elem.type() == element_type::int32_element);
+    elem.value<bool>(123);
+    assert(elem.type() == element_type::boolean_element);
+    elem.value<element_type::boolean_element>(123);
+    assert(elem.type() == element_type::boolean_element);
+    elem.value(element_type::boolean_element, 123);
+    assert(elem.type() == element_type::boolean_element);
+
 Elements can also be accessed via the visitor pattern.
-```cpp
-```
+
+    //visitor pattern here
 
 ### JSON Parsing
 
 JSON documents can be parse with the `json_reader` class, which parses directly to BSON data and can be implicitly converted to any valid `basic_document`, `basic_array` or `basic_document_set`. It can also be move-converted to a `document` or `array` for efficient conversion.
-```cpp
-jbson::json_reader reader{};
-reader.parse("{\"some json\": 123 }");
-reader.parse(R"({"some json": 123 })"); // C++11 raw string
-auto doc = jbson::document(std::move(reader));
-```
+
+    jbson::json_reader reader{};
+    reader.parse("{\"some json\": 123 }");
+    reader.parse(R"({"some json": 123 })"); // C++11 raw string
+    auto doc = jbson::document(std::move(reader));
+
 `json_reader` can parse string literals, or any range of UTF-8 codepoints e.g. `std::string`, `boost::string_ref`, `boost::iterator_range<...>`, `QByteArray`, etc.  
 For convenience, user-defined literals have been implemented for JSON documents.
-```cpp
-using jbson::literal;
-auto doc = R"({
-    "some json": 123
-})"_json_doc;
-```
+
+    using jbson::literal;
+    auto doc = R"({
+        "some json": 123
+    })"_json_doc;
+
 This is equivalent to the above example.
 
 ## Performance
