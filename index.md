@@ -21,7 +21,7 @@ All types are under the `jbson` namespace.
 
 ### Elements
 
-`basic_element` is the class through which elements' names & values are accessed. The names are *always* copied (may change in the future). Value data may or may not be, depending on the container template parameter.  
+`basic_element` is the class through which elements' names & values are accessed and has a template parameter for its data container. Generally, this will be a non-owning range (e.g. `iterator_range`), but there is an `element` alias to `basic_element<std::vector<char>>` to enforce data ownership. The names are *always* copied (may change in the future). Value data may or may not be, depending on the container template parameter.  
 The type of an element can be determined through comparison with the `element_type` enum class values.  
 Values can be accessed through the `value()` member function or the `get()` free function.
 
