@@ -65,7 +65,7 @@ template <typename ElemRangeT, typename StrRngT, typename OutIterator>
 void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator out) {
     using namespace boost;
 
-    path.advance_begin(subscript.size() + 2);
+    path.drop_front(subscript.size() + 2);
     if(!subscript.empty() && subscript.back() == ']')
         BOOST_THROW_EXCEPTION(jbson_error());
 
@@ -73,31 +73,31 @@ void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator o
     while(!subscript.empty()) {
         StrRngT elem_name;
         if(subscript.front() == '"') {
-            subscript.pop_front();
+            subscript.drop_front();
             elem_name = range::find<return_begin_found>(subscript, '"');
-            subscript.advance_begin(elem_name.size() + 1);
+            subscript.drop_front(elem_name.size() + 1);
         } else if(subscript.front() == '\'') {
-            subscript.pop_front();
+            subscript.drop_front();
             elem_name = range::find<return_begin_found>(subscript, '\'');
-            subscript.advance_begin(elem_name.size() + 1);
+            subscript.drop_front(elem_name.size() + 1);
         } else if(::isdigit(subscript.front())) {
             elem_name = range::find<return_begin_found>(subscript, ',');
-            subscript.advance_begin(elem_name.size());
+            subscript.drop_front(elem_name.size());
         } else if(subscript.front() == '*') {
             elem_name = {subscript.begin(), std::next(subscript.begin())};
-            subscript.pop_front();
+            subscript.drop_front();
         } else if(!range::binary_search("(?", subscript.front()))
             BOOST_THROW_EXCEPTION(jbson_error());
 
         if(!subscript.empty() && range::binary_search("(?", subscript.front())) {
             elem_name = range::find_if<return_begin_next>(subscript, boost::is_any_of(",]"));
-            subscript.advance_begin(elem_name.size());
+            subscript.drop_front(elem_name.size());
             select_expr(std::forward<ElemRangeT>(doc), path, elem_name, out);
         } else
             select_name(std::forward<ElemRangeT>(doc), path, elem_name, std::back_inserter(vec));
 
         if(!subscript.empty() && range::binary_search(",]", subscript.front()))
-            subscript.pop_front();
+            subscript.drop_front();
     }
     out = range::unique_copy(vec, out);
 }
@@ -509,15 +509,15 @@ void select_expr(ElemRangeT&& doc, StrRngT path, StrRngT expr, OutIterator out) 
 
     if(expr.back() != ')')
         return;
-    expr.pop_back();
+    expr.drop_back();
 
     std::vector<int> code;
     bool filter = false;
     if(starts_with(expr, as_literal("?("))) {
-        expr.advance_begin(2);
+        expr.drop_front(2);
         filter = true;
     } else
-        expr.pop_front();
+        expr.drop_front();
 
     expression::error_handler<typename std::decay_t<StrRngT>::const_iterator> err_h{expr.begin(), expr.end()};
     expression::parser<typename std::decay_t<StrRngT>::const_iterator> expr_parser{err_h};
@@ -586,7 +586,7 @@ void select(ElemRangeT&& doc, StrRngT path, OutIterator out) {
     }
 
     if(path.front() == '@')
-        path.pop_front();
+        path.drop_front();
 
     StrRngT elem_name;
     if(!starts_with(path, as_literal("..")))
@@ -594,18 +594,18 @@ void select(ElemRangeT&& doc, StrRngT path, OutIterator out) {
 
     if(path.front() == '[') {
         elem_name = range::find<return_begin_found>(path, ']');
-        elem_name.pop_front();
+        elem_name.drop_front();
         select_sub(std::forward<ElemRangeT>(doc), path, elem_name, out);
     } else {
         if(starts_with(path, as_literal(".."))) {
             elem_name = {path.begin(), std::next(path.begin(), 2)};
             select_name(std::forward<ElemRangeT>(doc), path, elem_name, out);
-            path.advance_begin(2);
+            path.drop_front(2);
         }
         elem_name = range::find_if<return_begin_found>(path, is_any_of(".["));
-        path.advance_begin(elem_name.size());
+        path.drop_front(elem_name.size());
         if(!path.empty() && path.front() == '.' && !starts_with(path, as_literal("..")))
-            path.pop_front();
+            path.drop_front();
         select_name(std::forward<ElemRangeT>(doc), path, elem_name, out);
     }
 }
