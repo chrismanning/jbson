@@ -17,7 +17,7 @@ struct builder {
     builder() = default;
 
     builder(const builder&) = default;
-    builder& operator=(const builder&) = default;
+    builder& operator=(const builder&)& = default;
 
     builder(builder&&) = default;
     builder& operator=(builder&&)& = default;
