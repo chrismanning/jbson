@@ -277,3 +277,10 @@ TEST(DocumentTest, SetTest2) {
     ASSERT_NE(doc.end(), it);
     EXPECT_EQ("Manning", it->value<boost::string_ref>());
 }
+
+TEST(DocumentTest, DocumentContainerTest1) {
+    std::array<char, 5> data;
+    *reinterpret_cast<int32_t*>(data.data()) = data.size();
+    basic_document<std::array<char, 5>> doc{data};
+    ASSERT_EQ(0, boost::distance(doc));
+}

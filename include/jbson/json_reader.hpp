@@ -11,6 +11,7 @@
 #include <memory>
 #include <codecvt>
 
+#include <boost/range/as_literal.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/lexical_cast.hpp>

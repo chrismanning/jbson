@@ -13,7 +13,6 @@
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <boost/optional.hpp>
-#include <boost/range/as_literal.hpp>
 
 #include "document_fwd.hpp"
 #include "element_fwd.hpp"
@@ -130,9 +129,17 @@ template <class Container, class ElementContainer> class basic_document {
         boost::range::push_back(m_data, other.m_data);
     }
 
-    template <typename CharT, size_t N> explicit basic_document(CharT (&rng)[N]) = delete;
+    template <typename CharT, size_t N> explicit basic_document(CharT (&)[N]) = delete;
 
-    template <typename CharT, size_t N> explicit basic_document(const CharT (&rng)[N]) = delete;
+    template <typename CharT, size_t N> explicit basic_document(const CharT (&)[N]) = delete;
+
+    template <typename CharT, size_t N,
+              typename = std::enable_if_t<std::is_same<std::array<CharT, N>, container_type>::value>>
+    explicit basic_document(const std::array<CharT, N>& arr) : m_data(arr) {}
+
+    template <typename CharT, size_t N,
+              typename = std::enable_if_t<!std::is_same<std::array<CharT, N>, container_type>::value>>
+    explicit basic_document(std::array<CharT, N>) = delete;
 
     template <
         typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
