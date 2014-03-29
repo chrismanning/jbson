@@ -17,9 +17,6 @@
 
 namespace jbson {
 
-template <typename Container, typename EContainer, typename StrRngT>
-auto path_select(const basic_document<Container, EContainer>& doc, StrRngT&& path_rng);
-
 namespace detail {
 
 template <typename ElemRangeT, typename StrRngT, typename OutIterator>
