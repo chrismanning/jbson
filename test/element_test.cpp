@@ -12,6 +12,7 @@ using namespace std::literals;
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>
+#include <jbson/builder.hpp>
 using namespace jbson;
 
 #include <gtest/gtest.h>
@@ -90,22 +91,70 @@ TEST(ElementTest, ElementConstructTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
-    auto val = 44.854;
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
+    const auto val = 44.854;
     el1.value(val);
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ(val, get<element_type::double_element>(el1));
+}
+
+TEST(ElementTest, ElementConstructTest2) {
+    element el1{"asd"};
+    ASSERT_NO_THROW((el1 = element{"Pi 6dp", 3.141592}));
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
+
+    ASSERT_NO_THROW((el1 = element{"Pi 6dp", 3.141592f}));
+    ASSERT_EQ(element_type::double_element, el1.type());
+    EXPECT_EQ("Pi 6dp", el1.name());
+    EXPECT_FLOAT_EQ(3.141592, get<element_type::double_element>(el1));
+
+    ASSERT_NO_THROW((el1 = element{"val", "literal"}));
+    ASSERT_EQ(element_type::string_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ("literal", get<element_type::string_element>(el1));
+
+    ASSERT_NO_THROW((el1 = element{"val", "literal"s}));
+    ASSERT_EQ(element_type::string_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ("literal", get<element_type::string_element>(el1));
+
+    std::string str1 = "str"s;
+    ASSERT_NO_THROW((el1 = element{"val", str1}));
+    ASSERT_EQ(element_type::string_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ("str", get<element_type::string_element>(el1));
+
+    const char* str2 = "str";
+    ASSERT_NO_THROW((el1 = element{"val", str2}));
+    ASSERT_EQ(element_type::string_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ("str", get<element_type::string_element>(el1));
+
+    ASSERT_NO_THROW((el1 = element{"val", 123}));
+    ASSERT_EQ(element_type::int32_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ(123, get<element_type::int32_element>(el1));
+
+    EXPECT_THROW((el1 = element{"nest", builder{}}), incompatible_type_conversion);
+    EXPECT_NO_THROW((el1 = element{"nest", element_type::document_element, builder{}}));
+
+    ASSERT_NO_THROW((el1 = element{"val", false}));
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_EQ("val", el1.name());
+    EXPECT_EQ(false, get<element_type::boolean_element>(el1));
 }
 
 TEST(ElementTest, ElementCopyTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     element el2 = el1;
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_EQ(el1, el2);
 }
 
@@ -113,13 +162,13 @@ TEST(ElementTest, ElementCopyTest2) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     element el2 = el1;
-    auto val = 44.854;
+    const auto val = 44.854;
     el2.value(val);
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(val, get<element_type::double_element>(el2));
+    EXPECT_DOUBLE_EQ(val, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
@@ -127,14 +176,14 @@ TEST(ElementTest, ElementCopyConvertTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     basic_element<std::list<char>> el2 = el1;
     EXPECT_EQ(el1, el2);
-    auto val = 44.854;
+    const auto val = 44.854;
     el2.value(val);
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(val, get<element_type::double_element>(el2));
+    EXPECT_DOUBLE_EQ(val, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
@@ -142,14 +191,14 @@ TEST(ElementTest, ElementMoveTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     auto old_size = el1.size();
     element el2 = std::move(el1);
     ASSERT_EQ(2, el1.size());
     ASSERT_EQ(old_size, el2.size());
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
@@ -157,14 +206,14 @@ TEST(ElementTest, ElementMoveConvertTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     auto old_size = el1.size();
     basic_element<std::list<char>> el2(std::move(el1));
     ASSERT_EQ(2, el1.size());
     ASSERT_EQ(old_size, el2.size());
     ASSERT_EQ(element_type::double_element, el2.type());
     EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el2));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el2));
     EXPECT_NE(el1, el2);
 }
 
@@ -232,7 +281,7 @@ TEST(ElementTest, ElementVisitTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     el1.visit(VoidVisitor<double>(3.141592));
 }
 
@@ -254,7 +303,7 @@ TEST(ElementTest, ElementVisitTest2) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_EQ(3.141592, get<element_type::double_element>(el1));
+    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
     EXPECT_TRUE(el1.visit(BoolVisitor<double>(3.141592)));
 }
 

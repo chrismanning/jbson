@@ -80,24 +80,25 @@ template <class Container> struct basic_element {
         value(type, std::forward<T>(val));
     }
     template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
-    basic_element(std::string, element_type = element_type::null_element);
+    explicit basic_element(std::string, element_type = element_type::null_element);
 
     template <size_t N>
-    basic_element(const char (&name)[N], element_type type)
-        : basic_element(std::string(name), type) {}
+    explicit basic_element(const char (&name)[N], element_type type = element_type::null_element)
+        : basic_element(std::string(name, N-1), type) {}
 
     template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
     }
 
-    template <size_t N, typename T> basic_element(const char (&name)[N], T&& val) : basic_element(std::move(name)) {
+    template <size_t N, typename T> basic_element(const char (&name)[N], T&& val)
+        : basic_element(std::string(name, N-1)) {
         value(std::forward<T>(val));
     }
 
     template <size_t N1, size_t N2>
     basic_element(const char (&name)[N1], const char (&val)[N2])
-        : basic_element(std::move(name)) {
-        value(val);
+        : basic_element(std::string(name, N1-1)) {
+        value(boost::string_ref(val, N2-1));
     }
 
     // field name
@@ -118,10 +119,11 @@ template <class Container> struct basic_element {
     }
 
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
-    template <size_t N> void value(char (&val)[N]) { value(boost::string_ref(val, N)); }
-    template <size_t N> void value(const char (&val)[N]) { value(boost::string_ref(val, N)); }
+    void value(std::string val) { value<element_type::string_element>(boost::string_ref{val}); }
     void value(const char* val) { value(boost::string_ref(val)); }
+
     void value(bool val) { value<element_type::boolean_element>(val); }
+    void value(float val) { value<element_type::double_element>(val); }
     void value(double val) { value<element_type::double_element>(val); }
     void value(int64_t val) { value<element_type::int64_element>(val); }
     void value(int32_t val) { value<element_type::int32_element>(val); }
