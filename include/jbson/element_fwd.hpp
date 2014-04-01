@@ -47,7 +47,7 @@ template <typename Container> struct is_element<basic_element<Container>> : std:
 } // namespace detail
 
 template <typename Container>
-using basic_document_set = std::multiset<basic_element<Container>, detail::elem_compare>;
+using basic_document_set = std::set<basic_element<Container>, detail::elem_compare>;
 
 using document_set = basic_document_set<std::vector<char>>;
 
