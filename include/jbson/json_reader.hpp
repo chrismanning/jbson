@@ -10,6 +10,7 @@
 #include <iterator>
 #include <memory>
 #include <codecvt>
+#include <cfenv>
 
 #include <boost/range/as_literal.hpp>
 #include <boost/range/algorithm.hpp>
@@ -714,15 +715,25 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
     auto type = element_type::null_element;
 
     char* pos;
-    const auto val = ::strtold(&*first, &pos);
+    const auto val = std::strtold(&*first, &pos);
 
     if(val == HUGE_VALL || pos == &*first || pos != &*last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
     std::advance(first, std::distance(const_cast<const char*>(&*first), const_cast<const char*>(pos)));
 
-    ::feclearexcept(FE_ALL_EXCEPT);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-pragmas"
+#endif
+#pragma STDC FENV_ACCESS ON
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+    std::feclearexcept(FE_ALL_EXCEPT);
     int64_t i = std::llrint(val);
-    if(::fetestexcept(FE_ALL_EXCEPT)) {
+
+    if(std::fetestexcept(FE_ALL_EXCEPT)) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(double), '\0');
         out = detail::set_impl<element_type::double_element, decltype(m_data), double>::call(out, val);
@@ -738,7 +749,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         out = detail::set_impl<element_type::int64_element, decltype(m_data), int64_t>::call(out, i);
         type = element_type::int64_element;
     }
-    ::feclearexcept(FE_ALL_EXCEPT);
+    std::feclearexcept(FE_ALL_EXCEPT);
 
     return std::make_tuple(out, type);
 }
