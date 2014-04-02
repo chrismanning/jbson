@@ -244,7 +244,10 @@ void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_itera
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
 
-    m_data = container_type{};
+    {
+        container_type c;
+        m_data.swap(c);
+    }
     m_data.reserve(+std::distance(&*first, &*last));
 
     m_start = std::make_shared<line_pos_iterator<ForwardIterator>>(first);
