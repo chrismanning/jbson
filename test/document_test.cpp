@@ -14,10 +14,15 @@ using namespace std::literals;
 #include <jbson/builder.hpp>
 using namespace jbson;
 
+#include <gtest/gtest.h>
+
+// copmile-time tests
 static_assert(std::is_constructible<std::vector<element>, array>::value,"");
 static_assert(!std::is_constructible<std::list<element>, array>::value,"");
-
-#include <gtest/gtest.h>
+static_assert(std::is_same<decltype(std::declval<document>().data()), std::vector<char>&&>::value,"");
+static_assert(std::is_same<decltype(std::declval<document&>().data()), const std::vector<char>&>::value,"");
+static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
+static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
 
 TEST(DocumentTest, DocumentParseTest1) {
     const auto test_bson = "\x16\x00\x00\x00\x02hello\x00\x06\x00\x00\x00world\x00\x00"s;

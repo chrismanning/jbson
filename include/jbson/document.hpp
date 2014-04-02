@@ -215,15 +215,15 @@ template <class Container, class ElementContainer> class basic_document {
 
     int32_t size() const noexcept { return boost::distance(m_data); }
 
-    const container_type& data() const& {
-        if(static_cast<ptrdiff_t>(m_data.size()) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
+    const container_type& data() const& noexcept {
         return m_data;
     }
 
-    container_type&& data() && {
-        if(static_cast<ptrdiff_t>(m_data.size()) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
+    container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) {
+        return m_data;
+    }
+
+    container_type&& data() && noexcept(std::is_nothrow_move_constructible<container_type>::value) {
         return std::move(m_data);
     }
 
