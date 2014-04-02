@@ -165,16 +165,20 @@ struct set_visitor<
                                                            boost::mpl::vector<const char&>>::
                          value&&(EType != element_type::array_element&& EType != element_type::document_element) &&
                      !std::is_convertible<size_func<EType, void*>, int>::value>> {
+
     using set_type = ElementTypeMap<EType, std::decay_t<Container>>;
+
     void operator()(std::decay_t<Container>& data, set_type val) const {
         set_impl<EType, std::decay_t<Container>, set_type>::call(std::back_inserter(data), std::move(val));
     }
+
     template <typename T>
     void operator()(std::decay_t<Container>& data, T&& val,
                     std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr) const {
         set_impl<EType, std::decay_t<Container>, set_type>::call(std::back_inserter(data),
                                                                  set_type(std::forward<T>(val)));
     }
+
     template <typename T>
     void operator()(std::decay_t<Container>&, T&&,
                     std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
@@ -189,21 +193,9 @@ struct set_visitor<EType, Container, A,
                                                                            boost::mpl::vector<const char&>>::value &&
                                     (EType != element_type::array_element && EType != element_type::document_element) &&
                                     !std::is_convertible<size_func<EType, void*>, int>::value>> {
-    using set_type = ElementTypeMap<EType, std::decay_t<Container>>;
-    void operator()(std::decay_t<Container>& data, set_type val) const {
-        set_impl<EType, std::decay_t<Container>, set_type>::call(std::begin(data), std::move(val));
-    }
-    template <typename T>
-    void operator()(std::decay_t<Container>& data, T&& val,
-                    std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr) const {
-        set_impl<EType, std::decay_t<Container>, set_type>::call(std::begin(data), set_type(std::forward<T>(val)));
-    }
-    template <typename T>
-    void operator()(std::decay_t<Container>&, T&&,
-                    std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
-                    std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
-        BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
-    }
+    static_assert(detail::has_member_function_push_back<std::remove_reference_t<Container>, void,
+                                    boost::mpl::vector<const char&>>::value,
+                  "Cannot set value of an element without a modifiable container");
 };
 
 } // namespace detail

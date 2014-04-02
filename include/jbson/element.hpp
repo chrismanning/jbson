@@ -41,10 +41,14 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
 
 template <class Container> struct basic_element {
     using container_type = std::decay_t<Container>;
-    static_assert(!std::is_convertible<container_type, std::string>::value, "");
-    static_assert(std::is_same<typename container_type::value_type, char>::value, "");
+    static_assert(!std::is_convertible<container_type, std::string>::value,
+                  "container_type must not be a string type (or convertible)");
+    static_assert(std::is_same<typename container_type::value_type, char>::value,
+                  "container_type's value_type must be char");
+    static_assert(detail::is_nothrow_swappable<container_type>::value,
+                  "container_type must have noexcept swap()");
 
-    basic_element() = delete;
+    basic_element() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
 
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
@@ -52,8 +56,6 @@ template <class Container> struct basic_element {
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
-    basic_element(const basic_element&) = default;
-    basic_element& operator=(const basic_element&) = default;
 
     template <typename OtherContainer>
     basic_element(basic_element<OtherContainer>&&,
@@ -61,8 +63,6 @@ template <class Container> struct basic_element {
     template <typename OtherContainer>
     basic_element(basic_element<OtherContainer>&&,
                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
-    basic_element(basic_element&&) = default;
-    basic_element& operator=(basic_element&&) = default;
 
     explicit basic_element(const container_type& c);
 
@@ -133,19 +133,23 @@ template <class Container> struct basic_element {
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
                                   << actual_type(typeid(T))
                                   << expected_type(detail::visit<detail::typeid_visitor>(m_type, *this)));
-        decltype(m_data) data;
+        container_type data;
         detail::visit<detail::set_visitor>(m_type, data, std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
     }
 
     template <typename T> void value(element_type type, T&& val) {
+        const auto old_type = m_type;
         m_type = type;
-        value<T>(std::forward<T>(val));
-        if(m_type != type)
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
-                                  << actual_type(typeid(T))
-                                  << expected_type(detail::visit<detail::typeid_visitor>(type, *this)));
+        try {
+            value<T>(std::forward<T>(val));
+            assert(m_type == type);
+        }
+        catch(...) {
+            m_type = old_type;
+            throw;
+        }
     }
 
     template <element_type EType, typename T>
@@ -155,12 +159,13 @@ template <class Container> struct basic_element {
               nullptr) {
         using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_same<std::decay_t<T>, T2>::value, "");
-        type(EType);
-        decltype(m_data) data;
+
+        container_type data;
         detail::set_visitor<EType, container_type, T2> {}
         (data, std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
+        type(EType);
     }
 
     template <element_type EType, typename T>
@@ -170,12 +175,13 @@ template <class Container> struct basic_element {
               nullptr) {
         using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
-        type(EType);
-        decltype(m_data) data;
+
+        container_type data;
         detail::set_visitor<EType, container_type, T2> {}
         (data, T2(std::forward<T>(val)));
         using std::swap;
         swap(m_data, data);
+        type(EType);
     }
 
     template <typename Visitor>
@@ -221,7 +227,7 @@ template <class Container> struct basic_element {
 
   private:
     std::string m_name;
-    element_type m_type;
+    element_type m_type{element_type::null_element};
     container_type m_data;
 
     template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;

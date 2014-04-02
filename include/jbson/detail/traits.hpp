@@ -135,6 +135,18 @@ static_assert(is_range_of_iterator<std::vector<char>, boost::mpl::bind<quote<std
                                                                        boost::mpl::_1, boost::mpl::_1>>::value,
               "");
 
+template <typename T>
+constexpr bool is_nothrow_swappable_impl() {
+    using std::swap;
+    return noexcept(swap(std::declval<std::decay_t<T>&>(), std::declval<std::decay_t<T>&>()));
+}
+
+template <typename T>
+struct is_nothrow_swappable {
+    using type = is_nothrow_swappable<T>;
+    static constexpr bool value = is_nothrow_swappable_impl<T>();
+};
+
 } // namespace detail
 } // namespace jbson
 
