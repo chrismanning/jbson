@@ -17,6 +17,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/exception/exception.hpp>
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
+#include <boost/io/ios_state.hpp>
 
 #include "element.hpp"
 #include "builder.hpp"
@@ -146,13 +147,13 @@ template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, json_error_num err) {
     switch(err) {
         case json_error_num::invalid_root_element:
-            os << "invalid_root_element";
+            os << "invalid root element; must be document (object) or array";
             break;
         case json_error_num::unexpected_end_of_range:
-            os << "unexpected_end_of_range";
+            os << "unexpected end of range";
             break;
         case json_error_num::unexpected_token:
-            os << "unexpected_token";
+            os << "unexpected token";
             break;
         default:
             os << "unknown error";
@@ -200,6 +201,38 @@ inline json_parse_error json_reader::make_parse_exception(json_error_num err, co
     return e;
 }
 
+inline std::string error_message(json_parse_error& err) {
+    std::stringstream is;
+    is << err.what() << ": ";
+    auto num = boost::get_error_info<parse_error>(err);
+    if(!num) {
+        is << "unknown error";
+        return is.str();
+    }
+    is << *num << "\n";
+
+    auto line = boost::get_error_info<current_line>(err);
+    if(!line)
+        return is.str();
+    auto pos = boost::get_error_info<line_pos>(err);
+    if(!pos)
+        return is.str();
+
+    is << *line << "\n";
+    {
+        boost::io::ios_width_saver ios(is);
+        is << std::setw(*pos) << "^";
+    }
+
+    auto expected = boost::get_error_info<expected_token>(err);
+    if(!expected || expected->empty())
+        return is.str();
+
+    is << "\nExpected: " << *expected;
+
+    return is.str();
+}
+
 template <typename ForwardIterator> void json_reader::parse(ForwardIterator first, ForwardIterator last) {
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
@@ -210,8 +243,8 @@ template <typename ForwardIterator>
 void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char>::value, "");
-    container_type c;
-    m_data.swap(c);
+
+    m_data = container_type{};
     m_data.reserve(+std::distance(&*first, &*last));
 
     m_start = std::make_shared<line_pos_iterator<ForwardIterator>>(first);
@@ -620,17 +653,20 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 auto codepoint = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
                 if(idx != 4)
                     BOOST_THROW_EXCEPTION(
-                        make_parse_exception(json_error_num::unexpected_token, std::next(first, idx), last));
+                        make_parse_exception(json_error_num::unexpected_token, std::next(first, idx), last,
+                                "hex (0-9;a-f/A-F)"));
                 std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt{};
                 std::string str;
                 if(codepoint >= 0xD800 && codepoint <= 0xDBFF) {
                     // Handle UTF-16 surrogate pair. Adapted from rapidjson
                     std::advance(first, 4);
                     if(*first++ != '\\' || *first++ != 'u')
-                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
+                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
+                                                                   "second half of a utf-16 surragate pair"));
                     auto codepoint2 = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
                     if(codepoint2 < 0xDC00 || codepoint2 > 0xDFFF)
-                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
+                        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
+                                                                   "second half of a utf-16 surragate pair"));
                     codepoint2 = (((codepoint - 0xD800) << 10) | (codepoint2 - 0xDC00)) + 0x10000;
                     str = cvt.to_bytes(codepoint2);
                 } else if(codepoint == 0x0000)
@@ -642,7 +678,8 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 out = boost::range::copy(str, out);
                 continue;
             } else
-                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last));
+                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
+                                                           "valid control char"));
         } else if(::iscntrl(c) && c != '\x7f')
             BOOST_THROW_EXCEPTION(
                 make_parse_exception(json_error_num::unexpected_token, first, last, "non-control char"));
@@ -660,7 +697,8 @@ template <typename ForwardIterator, typename OutputIterator>
 std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first,
                                                                    const line_pos_iterator<ForwardIterator>& last_,
                                                                    OutputIterator out) {
-    static_assert(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value, "");
+    static_assert(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value,
+                  "This number parser can only work with pointers or thin wrappers");
     assert(last_ != first);
     assert(&*first != nullptr);
     if(!std::isdigit(*first) && *first != '-')
@@ -671,7 +709,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
     if(*first == '0' && std::distance(first, last) > 1 && *std::next(first) != '.')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last_, "number"));
     auto type = element_type::null_element;
-    using namespace boost::spirit;
+
     char* pos;
     auto val = ::strtold(&*first, &pos);
 
