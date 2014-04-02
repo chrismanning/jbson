@@ -358,14 +358,7 @@ TEST(JsonReaderTest, JsonLiteralTest1) {
 TEST(JsonReaderTest, JsonParseErrorTest1) {
     auto json = boost::string_ref{R"({{})"};
     auto reader = json_reader{};
-    try {
-        reader.parse(json);
-        FAIL();
-    }
-    catch(json_parse_error& e) {
-//        std::clog << boost::diagnostic_information(e) << std::endl;
-//        FAIL();
-    }
+    ASSERT_THROW(reader.parse(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseUnicode) {
@@ -374,16 +367,10 @@ TEST(JsonReaderTest, JsonParseUnicode) {
     auto str = std::string{};
     str.resize(2);
     using line_it = line_pos_iterator<boost::string_ref::const_iterator>;
-    try {
-    /*ASSERT_NO_THROW*/(reader.parse(json));
+    ASSERT_NO_THROW(reader.parse(json));
     auto doc = document(reader);
     str = doc.begin()->value<std::string>();
     EXPECT_EQ("", str);
-    }
-    catch(...) {
-        std::clog << boost::current_exception_diagnostic_information() << std::endl;
-        FAIL();
-    }
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode) {
