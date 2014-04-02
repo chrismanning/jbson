@@ -244,6 +244,11 @@ template <class Container, class ElementContainer> class basic_document {
         return boost::equal(m_data, other.m_data);
     }
 
+    void swap(basic_document& other) noexcept {
+        using std::swap;
+        swap(m_data, other.m_data);
+    }
+
   private:
     container_type m_data;
     template <typename, typename> friend class basic_document;
@@ -266,6 +271,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     using base::end;
     using base::data;
     using base::size;
+    using base::swap;
 
     basic_array() = default;
 
@@ -314,6 +320,19 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
         return std::move(vec);
     }
 };
+
+template <typename Container, typename EContainer>
+void swap(basic_document<Container, EContainer>& a, basic_document<Container, EContainer>& b)
+noexcept(noexcept(a.swap(b))) {
+    std::abort();
+    a.swap(b);
+}
+
+template <typename Container, typename EContainer>
+void swap(basic_array<Container, EContainer>& a, basic_array<Container, EContainer>& b) noexcept(noexcept(a.swap(b))) {
+    std::abort();
+    a.swap(b);
+}
 
 } // namespace jbson
 

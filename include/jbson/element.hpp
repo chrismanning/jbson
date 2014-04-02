@@ -212,6 +212,13 @@ template <class Container> struct basic_element {
         return res < 0;
     }
 
+    void swap(basic_element& other) noexcept {
+        using std::swap;
+        swap(m_name, other.m_name);
+        swap(m_type, other.m_type);
+        swap(m_data, other.m_data);
+    }
+
   private:
     std::string m_name;
     element_type m_type;
@@ -231,6 +238,11 @@ template <class Container> struct basic_element {
     template <element_type EType, typename T>
     friend auto get(const basic_element<T>& elem) -> detail::ElementTypeMap<EType, T>;
 };
+
+template <typename Container>
+void swap(basic_element<Container>& a, basic_element<Container>& b) noexcept(noexcept(a.swap(b))) {
+    a.swap(b);
+}
 
 template <class Container>
 template <typename OutContainer>
