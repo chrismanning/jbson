@@ -97,13 +97,7 @@ template <class Container, class ElementContainer> class basic_document {
     using const_iterator = iterator;
     using value_type = element_type;
 
-    basic_document() = default;
-
-    basic_document(const basic_document&) = default;
-    basic_document& operator=(const basic_document&) = default;
-
-    basic_document(basic_document&&) = default;
-    basic_document& operator=(basic_document&&) = default;
+    basic_document() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
 
     template <typename SomeType>
     explicit basic_document(SomeType&& c,
@@ -120,7 +114,8 @@ template <class Container, class ElementContainer> class basic_document {
 
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
-                   std::enable_if_t<std::is_constructible<Container, OtherContainer>::value>* = nullptr)
+                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr)
+    noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
 
     template <typename OtherContainer>
@@ -273,16 +268,10 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     using base::size;
     using base::swap;
 
-    basic_array() = default;
-
-    basic_array(const basic_array&) = default;
-    basic_array& operator=(const basic_array&) = default;
-
-    basic_array(basic_array&&) = default;
-    basic_array& operator=(basic_array&&) = default;
+    basic_array() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
 
     template <typename... Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
-    basic_array(Args&&... args)
+    basic_array(Args&&... args) noexcept(std::is_nothrow_constructible<base, Args&&...>::value)
         : base(std::forward<Args>(args)...) {}
 
     template <typename SomeRangeT, typename = std::enable_if_t<!detail::is_document<std::decay_t<SomeRangeT>>::value>,
