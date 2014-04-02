@@ -71,6 +71,34 @@ TEST(BuilderTest, BuildTest3) {
     ASSERT_EQ(it, end);
 }
 
+TEST(BuilderTest, ArrayBuildTest1) {
+    static_assert(std::is_same<decltype(array_builder(123)(321)), array_builder&&>::value, "");
+    auto arrb = array_builder
+                (1, 15)
+                (2, "str")
+                (0, 4.6);
+    static_assert(std::is_same<decltype(arrb), array_builder>::value, "");
+    array arr;
+    EXPECT_NO_THROW(arr = array(arrb));
+
+    auto it = arr.begin();
+    const auto end = arr.end();
+    ASSERT_NE(end, it);
+    EXPECT_EQ("0", it->name());
+    EXPECT_EQ(element_type::double_element, it->type());
+    EXPECT_DOUBLE_EQ(4.6, get<element_type::double_element>(*it));
+    it++;
+    EXPECT_EQ("1", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(15, get<element_type::int32_element>(*it));
+    it++;
+    EXPECT_EQ("2", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("str", get<element_type::string_element>(*it));
+    it++;
+    ASSERT_EQ(it, end);
+}
+
 TEST(BuilderTest, BuildNestTest1) {
     auto doc = document(builder
                         ("hello", element_type::string_element, "world")
