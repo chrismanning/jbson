@@ -617,6 +617,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     std::advance(first, 1);
 
+    thread_local std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
     while(true) {
         if(first == last)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
@@ -650,13 +651,17 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 c = '\t';
             else if(c == 'u') {
                 std::advance(first, 1);
-                auto idx = size_t{0};
-                const auto codepoint = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
-                if(idx != 4)
+                std::array<char, 5> buf; buf.back() = 0;
+                std::copy(first, std::next(first, 4), buf.begin());
+                assert(buf.back() == 0);
+                char* pos;
+
+                const auto codepoint = std::strtol(buf.data(), &pos, 16);
+                if(pos != buf.data()+4)
                     BOOST_THROW_EXCEPTION(
-                        make_parse_exception(json_error_num::unexpected_token, std::next(first, idx), last,
+                        make_parse_exception(json_error_num::unexpected_token, std::next(first, pos-buf.data()), last,
                                 "hex (0-9;a-f/A-F)"));
-                std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt{};
+
                 std::string str;
                 if(codepoint >= 0xD800 && codepoint <= 0xDBFF) {
                     // Handle UTF-16 surrogate pair. Adapted from rapidjson
@@ -664,7 +669,15 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                     if(*first++ != '\\' || *first++ != 'u')
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
                                                                    "second half of a utf-16 surragate pair"));
-                    auto codepoint2 = std::stoi(std::string{first, std::next(first, 4)}, &idx, 16);
+
+                    std::copy(first, std::next(first, 4), buf.begin());
+                    assert(buf.back() == 0);
+
+                    auto codepoint2 = std::strtol(buf.data(), &pos, 16);
+                    if(pos != buf.data()+4)
+                        BOOST_THROW_EXCEPTION(
+                            make_parse_exception(json_error_num::unexpected_token, std::next(first, pos-buf.data()), last,
+                                    "hex (0-9;a-f/A-F)"));
                     if(codepoint2 < 0xDC00 || codepoint2 > 0xDFFF)
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
                                                                    "second half of a utf-16 surragate pair"));
