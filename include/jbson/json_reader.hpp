@@ -708,58 +708,64 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
 }
 
 template <typename ForwardIterator, typename OutputIterator>
-std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first,
+std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first_,
                                                                    const line_pos_iterator<ForwardIterator>& last_,
                                                                    OutputIterator out) {
     static_assert(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value,
                   "This number parser can only work with pointers or thin wrappers");
-    assert(last_ != first);
-    assert(&*first != nullptr);
+    assert(last_ != first_);
+
+    const auto* const first = &*first_;
+    assert(first != nullptr);
+
     if(!std::isdigit(*first) && *first != '-')
-        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last_, "number"));
-    const auto last = std::find_if_not(
-        first, last_, [](char c) { return ::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E'; });
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
+    const auto* const last = std::find_if_not(first, const_cast<const char*>(&*last_), [](char c) {
+        return ::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E';
+    });
 
     if(*first == '0' && std::distance(first, last) > 1 && *std::next(first) != '.')
-        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last_, "number"));
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
     auto type = element_type::null_element;
 
     char* pos;
-    const auto val = std::strtold(&*first, &pos);
+    const auto val = std::strtoll(first, &pos, 10);
 
-    if(val == HUGE_VALL || pos == &*first || pos != &*last)
-        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
-    std::advance(first, std::distance(const_cast<const char*>(&*first), const_cast<const char*>(pos)));
+    if(errno == ERANGE) {
+        errno = 0;
+        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_,
+                                                   "integer that fits in 8 bytes")
+                              << boost::errinfo_errno(ERANGE));
+    }
+    if(pos == first || pos != last) {
+        char* pos;
+        const auto val = std::strtod(first, &pos);
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-pragmas"
-#endif
-#pragma STDC FENV_ACCESS ON
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+        if(val == HUGE_VALL || pos == first || pos != last)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
 
-    std::feclearexcept(FE_ALL_EXCEPT);
-    int64_t i = std::llrint(val);
+        std::advance(first_, std::distance(first, const_cast<const char*>(pos)));
 
-    if(std::fetestexcept(FE_ALL_EXCEPT)) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(double), '\0');
         out = setter<element_type::double_element, double>::call(out, val);
         type = element_type::double_element;
-    } else if(i > std::numeric_limits<int32_t>::min() && i < std::numeric_limits<int32_t>::max()) {
+        return std::make_tuple(out, type);
+    }
+
+    std::advance(first_, std::distance(first, const_cast<const char*>(pos)));
+
+    if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(int32_t), '\0');
-        out = setter<element_type::int32_element, int32_t>::call(out, i);
+        out = setter<element_type::int32_element, int32_t>::call(out, static_cast<int32_t>(val));
         type = element_type::int32_element;
     } else {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(int64_t), '\0');
-        out = setter<element_type::int64_element, int64_t>::call(out, i);
+        out = setter<element_type::int64_element, int64_t>::call(out, val);
         type = element_type::int64_element;
     }
-    std::feclearexcept(FE_ALL_EXCEPT);
 
     return std::make_tuple(out, type);
 }
