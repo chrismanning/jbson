@@ -93,3 +93,11 @@ TEST_F(PerfTest, RvalueTest) {
         auto d = document(std::move(reader));
     }
 }
+
+TEST_F(PerfTest, ParseToSetTest) {
+    for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
+        ASSERT_NO_THROW(reader.parse(json_));
+        auto set = document_set(document(std::move(reader)));
+    }
+}
