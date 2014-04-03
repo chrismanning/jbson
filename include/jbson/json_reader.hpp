@@ -20,8 +20,7 @@
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 #include <boost/io/ios_state.hpp>
 
-#include "element.hpp"
-#include "builder.hpp"
+#include "document.hpp"
 #include "detail/traits.hpp"
 
 namespace jbson {
@@ -100,7 +99,7 @@ struct json_reader {
     }
 
   private:
-    template <element_type EType, typename T> using setter = detail::set_impl<EType, element::container_type, T>;
+    template <element_type EType, typename T> using setter = detail::set_impl<EType, container_type, T>;
 
     template <typename ForwardIterator, typename OutputIterator>
     OutputIterator parse_document(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
@@ -736,17 +735,17 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
     if(std::fetestexcept(FE_ALL_EXCEPT)) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(double), '\0');
-        out = detail::set_impl<element_type::double_element, decltype(m_data), double>::call(out, val);
+        out = setter<element_type::double_element, double>::call(out, val);
         type = element_type::double_element;
     } else if(i > std::numeric_limits<int32_t>::min() && i < std::numeric_limits<int32_t>::max()) {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(int32_t), '\0');
-        out = detail::set_impl<element_type::int32_element, decltype(m_data), int32_t>::call(out, i);
+        out = setter<element_type::int32_element, int32_t>::call(out, i);
         type = element_type::int32_element;
     } else {
         assert(out >= m_data.begin() && out <= m_data.end());
         out = m_data.insert(out, sizeof(int64_t), '\0');
-        out = detail::set_impl<element_type::int64_element, decltype(m_data), int64_t>::call(out, i);
+        out = setter<element_type::int64_element, int64_t>::call(out, i);
         type = element_type::int64_element;
     }
     std::feclearexcept(FE_ALL_EXCEPT);
