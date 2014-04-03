@@ -70,6 +70,11 @@ TEST_F(PerfTest, WhitespaceTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
         ASSERT_NO_THROW(reader.parse(whitespace_));
+        auto arr = array(std::move(reader));
+        auto beg = arr.begin();
+        ASSERT_NE(arr.end(), beg);
+        ASSERT_EQ("0", beg->name());
+        ASSERT_EQ(0, beg->value<int32_t>());
     }
 }
 
