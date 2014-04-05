@@ -31,12 +31,11 @@ using boost::spirit::line_pos_iterator;
 struct json_parse_error;
 enum class json_error_num;
 
-template <typename CharT> struct basic_json_reader {
-    using char_type = CharT;
+struct json_reader {
     using container_type = std::vector<char>;
     using range_type = boost::iterator_range<container_type::const_iterator>;
 
-    basic_json_reader() noexcept(std::is_nothrow_constructible<container_type>::value) = default;
+    json_reader() noexcept(std::is_nothrow_constructible<container_type>::value) = default;
 
     template <typename ForwardIterator> void parse(ForwardIterator, ForwardIterator);
     template <typename ForwardIterator>
@@ -135,11 +134,6 @@ template <typename CharT> struct basic_json_reader {
     container_type m_data;
 };
 
-using json_reader = basic_json_reader<char>;
-using wjson_reader = basic_json_reader<wchar_t>;
-using u16json_reader = basic_json_reader<char16_t>;
-using u32json_reader = basic_json_reader<char32_t>;
-
 enum class json_error_num { invalid_root_element, unexpected_end_of_range, unexpected_token, };
 
 template <typename CharT, typename TraitsT>
@@ -171,12 +165,10 @@ struct json_parse_error : jbson_error {
 
 std::string to_string(const json_parse_error&);
 
-template <typename CharT>
 template <typename ForwardIterator>
-json_parse_error basic_json_reader<CharT>::make_parse_exception(json_error_num err,
-                                                                const line_pos_iterator<ForwardIterator>& current,
-                                                                const line_pos_iterator<ForwardIterator>& last,
-                                                                const std::string& expected) const {
+json_parse_error
+json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
+                                  const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     auto e = make_parse_exception(err, expected);
     if(m_start) {
@@ -194,9 +186,7 @@ json_parse_error basic_json_reader<CharT>::make_parse_exception(json_error_num e
     return e;
 }
 
-template <typename CharT>
-inline json_parse_error basic_json_reader<CharT>::make_parse_exception(json_error_num err,
-                                                                       const std::string& expected) const {
+inline json_parse_error json_reader::make_parse_exception(json_error_num err, const std::string& expected) const {
     auto e = json_parse_error{};
     e << parse_error(err);
     if(!expected.empty())
@@ -236,19 +226,13 @@ inline std::string error_message(json_parse_error& err) {
     return is.str();
 }
 
-template <typename CharT>
-template <typename ForwardIterator>
-void basic_json_reader<CharT>::parse(ForwardIterator first, ForwardIterator last) {
+template <typename ForwardIterator> void json_reader::parse(ForwardIterator first, ForwardIterator last) {
     parse(line_pos_iterator<ForwardIterator>{first}, line_pos_iterator<ForwardIterator>{last});
 }
 
-template <typename CharT>
 template <typename ForwardIterator>
-void basic_json_reader<CharT>::parse(line_pos_iterator<ForwardIterator> first,
-                                     line_pos_iterator<ForwardIterator> last) {
+void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
-    static_assert(std::is_same<typename std::iterator_traits<ForwardIterator>::value_type, char_type>::value,
-                  "parser input must have same character type as class");
 
     m_data = container_type{};
     if(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value)
@@ -277,11 +261,9 @@ void basic_json_reader<CharT>::parse(line_pos_iterator<ForwardIterator> first,
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "end of input"));
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-OutputIterator basic_json_reader<CharT>::parse_document(line_pos_iterator<ForwardIterator>& first,
-                                                        const line_pos_iterator<ForwardIterator>& last,
-                                                        OutputIterator out) {
+OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& first,
+                                           const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     assert(last != first);
@@ -352,11 +334,9 @@ OutputIterator basic_json_reader<CharT>::parse_document(line_pos_iterator<Forwar
     }
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-OutputIterator basic_json_reader<CharT>::parse_array(line_pos_iterator<ForwardIterator>& first,
-                                                     const line_pos_iterator<ForwardIterator>& last,
-                                                     OutputIterator out) {
+OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& first,
+                                        const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     assert(last != first);
@@ -429,11 +409,10 @@ OutputIterator basic_json_reader<CharT>::parse_array(line_pos_iterator<ForwardIt
     }
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-std::tuple<OutputIterator, element_type>
-basic_json_reader<CharT>::parse_value(line_pos_iterator<ForwardIterator>& first,
-                                      const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_iterator<ForwardIterator>& first,
+                                                                  const line_pos_iterator<ForwardIterator>& last,
+                                                                  OutputIterator out) {
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
     assert(last != first);
@@ -504,10 +483,9 @@ basic_json_reader<CharT>::parse_value(line_pos_iterator<ForwardIterator>& first,
     return std::make_tuple(out, type);
 }
 
-template <typename CharT>
 template <typename OutputIterator>
 std::tuple<boost::optional<OutputIterator>, element_type>
-basic_json_reader<CharT>::parse_extended_value(const basic_document<range_type>& doc, OutputIterator out) {
+json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputIterator out) {
     if(doc.size() < 5)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value")
                               << expected_size(5) << actual_size(doc.size()));
@@ -601,11 +579,9 @@ basic_json_reader<CharT>::parse_extended_value(const basic_document<range_type>&
     return std::make_tuple(out, type);
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-OutputIterator basic_json_reader<CharT>::parse_string(line_pos_iterator<ForwardIterator>& first,
-                                                      const line_pos_iterator<ForwardIterator>& last,
-                                                      OutputIterator out) {
+OutputIterator json_reader::parse_string(line_pos_iterator<ForwardIterator>& first,
+                                         const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
     assert(last != first);
 
     assert(out >= m_data.begin() && out <= m_data.end());
@@ -618,11 +594,10 @@ OutputIterator basic_json_reader<CharT>::parse_string(line_pos_iterator<ForwardI
     return out;
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-OutputIterator basic_json_reader<CharT>::parse_name(line_pos_iterator<ForwardIterator>& first,
-                                                    const line_pos_iterator<ForwardIterator>& last,
-                                                    OutputIterator out) {
+OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first,
+                                       const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+    using char_type = typename std::iterator_traits<ForwardIterator>::value_type;
     assert(last != first);
     if(first == last)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
@@ -748,11 +723,10 @@ OutputIterator basic_json_reader<CharT>::parse_name(line_pos_iterator<ForwardIte
     return std::next(m_data.insert(out, '\0'));
 }
 
-template <typename CharT>
 template <typename ForwardIterator, typename OutputIterator>
-std::tuple<OutputIterator, element_type>
-basic_json_reader<CharT>::parse_number(line_pos_iterator<ForwardIterator>& first_,
-                                       const line_pos_iterator<ForwardIterator>& last_, OutputIterator out) {
+std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first_,
+                                                                   const line_pos_iterator<ForwardIterator>& last_,
+                                                                   OutputIterator out) {
     assert(last_ != first_);
 
     if(!std::isdigit(*first_) && *first_ != '-')
@@ -817,10 +791,9 @@ basic_json_reader<CharT>::parse_number(line_pos_iterator<ForwardIterator>& first
     return std::make_tuple(out, type);
 }
 
-template <typename CharT>
 template <typename ForwardIterator>
-void basic_json_reader<CharT>::skip_space(line_pos_iterator<ForwardIterator>& first,
-                                          const line_pos_iterator<ForwardIterator>& last) {
+void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
+                             const line_pos_iterator<ForwardIterator>& last) {
     first = std::find_if_not(first, last, &::isspace);
 }
 
@@ -845,55 +818,55 @@ inline array operator"" _json_arr(const char* str, size_t len) {
 }
 
 inline document_set operator"" _json_set(const wchar_t* str, size_t len) {
-    auto reader = wjson_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return document_set(document(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const wchar_t* str, size_t len) {
-    auto reader = wjson_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const wchar_t* str, size_t len) {
-    auto reader = wjson_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char16_t* str, size_t len) {
-    auto reader = u16json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return document_set(document(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char16_t* str, size_t len) {
-    auto reader = u16json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char16_t* str, size_t len) {
-    auto reader = u16json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char32_t* str, size_t len) {
-    auto reader = u32json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return document_set(document(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char32_t* str, size_t len) {
-    auto reader = u32json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char32_t* str, size_t len) {
-    auto reader = u32json_reader{};
+    auto reader = json_reader{};
     reader.parse(str, str + len);
     return std::move(reader);
 }
