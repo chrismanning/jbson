@@ -744,15 +744,14 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         return std::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E';
     });
 
-    const auto buf_len = std::distance(first_, last);
+    const auto buf_len = detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value
+                             ? std::distance(&*first_, &*last)
+                             : std::distance(first_, last);
     char* buf = (char*)alloca(buf_len + 1);
     char* const buf_end = buf + buf_len;
     *buf_end = 0;
     assert(buf != nullptr);
-    if(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value)
-        std::memcpy(buf, &*first_, buf_len);
-    else
-        std::copy(first_, last, buf);
+    std::copy(first_, last, buf);
 
     if(*buf == '0' && buf_len > 1 && *std::next(buf) != '.')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
