@@ -33,28 +33,26 @@ template <element_type EType> using element_type_c = mpl::integral_c<element_typ
 
 template <typename Iterator, typename Enable = void> struct is_iterator_pointer : std::false_type {};
 
-template <typename Iterator>
-struct is_iterator_pointer<Iterator*, bool> : std::true_type {};
-
-template <typename Iterator>
-struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_constructible<Iterator,
-        typename std::iterator_traits<Iterator>::value_type*>::value>> : std::true_type {
-};
+template <typename Iterator> struct is_iterator_pointer<Iterator*, bool> : std::true_type {};
 
 template <typename Iterator>
 struct is_iterator_pointer<
-    Iterator, std::enable_if_t<std::is_pointer<typename Iterator::iterator_type>::value>> : std::true_type {};
+    Iterator,
+    std::enable_if_t<std::is_constructible<Iterator, typename std::iterator_traits<Iterator>::value_type*>::value>>
+    : std::true_type {};
 
 template <typename Iterator>
-struct is_iterator_pointer<
-    boost::iterator_range<Iterator>,
-    std::enable_if_t<std::is_pointer<std::decay_t<typename Iterator::iterator_type>>::value>> : std::true_type {};
+struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_pointer<typename Iterator::iterator_type>::value>>
+    : std::true_type {};
+
+template <typename Iterator>
+struct is_iterator_pointer<boost::iterator_range<Iterator>> : is_iterator_pointer<Iterator> {};
 
 template <typename Container, bool set = false> struct TypeMap {
-    using container_type = std::conditional_t<set, Container,
-                                              boost::iterator_range<typename Container::const_iterator>>;
-    using string_type = std::conditional_t<!set && is_iterator_pointer<typename container_type::iterator>::value,
-                                           boost::string_ref, std::string>;
+    using container_type =
+        std::conditional_t<set, Container, boost::iterator_range<typename Container::const_iterator>>;
+    using string_type = std::conditional_t < !set && is_iterator_pointer<typename container_type::iterator>::value,
+          boost::string_ref, std::string > ;
     typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, string_type>,
@@ -94,19 +92,16 @@ template <typename IteratorT> struct is_iterator_range<boost::iterator_range<Ite
 
 template <typename T, typename T2> using lazy_enable_if = typename boost::lazy_enable_if<T, T2>;
 
-template <typename T>
-struct is_string_literal : std::false_type {};
+template <typename T> struct is_string_literal : std::false_type {};
 
-template <typename CharT, size_t N>
-struct is_string_literal<CharT(&)[N]> : std::true_type {};
+template <typename CharT, size_t N> struct is_string_literal<CharT (&)[N]> : std::true_type {};
 
-template <typename CharT, size_t N>
-struct is_string_literal<const CharT(&)[N]> : std::true_type {};
+template <typename CharT, size_t N> struct is_string_literal<const CharT (&)[N]> : std::true_type {};
 
 template <typename RandomAccessContainer>
-using is_random_access_container = typename std::is_same<typename boost::iterator_category_to_traversal<
-                                                     typename boost::range_category<RandomAccessContainer>::type>::type,
-                                                 boost::random_access_traversal_tag>;
+using is_random_access_container = typename std::is_same<
+    typename boost::iterator_category_to_traversal<typename boost::range_category<RandomAccessContainer>::type>::type,
+    boost::random_access_traversal_tag>;
 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
@@ -139,14 +134,12 @@ static_assert(is_range_of_iterator<std::vector<char>, boost::mpl::bind<quote<std
                                                                        boost::mpl::_1, boost::mpl::_1>>::value,
               "");
 
-template <typename T>
-constexpr bool is_nothrow_swappable_impl() {
+template <typename T> constexpr bool is_nothrow_swappable_impl() {
     using std::swap;
     return noexcept(swap(std::declval<std::decay_t<T>&>(), std::declval<std::decay_t<T>&>()));
 }
 
-template <typename T>
-struct is_nothrow_swappable {
+template <typename T> struct is_nothrow_swappable {
     using type = is_nothrow_swappable<T>;
     static constexpr bool value = is_nothrow_swappable_impl<T>();
 };
