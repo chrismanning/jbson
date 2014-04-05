@@ -156,8 +156,9 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
 
 using parse_error = boost::error_info<struct err_val_, json_error_num>;
 using expected_token = boost::error_info<struct token_, std::string>;
-using current_line = boost::error_info<struct line_, std::string>;
-using line_pos = boost::error_info<struct line_pos_, size_t>;
+using current_line_string = boost::error_info<struct line_, std::string>;
+using line_position = boost::error_info<struct line_pos_, size_t>;
+using line_number = boost::error_info<struct line_num_, size_t>;
 
 struct json_parse_error : jbson_error {
     const char* what() const noexcept override { return "json_parse_error"; }
@@ -185,11 +186,18 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
 
         std::basic_string<cvt_char_type> str{range.begin(), range.end()};
         if(std::is_same<char_type, container_type::value_type>::value)
-            e << current_line(boost::lexical_cast<std::string>(range));
+            e << current_line_string(boost::lexical_cast<std::string>(range));
         else {
-            e << current_line(cvt.to_bytes(str));
+            try {
+                e << current_line_string(cvt.to_bytes(str));
+            }
+            catch(...) {
+                auto c = str[boost::spirit::get_line(current)];
+                e << current_line_string(std::to_string((int)c));
+            }
         }
-        e << line_pos(boost::spirit::get_column(begin, current));
+        e << line_number(boost::spirit::get_line(current));
+        e << line_position(boost::spirit::get_column(begin, current));
     } else
         std::abort();
     return e;
@@ -213,13 +221,16 @@ inline std::string error_message(json_parse_error& err) {
     }
     is << *num << "\n";
 
-    const auto line = boost::get_error_info<current_line>(err);
+    const auto line_num = boost::get_error_info<line_number>(err);
+    const auto line = boost::get_error_info<current_line_string>(err);
     if(!line)
         return is.str();
-    const auto pos = boost::get_error_info<line_pos>(err);
+    const auto pos = boost::get_error_info<line_position>(err);
     if(!pos)
         return is.str();
 
+    if(line_num)
+        is << "line " << *line_num << ": ";
     is << *line << "\n";
     {
         boost::io::ios_width_saver ios(is);
