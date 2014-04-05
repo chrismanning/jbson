@@ -169,6 +169,7 @@ template <typename ForwardIterator>
 json_parse_error
 json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
                                   const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
+    using char_type = typename std::iterator_traits<ForwardIterator>::value_type;
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     auto e = make_parse_exception(err, expected);
     if(m_start) {
@@ -178,8 +179,16 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
             std::advance(begin, 1);
         auto range = boost::range::find_first_of<boost::return_begin_found>(boost::make_iterator_range(begin, last),
                                                                             boost::as_literal("\n\r"));
+        using cvt_char_type =
+            std::conditional_t<std::is_same<char_type, container_type::value_type>::value, char32_t, char_type>;
+        thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
 
-        e << current_line(boost::lexical_cast<std::string>(range));
+        std::basic_string<cvt_char_type> str{range.begin(), range.end()};
+        if(std::is_same<char_type, container_type::value_type>::value)
+            e << current_line(boost::lexical_cast<std::string>(range));
+        else {
+            e << current_line(cvt.to_bytes(str));
+        }
         e << line_pos(boost::spirit::get_column(begin, current));
     } else
         std::abort();
