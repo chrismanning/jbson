@@ -373,16 +373,27 @@ TEST(JsonReaderTest, JsonParseUnicode) {
     EXPECT_EQ("", str);
 }
 
-TEST(JsonReaderTest, JsonParseSurrogateUnicode) {
+TEST(JsonReaderTest, JsonParseSurrogateUnicode1) {
     auto json = boost::string_ref{R"(["\uD834\uDD1E"])"};
     auto reader = json_reader{};
     auto str = std::string{};
     str.resize(2);
-    using line_it = line_pos_iterator<boost::string_ref::const_iterator>;
     ASSERT_NO_THROW(reader.parse(json));
     auto doc = document(reader);
     str = doc.begin()->value<std::string>();
     EXPECT_EQ("\xF0\x9D\x84\x9E", str);
+}
+
+TEST(JsonReaderTest, JsonParseSurrogateUnicode2) {
+    auto json = boost::string_ref{R"(["\uD834\uDB00"])"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
+}
+
+TEST(JsonReaderTest, JsonParseSurrogateUnicode3) {
+    auto json = boost::string_ref{R"(["\uDEAD"])"};
+    auto reader = json_reader{};
+    ASSERT_THROW(reader.parse(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonCheckerFail1) {

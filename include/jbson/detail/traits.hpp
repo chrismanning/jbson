@@ -34,7 +34,11 @@ template <element_type EType> using element_type_c = mpl::integral_c<element_typ
 template <typename Iterator, typename Enable = void> struct is_iterator_pointer : std::false_type {};
 
 template <typename Iterator>
-struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_constructible<Iterator, char*>::value>> : std::true_type {
+struct is_iterator_pointer<Iterator*, bool> : std::true_type {};
+
+template <typename Iterator>
+struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_constructible<Iterator,
+        typename std::iterator_traits<Iterator>::value_type*>::value>> : std::true_type {
 };
 
 template <typename Iterator>
