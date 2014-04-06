@@ -218,6 +218,58 @@ TEST(JsonReaderTest, JsonParseTest16) {
     ASSERT_EQ(elements.end(), it);
 }
 
+TEST(JsonReaderTest, JsonParseTest16_utf32) {
+    auto json = boost::u32string_ref{U"[4294967296, \"some \U0001D11E string\", true]"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    auto elements = basic_document_set<json_reader::range_type>(reader);
+    ASSERT_EQ(3, elements.size());
+
+    auto it = elements.begin();
+    EXPECT_EQ("0", it->name());
+    ASSERT_EQ(element_type::int64_element, it->type());
+    EXPECT_EQ(4294967296, get<element_type::int64_element>(*it));
+    ++it;
+    ASSERT_NE(elements.end(), it);
+    EXPECT_EQ("1", it->name());
+    ASSERT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("some \xF0\x9D\x84\x9E string", get<element_type::string_element>(*it));
+    ++it;
+    ASSERT_NE(elements.end(), it);
+    EXPECT_EQ("2", it->name());
+    ASSERT_EQ(element_type::boolean_element, it->type());
+    EXPECT_TRUE(get<element_type::boolean_element>(*it));
+    ++it;
+    ASSERT_EQ(elements.end(), it);
+}
+
+TEST(JsonReaderTest, JsonParseTest16_utf16) {
+    auto json = boost::u16string_ref{u"[4294967296, \"some \xD834\xDD1E string\", true]"};
+    auto reader = json_reader{};
+    ASSERT_NO_THROW(reader.parse(json));
+
+    auto elements = basic_document_set<json_reader::range_type>(reader);
+    ASSERT_EQ(3, elements.size());
+
+    auto it = elements.begin();
+    EXPECT_EQ("0", it->name());
+    ASSERT_EQ(element_type::int64_element, it->type());
+    EXPECT_EQ(4294967296, get<element_type::int64_element>(*it));
+    ++it;
+    ASSERT_NE(elements.end(), it);
+    EXPECT_EQ("1", it->name());
+    ASSERT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("some \xF0\x9D\x84\x9E string", get<element_type::string_element>(*it));
+    ++it;
+    ASSERT_NE(elements.end(), it);
+    EXPECT_EQ("2", it->name());
+    ASSERT_EQ(element_type::boolean_element, it->type());
+    EXPECT_TRUE(get<element_type::boolean_element>(*it));
+    ++it;
+    ASSERT_EQ(elements.end(), it);
+}
+
 TEST(JsonReaderTest, JsonParseTest17) {
     auto json = boost::string_ref{R"({"bindata" : {"$binary": false}})"};
     auto reader = json_reader{};
