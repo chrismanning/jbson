@@ -188,19 +188,19 @@ This is equivalent to the above example.
 ## Performance
 Performance of the JSON parser is decent, as measured by [json_benchmark](https://github.com/mloskot/json_benchmark), it's 2nd only to rapidjson (or 3rd to QJsonDocument with small input):
 
-> QJsonDocument.small: 1000 iterations of 500 parsings in 1.04621 to 1.05643 sec based on 2 benchmarkss  
+> QJsonDocument.small: 1000 iterations of 500 parsings in 1.04621 to 1.05643 sec based on 2 benchmarks  
 > QJsonDocument.large: 1000 iterations of 1 parsings in 58.1027 to 58.1235 sec based on 2 benchmarks
 
-> jsoncpp.small: 1000 iterations of 500 parsings in 2.4124 to 2.45696 sec based on 2 benchmarks 
+> jsoncpp.small: 1000 iterations of 500 parsings in 2.4124 to 2.45696 sec based on 2 benchmarks  
 > jsoncpp.large: 1000 iterations of 1 parsings in 62.7781 to 62.7823 sec based on 2 benchmarks
 
-> rapidjson.small: 1000 iterations of 500 parsings in 0.454047 to 0.48559 sec based on 2 benchmarkss  
+> rapidjson.small: 1000 iterations of 500 parsings in 0.454047 to 0.48559 sec based on 2 benchmarks  
 > rapidjson.large: 1000 iterations of 1 parsings in 4.8566 to 4.86322 sec based on 2 benchmarks
 
-> jbson.small: 1000 iterations of 500 parsings in 1.46874 to 1.4981 sec based on 2 benchmarks
+> jbson.small: 1000 iterations of 500 parsings in 1.46874 to 1.4981 sec based on 2 benchmarks  
 > jbson.large: 1000 iterations of 1 parsings in 46.0871 to 46.0893 sec based on 2 benchmarks
 
-> jsoncons.small: 1000 iterations of 500 parsings in 10.2386 to 10.2747 sec based on 2 benchmarkss  
+> jsoncons.small: 1000 iterations of 500 parsings in 10.2386 to 10.2747 sec based on 2 benchmarks  
 > jsoncons.large: 1000 iterations of 1 parsings in 243.634 to 243.796 sec based on 2 benchmarks
 
 ## Notes
