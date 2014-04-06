@@ -213,6 +213,11 @@ inline json_parse_error json_reader::make_parse_exception(json_error_num err, co
 
 inline std::string error_message(json_parse_error& err) {
     std::stringstream is;
+
+    const auto line_num = boost::get_error_info<line_number>(err);
+    if(line_num)
+        is << "line " << *line_num << ": ";
+
     is << err.what() << ": ";
     const auto num = boost::get_error_info<parse_error>(err);
     if(!num) {
@@ -221,7 +226,6 @@ inline std::string error_message(json_parse_error& err) {
     }
     is << *num << "\n";
 
-    const auto line_num = boost::get_error_info<line_number>(err);
     const auto line = boost::get_error_info<current_line_string>(err);
     if(!line)
         return is.str();
@@ -229,8 +233,6 @@ inline std::string error_message(json_parse_error& err) {
     if(!pos)
         return is.str();
 
-    if(line_num)
-        is << "line " << *line_num << ": ";
     is << *line << "\n";
     {
         boost::io::ios_width_saver ios(is);
