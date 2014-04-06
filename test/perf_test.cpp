@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#define NDEBUG
 #include <fstream>
 
 #include <gtest/gtest.h>
@@ -46,6 +47,8 @@ public:
 
 protected:
     std::vector<char> json_;
+    std::u16string json_u16;
+    std::u32string json_u32;
     std::vector<char> whitespace_;
     document doc;
 
@@ -63,6 +66,26 @@ TEST_F(PerfTest, ParseTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
         json_reader reader;
         ASSERT_NO_THROW(reader.parse(json_));
+    }
+}
+
+TEST_F(PerfTest, Utf16ParseTest) {
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt{};
+    json_u16 = cvt.from_bytes(json_.data(), json_.data()+json_.size());
+
+    for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
+        ASSERT_NO_THROW(reader.parse(json_u16));
+    }
+}
+
+TEST_F(PerfTest, Utf32ParseTest) {
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt{};
+    json_u32 = cvt.from_bytes(json_.data(), json_.data()+json_.size());
+
+    for (size_t i = 0; i < kTrialCount; i++) {
+        json_reader reader;
+        ASSERT_NO_THROW(reader.parse(json_u32));
     }
 }
 

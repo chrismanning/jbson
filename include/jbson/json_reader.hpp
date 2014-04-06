@@ -614,6 +614,58 @@ OutputIterator json_reader::parse_string(line_pos_iterator<ForwardIterator>& fir
     return out;
 }
 
+namespace detail {
+
+template <typename CharT>
+inline bool iscntrl(CharT c) {
+    return std::iswcntrl(c);
+}
+
+template <>
+inline bool iscntrl<char>(char c) {
+    return std::iscntrl(c);
+}
+
+template <typename CharT>
+inline bool isxdigit(CharT c) {
+    return std::iswxdigit(c);
+}
+
+template <>
+inline bool isxdigit<char>(char c) {
+    return std::isxdigit(c);
+}
+
+template <typename CharT>
+inline bool isspace(CharT c) {
+    return std::iswspace(c);
+}
+
+template <>
+inline bool isspace<char>(char c) {
+    return std::isspace(c);
+}
+
+template <typename CharT>
+struct codecvt {
+    using type = std::codecvt_utf8<CharT>;
+};
+
+template <>
+struct codecvt<char> : std::codecvt<char, char, std::mbstate_t> {
+    using type = codecvt<char>;
+};
+
+template <>
+struct codecvt<char16_t> {
+    using type = std::codecvt_utf8_utf16<char16_t>;
+};
+
+template <typename CharT>
+using codecvt_t = typename codecvt<CharT>::type;
+
+} // namespace detail
+
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first,
                                        const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
@@ -625,43 +677,55 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "\""));
     std::advance(first, 1);
 
-    thread_local std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt16;
+    static std::codecvt_utf8_utf16<char16_t> cvt16;
+    detail::codecvt_t<char_type> cvt;
+    std::mbstate_t state{};
+    std::array<char_type, 2> buf;
+    std::array<char, std::max(sizeof(buf), 2*sizeof(char16_t))+1> to;
+
     while(true) {
         if(first == last)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
 
-        char_type c = *first;
-        if(c == '"') {
+        buf[0] = *first;
+
+        if(buf[0] == '"') {
             std::advance(first, 1);
             break;
         }
 
-        if(c == '\\') {
+        // Handle UTF-16 surrogate pair
+        if(std::is_same<char_type, char16_t>::value && buf[0] >= 0xD800 && buf[0] <= 0xDBFF)
+            buf[1] = *++first;
+        else
+            buf[1] = 0;
+
+        if(buf[0] == '\\') {
             std::advance(first, 1);
             if(first == last || *first == '\0')
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_end_of_range, first, last));
-            c = *first;
-            if(c == '"')
-                c = '"';
-            else if(c == '\\')
-                c = '\\';
-            else if(c == '/')
-                c = '/';
-            else if(c == 'b')
-                c = '\b';
-            else if(c == 'f')
-                c = '\f';
-            else if(c == 'n')
-                c = '\n';
-            else if(c == 'r')
-                c = '\r';
-            else if(c == 't')
-                c = '\t';
-            else if(c == 'u') {
+            buf[0] = *first;
+            if(buf[0] == '"')
+                buf[0] = '"';
+            else if(buf[0] == '\\')
+                buf[0] = '\\';
+            else if(buf[0] == '/')
+                buf[0] = '/';
+            else if(buf[0] == 'b')
+                buf[0] = '\b';
+            else if(buf[0] == 'f')
+                buf[0] = '\f';
+            else if(buf[0] == 'n')
+                buf[0] = '\n';
+            else if(buf[0] == 'r')
+                buf[0] = '\r';
+            else if(buf[0] == 't')
+                buf[0] = '\t';
+            else if(buf[0] == 'u') {
                 std::advance(first, 1);
 
                 if(std::next(first, 4) !=
-                   std::find_if_not(first, std::next(first, 4), [](auto&& c) { return std::isxdigit(c); }))
+                   std::find_if_not(first, std::next(first, 4), [](auto&& c) { return detail::isxdigit(c); }))
                     BOOST_THROW_EXCEPTION(
                         make_parse_exception(json_error_num::unexpected_token, first, last, "4x hex (0-9;a-f/A-F)"));
 
@@ -688,13 +752,13 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 }
 
                 if(codepoints[0] >= 0xD800 && codepoints[0] <= 0xDBFF) {
-                    // Handle UTF-16 surrogate pair. Adapted from rapidjson
+                    // Handle UTF-16 surrogate pair
                     std::advance(first, 4);
                     if(*first++ != '\\' || *first++ != 'u')
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
                                                                    "trail surrogate after lead surrogate (utf-16)"));
                     if(std::next(first, 4) !=
-                       std::find_if_not(first, std::next(first, 4), [](auto&& c) { return std::isxdigit(c); }))
+                       std::find_if_not(first, std::next(first, 4), [](auto&& c) { return detail::isxdigit(c); }))
                         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
                                                                    "4x valid hex characters (0-9;a-f/A-F)"));
 
@@ -708,33 +772,42 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                                                                    "valid hex characters (0-9;a-f/A-F)"));
                 }
 
-                try {
-                    auto str = cvt16.to_bytes(codepoints.data(), codepoints.data() + (codepoints[1] == 0 ? 1 : 2));
-                    std::advance(first, 4);
-                    out = m_data.insert(out, str.size(), '\0');
-                    out = boost::range::copy(str, out);
-                    continue;
-                }
-                catch(std::range_error&) {
+                to.fill(0);
+                const char16_t* frm_next;
+                char* to_next;
+                auto res = cvt16.out(state, codepoints.data(), codepoints.data()+codepoints.size(), frm_next,
+                        to.data(), to.data()+to.size(), to_next);
+                if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
                     BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
                                                                "valid unicode code point(s)"));
-                }
+                std::advance(first, 4);
+                auto len = std::strlen(to.data());
+                out = m_data.insert(out, len, '\0');
+                out = std::copy(to.data(), to.data()+len, out);
+                continue;
             } else
                 BOOST_THROW_EXCEPTION(
                     make_parse_exception(json_error_num::unexpected_token, first, last, "valid control char"));
-        } else if(std::iscntrl(c) && c != '\x7f')
+        } else if(detail::iscntrl(buf[0]) && buf[0] != '\x7f')
             BOOST_THROW_EXCEPTION(
                 make_parse_exception(json_error_num::unexpected_token, first, last, "non-control char"));
 
         if(std::is_same<char_type, container_type::value_type>::value) {
             assert(out >= m_data.begin() && out <= m_data.end());
-            out = std::next(m_data.insert(out, c));
-        } else {
-            using cvt_char_type =
-                std::conditional_t<std::is_same<char_type, container_type::value_type>::value, char32_t, char_type>;
-            thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
-            auto str = cvt.to_bytes(c);
-            out = std::next(m_data.insert(out, str.begin(), str.end()), str.size());
+            out = std::next(m_data.insert(out, buf[0]));
+        }
+        else {
+            to.fill(0);
+            const char_type* frm_next;
+            char* to_next;
+            auto res = cvt.out(state, buf.data(), buf.data()+(buf[1] ? 2 : 1), frm_next,
+                    to.data(), to.data()+to.size(), to_next);
+            if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
+                BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last,
+                                                           "valid unicode code point(s)"));
+            auto len = std::strlen(to.data());
+            out = m_data.insert(out, len, '\0');
+            out = std::copy(to.data(), to.data()+len, out);
         }
 
         std::advance(first, 1);
@@ -813,7 +886,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 template <typename ForwardIterator>
 void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
                              const line_pos_iterator<ForwardIterator>& last) {
-    first = std::find_if_not(first, last, &::isspace);
+    first = std::find_if_not(first, last, [](auto&& c) { return detail::isspace(c); });
 }
 
 inline namespace literal {
