@@ -175,7 +175,7 @@ JSON documents can be parse with the `json_reader` class, which parses directly 
     reader.parse(R"({"some json": 123 })"); // C++11 raw string
     auto doc = jbson::document(std::move(reader));
 
-`json_reader` can parse string literals, or any range of UTF-8 codepoints e.g. `std::string`, `boost::string_ref`, `boost::iterator_range<...>`, `QByteArray`, etc.  
+`json_reader` can parse string literals, or any range of UTF-(8, 16 or 32) characters e.g. `std::string`, `boost::string_ref`, `boost::iterator_range<...>`, `QByteArray`, etc. To parse UTF-16 or UTF-32 documents, `json_reader` must be passed a range of (or iterators to) `char16_t` or `char32_t`, respectively. It is assumed the input code units use the system endian, and a BOM (byte-order mark) at the beginning of input is an error. `json_reader` may also work with `wchar_t`, though this usage is non-standard, non-portable and unsupported.  
 For convenience, user-defined literals have been implemented for JSON documents.
 
     using jbson::literal;
