@@ -279,7 +279,7 @@ void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_itera
     m_data.shrink_to_fit();
 
     skip_space(first, last);
-    if(first != last)
+    if(first != last && *first != '\0')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "end of input"));
 }
 
