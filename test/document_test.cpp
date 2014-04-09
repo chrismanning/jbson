@@ -46,7 +46,7 @@ TEST(DocumentTest, DocumentParseTest2) {
 }
 
 TEST(DocumentTest, DocumentParseTest3) {
-    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    auto ifs = std::ifstream{JBSON_FILES"/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -94,7 +94,7 @@ TEST(DocumentTest, DocumentParseTest3) {
 }
 
 TEST(DocumentTest, DocumentParseTest4) {
-    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    auto ifs = std::ifstream{JBSON_FILES"/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -138,7 +138,7 @@ TEST(DocumentTest, DocumentParseTest4) {
 }
 
 TEST(DocumentTest, ArrayTest1) {
-    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    auto ifs = std::ifstream{JBSON_FILES"/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -187,7 +187,7 @@ TEST(DocumentTest, ArrayTest1) {
 }
 
 TEST(DocumentTest, VectorToDocTest1) {
-    auto ifs = std::ifstream{JBSON_FILES"test.bson", std::ios::binary};
+    auto ifs = std::ifstream{JBSON_FILES"/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());

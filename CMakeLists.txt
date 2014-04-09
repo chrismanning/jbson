@@ -72,20 +72,12 @@ ExternalProject_Get_Property(gtest_${PROJECT_NAME} binary_dir)
 set(GTEST_LIBRARIES "-L${binary_dir} -lgtest")
 message(STATUS "Gtest libs: ${GTEST_LIBRARIES}")
 
-add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test/")
+add_definitions(-DJBSON_FILES="${CMAKE_CURRENT_SOURCE_DIR}/test")
 
 function(cxx_test test_name)
-  add_executable(${PROJECT_NAME}_${test_name} test/${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
+  add_executable(${PROJECT_NAME}_${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
   target_link_libraries(${PROJECT_NAME}_${test_name} ${GTEST_LIBRARIES})
   add_test(${PROJECT_NAME}_${test_name} ${EXECUTABLE_OUTPUT_PATH}/${PROJECT_NAME}_${test_name})
 endfunction()
 
-cxx_test(element_test)
-cxx_test(document_test)
-cxx_test(builder_test)
-cxx_test(json_reader_test)
-cxx_test(json_writer_test)
-cxx_test(path_test)
-
-add_executable(${PROJECT_NAME}_perf_test test/perf_test.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
-target_link_libraries(${PROJECT_NAME}_perf_test ${GTEST_LIBRARIES})
+add_subdirectory(test)

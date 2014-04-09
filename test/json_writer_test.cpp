@@ -208,7 +208,7 @@ TEST(JsonWriterTest, JsonWriteTest7) {
 }
 
 TEST(JsonWriterTest, JsonWriteTest8) {
-    auto ifs = std::ifstream{JBSON_FILES"json_checker_test_suite/pass1.json", std::ios::in};
+    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/pass1.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());

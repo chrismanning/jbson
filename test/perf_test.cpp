@@ -15,7 +15,7 @@ using namespace jbson;
 class PerfTest : public ::testing::Test {
 public:
     virtual void SetUp() {
-        std::ifstream ifs(JBSON_FILES"json_test_suite_sample.json");
+        std::ifstream ifs(JBSON_FILES"/json_test_suite_sample.json");
         ASSERT_FALSE(ifs.fail());
 
         ifs.seekg(0, std::ios::end);
