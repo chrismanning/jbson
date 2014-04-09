@@ -237,9 +237,6 @@ template <class Container> struct basic_element {
     template <typename T> static bool valid_set_type(element_type);
     template <typename T> bool valid_set_type() const { return valid_set_type<T>(type()); }
 
-    template <typename ReturnT, typename> friend struct detail::get_impl;
-    template <element_type EType, typename C, typename T, typename> friend struct detail::set_impl;
-
     template <typename> friend struct basic_element;
     template <element_type EType, typename T>
     friend auto get(const basic_element<T>& elem) -> detail::ElementTypeMap<EType, T>;

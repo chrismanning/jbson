@@ -20,8 +20,6 @@
 namespace jbson {
 namespace detail {
 
-template <typename ReturnT, typename Enable = void> struct get_impl;
-
 template <typename StringT> struct make_string {
     template <typename Iterator> static StringT call(const Iterator& first, const Iterator& last) {
         return StringT{first, last};
@@ -35,122 +33,115 @@ template <> struct make_string<boost::string_ref> {
     }
 };
 
-// getters
+} // namespace detail
+
 // number
-template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_arithmetic<ReturnT>::value>> {
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        if(boost::distance(data) != sizeof(ReturnT))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data))
-                                                         << expected_size(sizeof(ReturnT)));
-        return detail::little_endian_to_native<ReturnT>(data.begin(), data.end());
-    }
-};
+template <typename RangeT, typename ArithT>
+void deserialise(const RangeT& data, ArithT& num, std::enable_if_t<std::is_arithmetic<ArithT>::value>* = nullptr) {
+    if(boost::distance(data) != sizeof(ArithT))
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data))
+                                                     << expected_size(sizeof(ArithT)));
+    num = detail::little_endian_to_native<ArithT>(data.begin(), data.end());
+}
 
 // string
-template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_convertible<std::decay_t<ReturnT>, boost::string_ref>::value>> {
-    template <typename RangeT> static std::decay_t<ReturnT> call(const RangeT& data) {
-        auto first = data.begin(), last = data.end();
-        if(std::distance(first, last) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                         << expected_size(sizeof(int32_t)));
-        std::advance(first, sizeof(int32_t));
-        auto length = little_endian_to_native<int32_t>(data.begin(), first) - 1;
-        last = std::find(first, last, '\0');
-        if(std::distance(first, last) != length)
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                         << expected_size(length));
-        return make_string<std::decay_t<ReturnT>>::call(first, last);
-    }
-};
+template <typename RangeT, typename StringT>
+void deserialise(const RangeT& data, StringT& str,
+                 std::enable_if_t<std::is_convertible<std::decay_t<StringT>, boost::string_ref>::value>* = nullptr) {
+    auto first = data.begin(), last = data.end();
+    if(std::distance(first, last) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
+                                                     << expected_size(sizeof(int32_t)));
+    std::advance(first, sizeof(int32_t));
+    const auto length = detail::little_endian_to_native<int32_t>(data.begin(), first) - 1;
+    last = std::find(first, last, '\0');
+    if(std::distance(first, last) != length)
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
+                                                     << expected_size(length));
+
+    str = detail::make_string<StringT>::call(first, last);
+}
 
 // embedded document
-template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<is_document<std::decay_t<ReturnT>>::value>> {
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        return ReturnT{data};
-    }
-};
+template <typename RangeT, typename Container, typename EContainer>
+void deserialise(const RangeT& data, basic_document<Container, EContainer>& doc) {
+    doc = basic_document<Container, EContainer>{data};
+}
+
+template <typename RangeT, typename Container, typename EContainer>
+void deserialise(const RangeT& data, basic_array<Container, EContainer>& arr) {
+    arr = basic_array<Container, EContainer>{data};
+}
 
 // binary data
-template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_same<std::decay_t<ReturnT>, std::vector<char>>::value>> {
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        ReturnT vec;
-        boost::range::push_back(vec, data);
-        return vec;
-    }
-};
+template <typename RangeT> void deserialise(const RangeT& data, std::vector<char>& vec) {
+    boost::range::push_back(vec, data);
+}
 
 // ditto
-template <template <typename> class ReturnT, typename Iterator>
-struct get_impl<
-    ReturnT<Iterator>,
-    std::enable_if_t<std::is_same<std::decay_t<ReturnT<Iterator>>, typename boost::iterator_range<Iterator>>::value>> {
-    template <typename RangeT> static ReturnT<Iterator> call(const RangeT& data) { return data; }
-};
+template <typename RangeT> void deserialise(const RangeT& data, RangeT& vec) { vec = data; }
 
 // oid
-template <typename ReturnT>
-struct get_impl<ReturnT, std::enable_if_t<std::is_same<std::decay_t<ReturnT>, std::array<char, 12>>::value>> {
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        if(boost::distance(data) != 12)
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(12));
-        ReturnT arr;
-        std::copy(data.begin(), data.end(), arr.data());
-        return arr;
-    }
-};
+template <typename RangeT> void deserialise(const RangeT& data, std::array<char, 12>& oid) {
+    if(boost::distance(data) != 12)
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(12));
+    std::copy(data.begin(), data.end(), oid.data());
+}
 
 template <size_t N, typename TupleT> using tuple_element_t = typename std::tuple_element<N, std::decay_t<TupleT>>::type;
 
 // regex
-template <typename TupleT>
-struct get_impl<TupleT,
-                std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
-                                 std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value&&
-                                     std::is_same<tuple_element_t<0, TupleT>, tuple_element_t<1, TupleT>>::value>> {
-    template <typename RangeT> static std::decay_t<TupleT> call(const RangeT& data) {
-        using string_maker = make_string<std::decay_t<tuple_element_t<1, TupleT>>>;
-        auto first = std::find(data.begin(), data.end(), '\0');
-        auto str = string_maker::call(data.begin(), first);
-        auto last = std::find(++first, data.end(), '\0');
-        return std::make_tuple(str, string_maker::call(first, last));
-    }
-};
+template <typename RangeT, typename TupleT>
+void deserialise(
+    const RangeT& data, TupleT& tuple,
+    std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
+                     std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value&&
+                         std::is_same<tuple_element_t<0, TupleT>, tuple_element_t<1, TupleT>>::value>* = nullptr) {
+    using string_maker = detail::make_string<std::decay_t<tuple_element_t<1, TupleT>>>;
+    auto first = std::find(data.begin(), data.end(), '\0');
+    std::get<0>(tuple) = string_maker::call(data.begin(), first);
+    auto last = std::find(++first, data.end(), '\0');
+    std::get<1>(tuple) = string_maker::call(first, last);
+}
 
 // db pointer
-template <typename TupleT>
-struct get_impl<
-    TupleT, std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
+template <typename RangeT, typename TupleT>
+void
+deserialise(const RangeT& data, TupleT& tuple,
+            std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
                              std::is_same<std::array<char, 12>, std::decay_t<tuple_element_t<1, TupleT>>>::value&&
-                                 std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>> {
-    template <typename RangeT> static std::decay_t<TupleT> call(const RangeT& data) {
-        auto str = get_impl<tuple_element_t<0, TupleT>>::call(data);
-        auto oid = get_impl<std::array<char, 12>>::call(boost::make_iterator_range(
-            std::next(data.begin(), detect_size(element_type::string_element, data.begin(), data.end())),
-            data.end()));
-        return std::make_tuple(str, oid);
-    }
-};
+                                 std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>* =
+                nullptr) {
+    deserialise(data, std::get<0>(tuple));
+    deserialise(boost::make_iterator_range(std::next(data.begin(), detail::detect_size(element_type::string_element,
+                                                                                       data.begin(), data.end())),
+                                           data.end()),
+                std::get<1>(tuple));
+}
 
 // scoped javascript
-template <typename TupleT>
-struct get_impl<
-    TupleT, std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
-                             is_document<std::decay_t<tuple_element_t<1, TupleT>>>::value&&
-                                 std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>> {
-    template <typename RangeT> static TupleT call(const RangeT& data) {
-        auto str = get_impl<std::decay_t<tuple_element_t<0, TupleT>>>::call(data);
-        auto doc = get_impl<std::decay_t<tuple_element_t<1, TupleT>>>::call(boost::make_iterator_range(
-            std::next(data.begin(), detect_size(element_type::string_element, data.begin(), data.end())),
-            data.end()));
-        return std::make_tuple(str, doc);
-    }
-};
+template <typename RangeT, typename TupleT>
+void deserialise(
+    const RangeT& data, TupleT& tuple,
+    std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
+                     detail::is_document<std::decay_t<tuple_element_t<1, TupleT>>>::value&& std::is_constructible<
+                         std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>* = nullptr) {
+    deserialise(data, std::get<0>(tuple));
+    deserialise(boost::make_iterator_range(std::next(data.begin(), detail::detect_size(element_type::string_element,
+                                                                                       data.begin(), data.end())),
+                                           data.end()),
+                std::get<1>(tuple));
+}
 
-template <typename ReturnT> struct get_impl<ReturnT, std::enable_if_t<std::is_void<ReturnT>::value>> {
-    static_assert(std::is_void<ReturnT>::value, "cannot get void");
+namespace detail {
+
+template <typename ReturnT> struct get_impl {
+    static_assert(!std::is_void<ReturnT>::value, "cannot get void");
+    template <typename RangeT> static ReturnT call(const RangeT& data) {
+        ReturnT ret{};
+        deserialise(data, ret);
+        return std::move(ret);
+    }
 };
 
 } // namespace detail
