@@ -341,16 +341,6 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
     EXPECT_EQ(oid, new_oid);
 }
 
-TYPED_TEST_P(ParameterizedContainerTest, ElementDateTest) {
-    using date_type = typename TestFixture::template ElementTypeMap<element_type::date_element>;
-    using clock_type = typename date_type::clock;
-    const auto now_time = std::chrono::time_point_cast<std::chrono::milliseconds>(clock_type::now());
-    static_assert(std::is_same<std::decay_t<decltype(now_time)>, date_type>::value, "");
-    basic_element<typename TestFixture::container_type> el{"date modified", element_type::date_element};
-    EXPECT_NO_THROW(el.value(now_time));
-    EXPECT_EQ(now_time, get<element_type::date_element>(el));
-}
-
 TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
     using regex_type = typename TestFixture::template ElementTypeMap<element_type::regex_element>;
     basic_element<typename TestFixture::container_type> el{"some filter", element_type::regex_element};
@@ -362,6 +352,7 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
     EXPECT_EQ("i", options);
 }
 
-REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementDateTest, ElementRegexTest);
-using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>, boost::container::stable_vector<char>>;
+REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementRegexTest);
+using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>,
+                                        boost::container::stable_vector<char>>;
 INSTANTIATE_TYPED_TEST_CASE_P(ParameterizedOIDTest, ParameterizedContainerTest, ContainerTypes);

@@ -38,18 +38,6 @@ struct set_impl<EType, Container, T,
     }
 };
 
-// date
-template <element_type EType, typename Container, typename DateT>
-struct set_impl<EType, Container, DateT,
-                std::enable_if_t<std::is_arithmetic<typename std::decay_t<DateT>::rep>::value&&
-                                     std::is_arithmetic<typename std::decay_t<DateT>::clock::rep>::value>> {
-    template <typename OutIterator> static OutIterator call(OutIterator out, DateT val) {
-        BOOST_CONCEPT_ASSERT((boost::OutputIterator<OutIterator, char>));
-        return boost::range::copy(detail::native_to_little_endian(static_cast<int64_t>(val.time_since_epoch().count())),
-                                  out);
-    }
-};
-
 // oid
 template <element_type EType, typename Container, typename T>
 struct set_impl<EType, Container, T, std::enable_if_t<std::is_same<std::decay_t<T>, std::array<char, 12>>::value>> {

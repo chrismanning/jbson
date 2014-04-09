@@ -197,8 +197,7 @@ struct json_element_visitor<element_type::db_pointer_element, Element, OutputIte
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::date_element, Element, OutputIterator> {
     std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
-        auto date = get<element_type::date_element>(e);
-        return stringify(static_cast<int64_t>(date.time_since_epoch().count()), out);
+        return stringify(static_cast<document>(builder("$date", e.template value<int64_t>())), out);
     }
 };
 

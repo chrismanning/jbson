@@ -525,10 +525,10 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
         using DateT = detail::ElementTypeMap<element_type::date_element, element::container_type>;
         if(doc.begin()->type() == element_type::int32_element)
             out = setter<element_type::date_element, DateT>::call(
-                out, DateT{std::chrono::milliseconds{get<element_type::int32_element>(*doc.begin())}});
+                out, static_cast<DateT>(get<element_type::int32_element>(*doc.begin())));
         else if(doc.begin()->type() == element_type::int64_element)
             out = setter<element_type::date_element, DateT>::call(
-                out, DateT{std::chrono::milliseconds{get<element_type::int64_element>(*doc.begin())}});
+                out, static_cast<DateT>(get<element_type::int64_element>(*doc.begin())));
         else
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
         type = element_type::date_element;
