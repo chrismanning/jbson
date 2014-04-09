@@ -149,8 +149,7 @@ struct set_visitor<EType, C, A, std::enable_if_t<EType == element_type::array_el
 template <element_type EType, typename Container, typename A>
 struct set_visitor<
     EType, Container, A,
-    std::enable_if_t<detail::has_member_function_push_back<std::remove_reference_t<Container>, void,
-                                                           boost::mpl::vector<const char&>>::
+    std::enable_if_t<detail::container_has_push_back<std::decay_t<Container>>::
                          value&&(EType != element_type::array_element&& EType != element_type::document_element) &&
                      !std::is_convertible<size_func<EType, void*>, int>::value>> {
 
@@ -177,12 +176,10 @@ struct set_visitor<
 
 template <element_type EType, typename Container, typename A>
 struct set_visitor<EType, Container, A,
-                   std::enable_if_t<!detail::has_member_function_push_back<std::remove_reference_t<Container>, void,
-                                                                           boost::mpl::vector<const char&>>::value &&
+                   std::enable_if_t<!detail::container_has_push_back<std::decay_t<Container>>::value &&
                                     (EType != element_type::array_element && EType != element_type::document_element) &&
                                     !std::is_convertible<size_func<EType, void*>, int>::value>> {
-    static_assert(detail::has_member_function_push_back<std::remove_reference_t<Container>, void,
-                                    boost::mpl::vector<const char&>>::value,
+    static_assert(detail::container_has_push_back<std::remove_reference_t<Container>>::value,
                   "Cannot set value of an element without a modifiable container");
 };
 

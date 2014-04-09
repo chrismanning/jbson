@@ -289,9 +289,10 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
-    template <typename RandomAccessContainer,
-              typename = std::enable_if_t<detail::is_random_access_container<RandomAccessContainer>::value>>
-    explicit operator RandomAccessContainer() const {
+    template <typename SequenceContainer>
+    explicit operator SequenceContainer() const {
+        static_assert(detail::container_has_push_back<SequenceContainer>::value,
+                      "container must have a push_back() member function");
         auto fun = [](auto&& a, auto&& b) {
 #ifdef _GNU_SOURCE
             // natural sort
@@ -300,7 +301,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
             return a.name().compare(b.name());
 #endif
         };
-        auto vec = RandomAccessContainer{};
+        auto vec = SequenceContainer{};
         for(auto&& e : *this)
             vec.push_back(e);
         boost::range::sort(vec, [fun](auto&& e1, auto&& e2) { return fun(e1, e2) < 0; });

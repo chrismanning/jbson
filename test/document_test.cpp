@@ -18,7 +18,6 @@ using namespace jbson;
 
 // copmile-time tests
 static_assert(std::is_constructible<std::vector<element>, array>::value,"");
-static_assert(!std::is_constructible<std::list<element>, array>::value,"");
 static_assert(std::is_same<decltype(std::declval<document>().data()), std::vector<char>&&>::value,"");
 static_assert(std::is_same<decltype(std::declval<document&>().data()), const std::vector<char>&>::value,"");
 static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
@@ -164,7 +163,6 @@ TEST(DocumentTest, ArrayTest1) {
 
     static_assert(std::is_constructible<std::vector<element>, decltype(arr)>::value, "");
     static_assert(std::is_constructible<std::deque<element>, decltype(arr)>::value, "");
-    static_assert(!std::is_constructible<std::list<element>, decltype(arr)>::value, "");
     auto vec = std::vector<element>(arr);
     ASSERT_EQ(3, vec.size());
 

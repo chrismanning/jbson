@@ -97,40 +97,54 @@ template <typename CharT, size_t N> struct is_string_literal<CharT (&)[N]> : std
 
 template <typename CharT, size_t N> struct is_string_literal<const CharT (&)[N]> : std::true_type {};
 
-template <typename RandomAccessContainer>
-using is_random_access_container = typename std::is_same<
-    typename boost::iterator_category_to_traversal<typename boost::range_category<RandomAccessContainer>::type>::type,
-    boost::random_access_traversal_tag>;
-
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
 
+template <typename Container, typename Arg>
+using container_has_push_back_arg_impl = has_member_function_push_back<Container, void, mpl::vector<Arg>>;
+
+template <typename Container> struct container_has_push_back_impl {
+    using type =
+        mpl::or_<container_has_push_back_arg_impl<Container, typename boost::range_value<Container>::type>,
+                 container_has_push_back_arg_impl<Container, const typename boost::range_value<Container>::type&>>;
+};
+
+template <typename Container>
+using container_has_push_back =
+    typename mpl::eval_if<has_iterator<std::decay_t<Container>>, container_has_push_back_impl<std::decay_t<Container>>,
+                          std::false_type>::type;
+
+static_assert(container_has_push_back<std::vector<char>>::value, "");
+static_assert(container_has_push_back<std::string>::value, "");
+static_assert(!container_has_push_back<std::set<char>>::value, "");
+static_assert(!container_has_push_back<char>::value, "");
+static_assert(!container_has_push_back<double>::value, "");
+
 template <typename RangeT, typename ElementTrait, typename RangeTrait>
-using is_range_of = typename boost::mpl::apply<
-    ElementTrait, typename boost::mpl::eval_if<
-                      boost::mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>,
-                      boost::mpl::apply<RangeTrait, std::decay_t<RangeT>>, boost::mpl::identity<void>>::type>::type;
+using is_range_of = typename mpl::apply<
+    ElementTrait,
+    typename mpl::eval_if<mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>,
+                          mpl::apply<RangeTrait, std::decay_t<RangeT>>, mpl::identity<void>>::type>::type;
 
 template <typename RangeT, typename ElementTrait>
-using is_range_of_value = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_value>>;
+using is_range_of_value = is_range_of<RangeT, ElementTrait, mpl::quote1<boost::range_value>>;
 
 template <typename RangeT, typename ElementT>
-using is_range_of_same_value =
-    is_range_of_value<RangeT, boost::mpl::bind2<boost::mpl::quote2<std::is_same>, ElementT, boost::mpl::_1>>;
+using is_range_of_same_value = is_range_of_value<RangeT, mpl::bind2<mpl::quote2<std::is_same>, ElementT, mpl::_1>>;
 
 static_assert(is_range_of_same_value<std::vector<char>, char>::value, "");
 static_assert(!is_range_of_same_value<char, char>::value, "");
 static_assert(!is_range_of_same_value<double, char>::value, "");
 
 template <typename RangeT, typename ElementTrait>
-using is_range_of_iterator = is_range_of<RangeT, ElementTrait, boost::mpl::quote1<boost::range_mutable_iterator>>;
+using is_range_of_iterator = is_range_of<RangeT, ElementTrait, mpl::quote1<boost::range_mutable_iterator>>;
 
 template <template <typename...> class Fun, typename...> struct quote {
     template <typename... Args> using apply = typename Fun<Args...>::type;
 };
 
-static_assert(is_range_of_iterator<std::vector<char>, boost::mpl::bind<quote<std::is_constructible>, std::vector<char>,
-                                                                       boost::mpl::_1, boost::mpl::_1>>::value,
+static_assert(is_range_of_iterator<std::vector<char>,
+                                   mpl::bind<quote<std::is_constructible>, std::vector<char>, mpl::_1, mpl::_1>>::value,
               "");
 
 template <typename T> constexpr bool is_nothrow_swappable_impl() {
