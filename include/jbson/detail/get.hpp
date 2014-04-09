@@ -102,19 +102,6 @@ struct get_impl<ReturnT, std::enable_if_t<std::is_same<std::decay_t<ReturnT>, st
     }
 };
 
-// date
-template <typename ReturnT>
-struct get_impl<
-    ReturnT,
-    std::enable_if_t<std::is_same<
-        std::decay_t<ReturnT>, std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>>::value>> {
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        if(boost::distance(data) != 8)
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(8));
-        return ReturnT{std::chrono::milliseconds{get_impl<int64_t>::call(data)}};
-    }
-};
-
 template <size_t N, typename TupleT> using tuple_element_t = typename std::tuple_element<N, std::decay_t<TupleT>>::type;
 
 // regex
