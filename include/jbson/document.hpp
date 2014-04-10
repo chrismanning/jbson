@@ -114,8 +114,8 @@ template <class Container, class ElementContainer> class basic_document {
 
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
-                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr)
-    noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                       nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
 
     template <typename OtherContainer>
@@ -130,7 +130,8 @@ template <class Container, class ElementContainer> class basic_document {
 
     template <typename CharT, size_t N,
               typename = std::enable_if_t<std::is_same<std::array<CharT, N>, container_type>::value>>
-    explicit basic_document(const std::array<CharT, N>& arr) : m_data(arr) {}
+    explicit basic_document(const std::array<CharT, N>& arr)
+        : m_data(arr) {}
 
     template <typename CharT, size_t N,
               typename = std::enable_if_t<!std::is_same<std::array<CharT, N>, container_type>::value>>
@@ -141,6 +142,7 @@ template <class Container, class ElementContainer> class basic_document {
         typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
         typename =
             std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
+                             !detail::is_iterator_range<container_type>::value &&
                              detail::is_range_of_iterator<
                                  ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
                                                                 boost::mpl::_1, boost::mpl::_1>>::value>>
@@ -215,13 +217,9 @@ template <class Container, class ElementContainer> class basic_document {
 
     int32_t size() const noexcept { return boost::distance(m_data); }
 
-    const container_type& data() const& noexcept {
-        return m_data;
-    }
+    const container_type& data() const& noexcept { return m_data; }
 
-    container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) {
-        return m_data;
-    }
+    container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) { return m_data; }
 
     container_type&& data() && noexcept(std::is_nothrow_move_constructible<container_type>::value) {
         return std::move(m_data);
@@ -289,10 +287,11 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
-    template <typename SequenceContainer>
+    template <typename SequenceContainer,
+              typename = std::enable_if_t<detail::container_has_push_back<SequenceContainer>::value>,
+              typename = std::enable_if_t<
+                  detail::is_range_of_value<SequenceContainer, boost::mpl::quote1<detail::is_element>>::value>>
     explicit operator SequenceContainer() const {
-        static_assert(detail::container_has_push_back<SequenceContainer>::value,
-                      "container must have a push_back() member function");
         auto fun = [](auto&& a, auto&& b) {
 #ifdef _GNU_SOURCE
             // natural sort
@@ -312,8 +311,8 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 };
 
 template <typename Container, typename EContainer>
-void swap(basic_document<Container, EContainer>& a, basic_document<Container, EContainer>& b)
-noexcept(noexcept(a.swap(b))) {
+void swap(basic_document<Container, EContainer>& a,
+          basic_document<Container, EContainer>& b) noexcept(noexcept(a.swap(b))) {
     std::abort();
     a.swap(b);
 }
