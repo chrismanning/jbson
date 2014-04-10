@@ -7,3 +7,5 @@ cxx_test(path_test)
 
 add_executable(${PROJECT_NAME}_perf_test perf_test.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
 target_link_libraries(${PROJECT_NAME}_perf_test ${GTEST_LIBRARIES})
+
+add_subdirectory(bson_tests)
