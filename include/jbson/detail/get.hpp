@@ -132,10 +132,15 @@ void deserialise(
     std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
                      detail::is_document<std::decay_t<tuple_element_t<1, TupleT>>>::value&& std::is_constructible<
                          std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>* = nullptr) {
-    deserialise(data, std::get<0>(tuple));
-    deserialise(boost::make_iterator_range(std::next(data.begin(), detail::detect_size(element_type::string_element,
-                                                                                       data.begin(), data.end())),
-                                           data.end()),
+    int32_t length;
+    auto it = data.begin();
+    deserialise(boost::make_iterator_range(it, std::next(it, 4)), length);
+    if(length != boost::distance(data))
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(length));
+    std::advance(it, 4);
+    deserialise(boost::make_iterator_range(it, data.end()), std::get<0>(tuple));
+    deserialise(boost::make_iterator_range(
+                    std::next(it, detail::detect_size(element_type::string_element, it, data.end())), data.end()),
                 std::get<1>(tuple));
 }
 
