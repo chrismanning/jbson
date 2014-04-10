@@ -98,9 +98,15 @@ void deserialise(
                      std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value&&
                          std::is_same<tuple_element_t<0, TupleT>, tuple_element_t<1, TupleT>>::value>* = nullptr) {
     using string_maker = detail::make_string<std::decay_t<tuple_element_t<1, TupleT>>>;
+
     auto first = std::find(data.begin(), data.end(), '\0');
+    if(first == data.end())
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)));
     std::get<0>(tuple) = string_maker::call(data.begin(), first);
+
     auto last = std::find(++first, data.end(), '\0');
+    if(last == data.end())
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)));
     std::get<1>(tuple) = string_maker::call(first, last);
 }
 
