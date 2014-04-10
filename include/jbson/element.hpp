@@ -111,10 +111,6 @@ template <class Container> struct basic_element {
     void type(element_type type) noexcept { m_type = type; }
 
     template <typename T> T value() const {
-        if(!valid_type<T>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
-                                  << actual_type(typeid(T))
-                                  << expected_type(detail::visit<detail::typeid_visitor>(m_type, *this)));
         return detail::get_impl<T>::call(m_data);
     }
 
@@ -436,19 +432,23 @@ template <typename T, typename Container, typename Enable> struct is_valid_func 
     };
 };
 
+using expected_element_type = boost::error_info<struct expected_element_type_, element_type>;
+using actual_element_type = boost::error_info<struct actual_element_type_, element_type>;
+
 } // namespace detail
 
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container> {
-    using ReturnT = detail::ElementTypeMap<EType, Container>;
     if(EType != elem.type())
-        BOOST_THROW_EXCEPTION(incompatible_element_conversion{});
+        BOOST_THROW_EXCEPTION(incompatible_element_conversion{}
+                              << detail::expected_element_type(EType)
+                              << detail::actual_element_type(elem.type()));
 
-    return detail::get_impl<ReturnT>::call(elem.m_data);
+    return elem.template value<detail::ElementTypeMap<EType, Container>>();
 }
 
 template <typename ReturnT, typename Container> ReturnT get(const basic_element<Container>& elem) {
-    return detail::get_impl<ReturnT>::call(elem.m_data);
+    return elem.template value<ReturnT>();
 }
 
 template <typename CharT, typename TraitsT>

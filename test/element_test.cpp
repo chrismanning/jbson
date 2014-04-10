@@ -27,7 +27,7 @@ TEST(ElementTest, ElementParseTest1) {
 
     EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
     EXPECT_NO_THROW(el1.value<boost::string_ref>());
-    EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
+    EXPECT_THROW(el1.value<bool>(), invalid_element_size);
 
     el1.value(element_type::boolean_element, false);
     EXPECT_FALSE(get<element_type::boolean_element>(el1));
