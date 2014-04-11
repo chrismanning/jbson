@@ -103,13 +103,13 @@ template <class Container, class ElementContainer> class basic_document {
     explicit basic_document(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
+        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
+            BOOST_THROW_EXCEPTION(invalid_document_size{});
         if(static_cast<ptrdiff_t>(boost::distance(m_data)) !=
            detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
             BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(detail::little_endian_to_native<int32_t>(
                                                                  m_data.begin(), m_data.end()))
                                                           << actual_size(boost::distance(m_data)));
-        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
     }
 
     template <typename OtherContainer>
