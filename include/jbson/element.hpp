@@ -45,8 +45,7 @@ template <class Container> struct basic_element {
                   "container_type must not be a string type (or convertible)");
     static_assert(std::is_same<typename container_type::value_type, char>::value,
                   "container_type's value_type must be char");
-    static_assert(detail::is_nothrow_swappable<container_type>::value,
-                  "container_type must have noexcept swap()");
+    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
 
     basic_element() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
 
@@ -59,22 +58,20 @@ template <class Container> struct basic_element {
 
     template <typename OtherContainer>
     basic_element(basic_element<OtherContainer>&&,
-                  std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
-    template <typename OtherContainer>
-    basic_element(basic_element<OtherContainer>&&,
-                  std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
-
-    explicit basic_element(const container_type& c);
+                  std::enable_if_t<std::is_constructible<container_type, OtherContainer&&>::value>* = nullptr);
 
     template <typename ForwardRange>
-    explicit basic_element(const ForwardRange&,
-                           std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr);
+    explicit basic_element(
+        ForwardRange&&, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr,
+        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>* =
+            nullptr);
 
-    template <typename ForwardIterator1, typename ForwardIterator2>
-    basic_element(ForwardIterator1 first, ForwardIterator2 last,
-                  std::enable_if_t<!detail::is_string_literal<ForwardIterator1>::value>* = nullptr,
-                  std::enable_if_t<std::is_same<ForwardIterator1, ForwardIterator2>::value>* = nullptr)
-        : basic_element(container_type{first, last}) {}
+    template <typename ForwardIterator>
+    basic_element(ForwardIterator&& first, ForwardIterator&& last,
+                  std::enable_if_t<!detail::is_string_literal<ForwardIterator>::value>* = nullptr,
+                  std::enable_if_t<detail::is_range_of_same_value<decltype(boost::make_iterator_range(first, last)),
+                                                                  typename Container::value_type>::value>* = nullptr)
+        : basic_element(boost::make_iterator_range(first, last)) {}
 
     template <typename T> basic_element(std::string name, element_type type, T&& val) : basic_element(std::move(name)) {
         value(type, std::forward<T>(val));
@@ -84,21 +81,22 @@ template <class Container> struct basic_element {
 
     template <size_t N>
     explicit basic_element(const char (&name)[N], element_type type = element_type::null_element)
-        : basic_element(std::string(name, N-1), type) {}
+        : basic_element(std::string(name, N - 1), type) {}
 
     template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
     }
 
-    template <size_t N, typename T> basic_element(const char (&name)[N], T&& val)
-        : basic_element(std::string(name, N-1)) {
+    template <size_t N, typename T>
+    basic_element(const char (&name)[N], T&& val)
+        : basic_element(std::string(name, N - 1)) {
         value(std::forward<T>(val));
     }
 
     template <size_t N1, size_t N2>
     basic_element(const char (&name)[N1], const char (&val)[N2])
-        : basic_element(std::string(name, N1-1)) {
-        value(boost::string_ref(val, N2-1));
+        : basic_element(std::string(name, N1 - 1)) {
+        value(boost::string_ref(val, N2 - 1));
     }
 
     // field name
@@ -110,12 +108,12 @@ template <class Container> struct basic_element {
     element_type type() const noexcept { return m_type; }
     void type(element_type type) noexcept { m_type = type; }
 
-    template <typename T> T value() const {
-        return detail::get_impl<T>::call(m_data);
-    }
+    template <typename T> T value() const { return detail::get_impl<T>::call(m_data); }
 
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
-    void value(std::string val) { value<element_type::string_element>(boost::string_ref{val}); }
+    void value(std::string val) {
+        value<element_type::string_element>(boost::string_ref{val});
+    }
     void value(const char* val) { value(boost::string_ref(val)); }
 
     void value(bool val) { value<element_type::boolean_element>(val); }
@@ -284,20 +282,15 @@ template <class Container>
 template <typename OtherContainer>
 basic_element<Container>::basic_element(
     basic_element<OtherContainer>&& elem,
-    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*)
-    : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)) {
-    boost::range::push_back(m_data, elem.m_data);
-    elem.m_data = OtherContainer{};
-}
-
-template <class Container>
-template <typename OtherContainer>
-basic_element<Container>::basic_element(basic_element<OtherContainer>&& elem,
-                                        std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
+    std::enable_if_t<std::is_constructible<container_type, OtherContainer&&>::value>*)
     : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)), m_data(std::move(elem.m_data)) {}
 
-template <class Container> basic_element<Container>::basic_element(const container_type& c) {
-    auto first = c.begin(), last = c.end();
+template <class Container>
+template <typename ForwardRange>
+basic_element<Container>::basic_element(
+    ForwardRange&& range, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*,
+    std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>*) {
+    auto first = std::begin(range), last = std::end(range);
     m_type = static_cast<element_type>(*first++);
     if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
@@ -311,12 +304,6 @@ template <class Container> basic_element<Container>::basic_element(const contain
     last = std::next(first, elem_size);
     m_data = container_type{first, last};
 }
-
-template <class Container>
-template <typename ForwardRange>
-basic_element<Container>::basic_element(const ForwardRange& range,
-                                        std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*)
-    : basic_element(std::begin(range), std::end(range)) {}
 
 template <class Container>
 template <typename ForwardIterator>
@@ -382,8 +369,8 @@ template <class Container>
 template <typename Visitor>
 auto basic_element<Container>::visit(
     Visitor&& visitor,
-    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*)
-    const -> decltype(std::declval<Visitor>()("", double {}, element_type{})) {
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*) const
+    -> decltype(std::declval<Visitor>()("", double {}, element_type{})) {
     return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
 }
 
@@ -440,9 +427,8 @@ using actual_element_type = boost::error_info<struct actual_element_type_, eleme
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container> {
     if(EType != elem.type())
-        BOOST_THROW_EXCEPTION(incompatible_element_conversion{}
-                              << detail::expected_element_type(EType)
-                              << detail::actual_element_type(elem.type()));
+        BOOST_THROW_EXCEPTION(incompatible_element_conversion{} << detail::expected_element_type(EType)
+                                                                << detail::actual_element_type(elem.type()));
 
     return elem.template value<detail::ElementTypeMap<EType, Container>>();
 }

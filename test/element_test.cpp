@@ -202,27 +202,12 @@ TEST(ElementTest, ElementMoveTest1) {
     EXPECT_NE(el1, el2);
 }
 
-TEST(ElementTest, ElementMoveConvertTest1) {
-    auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
-    ASSERT_EQ(element_type::double_element, el1.type());
-    EXPECT_EQ("Pi 6dp", el1.name());
-    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el1));
-    auto old_size = el1.size();
-    basic_element<std::list<char>> el2(std::move(el1));
-    ASSERT_EQ(2, el1.size());
-    ASSERT_EQ(old_size, el2.size());
-    ASSERT_EQ(element_type::double_element, el2.type());
-    EXPECT_EQ("Pi 6dp", el2.name());
-    EXPECT_DOUBLE_EQ(3.141592, get<element_type::double_element>(el2));
-    EXPECT_NE(el1, el2);
-}
-
 TEST(ElementTest, ElementVoidTest) {
     auto el1 = element{"null element", element_type::null_element};
     ASSERT_EQ(element_type::null_element, el1.type());
     EXPECT_EQ("null element", el1.name());
     ASSERT_EQ(el1.name().size() + sizeof('\0') + sizeof(element_type), el1.size());
-    //    el1.value<bool>();
+    ASSERT_ANY_THROW(el1.value<bool>());
 }
 
 TEST(ElementTest, ElementRefTest1) {
