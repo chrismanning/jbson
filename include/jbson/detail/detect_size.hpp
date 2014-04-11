@@ -45,7 +45,7 @@ template <typename ForwardIterator> struct size_func<element_type::string_elemen
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
                                                          << expected_size(sizeof(int32_t)));
-        const auto str_size = detail::little_endian_to_native<uint32_t>(first, last);
+        const auto str_size = detail::little_endian_to_native<int32_t>(first, last);
         if(str_size <= 0) // should always be at least 1 (null char)
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(str_size));
         auto it = std::next(first, sizeof(int32_t) + str_size - 1);
@@ -79,8 +79,8 @@ template <typename ForwardIterator> struct size_func<element_type::document_elem
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
                                                          << expected_size(sizeof(int32_t)));
-        const auto size = detail::little_endian_to_native<uint32_t>(first, last);
-        if(size < 0)
+        const auto size = detail::little_endian_to_native<int32_t>(first, last);
+        if(static_cast<ptrdiff_t>(size) < static_cast<ptrdiff_t>(sizeof(int32_t) + sizeof('\0')))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last)));
 
         auto it = std::next(first, size - 1);
@@ -105,7 +105,7 @@ struct size_func<element_type::scoped_javascript_element, ForwardIterator>
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
                                                          << expected_size(sizeof(int32_t)));
-        const auto total_size = detail::little_endian_to_native<uint32_t>(first, last);
+        const auto total_size = detail::little_endian_to_native<int32_t>(first, last);
         if(total_size < 0)
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last)));
 
