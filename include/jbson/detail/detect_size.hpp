@@ -45,7 +45,10 @@ template <typename ForwardIterator> struct size_func<element_type::string_elemen
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
                                                          << expected_size(sizeof(int32_t)));
-        return sizeof(int32_t) + detail::little_endian_to_native<int32_t>(first, last);
+        const auto str_len = detail::little_endian_to_native<int32_t>(first, last);
+        if(str_len < 0)
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(str_len));
+        return sizeof(int32_t) + str_len;
     }
 };
 
@@ -70,7 +73,10 @@ template <typename ForwardIterator> struct size_func<element_type::document_elem
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
                                                          << expected_size(sizeof(int32_t)));
-        return detail::little_endian_to_native<int32_t>(first, last);
+        const auto size = detail::little_endian_to_native<int32_t>(first, last);
+        if(size < 0)
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last)));
+        return size;
     }
 };
 

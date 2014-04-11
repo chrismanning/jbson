@@ -54,6 +54,8 @@ void deserialise(const RangeT& data, StringT& str,
                                                      << expected_size(sizeof(int32_t)));
     std::advance(first, sizeof(int32_t));
     const auto length = detail::little_endian_to_native<int32_t>(data.begin(), first) - 1;
+    if(length < 0)
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(length));
     last = std::find(first, last, '\0');
     if(std::distance(first, last) != length)
         BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
