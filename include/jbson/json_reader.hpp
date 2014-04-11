@@ -111,7 +111,7 @@ struct json_reader {
 
     template <typename ForwardIterator, typename OutputIterator>
     OutputIterator parse_name(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
-                              OutputIterator);
+                              OutputIterator, bool allow_null = false);
 
     template <typename ForwardIterator, typename OutputIterator>
     OutputIterator parse_string(line_pos_iterator<ForwardIterator>&, const line_pos_iterator<ForwardIterator>&,
@@ -610,7 +610,7 @@ OutputIterator json_reader::parse_string(line_pos_iterator<ForwardIterator>& fir
     out = m_data.insert(out, 4, '\0');
 
     const auto size = std::distance(m_data.begin(), std::next(out, 4));
-    out = parse_name(first, last, std::next(out, 4));
+    out = parse_name(first, last, std::next(out, 4), true);
     boost::range::copy(detail::native_to_little_endian<int32_t>(m_data.size() - size),
                        std::next(m_data.begin(), size - 4));
     return out;
@@ -670,7 +670,8 @@ using codecvt_t = typename codecvt<CharT>::type;
 
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first,
-                                       const line_pos_iterator<ForwardIterator>& last, OutputIterator out) {
+                                       const line_pos_iterator<ForwardIterator>& last, OutputIterator out,
+                                       bool allow_null) {
     using char_type = typename std::iterator_traits<ForwardIterator>::value_type;
     assert(last != first);
     if(first == last)
@@ -692,6 +693,10 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
         buf[0] = *first;
 
         if(buf[0] == '"') {
+            std::advance(first, 1);
+            break;
+        }
+        if(buf[0] == '\0' && !allow_null) {
             std::advance(first, 1);
             break;
         }
@@ -748,8 +753,8 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
                 if(codepoints[0] == 0x0000) {
                     auto null_str = R"(\u0000)";
                     std::advance(first, 4);
-                    out = m_data.insert(out, sizeof(null_str), '\0');
-                    out = std::copy(null_str, null_str + sizeof(null_str), out);
+                    out = m_data.insert(out, 6, '\0');
+                    out = std::copy(null_str, null_str + 6, out);
                     continue;
                 }
 
