@@ -6,7 +6,7 @@
 #ifndef JBSON_BUILDER_HPP
 #define JBSON_BUILDER_HPP
 
-#include <deque>
+#include <vector>
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>
@@ -14,13 +14,7 @@
 namespace jbson {
 
 struct builder {
-    builder() = default;
-
-    builder(const builder&) = default;
-    builder& operator=(const builder&)& = default;
-
-    builder(builder&&) = default;
-    builder& operator=(builder&&)& = default;
+    builder() noexcept = default;
 
     template <typename... Args> builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
@@ -57,13 +51,7 @@ static_assert(std::is_convertible<builder, document>::value, "");
 static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 
 struct array_builder {
-    array_builder() = default;
-
-    array_builder(const array_builder&) = default;
-    array_builder& operator=(const array_builder&) = default;
-
-    array_builder(array_builder&&) = default;
-    array_builder& operator=(array_builder&&)& = default;
+    array_builder() noexcept = default;
 
     template <typename... Args> array_builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
 
@@ -122,7 +110,7 @@ struct array_builder {
     }
 
   private:
-    mutable std::deque<element> m_elements;
+    mutable std::vector<element> m_elements;
 };
 static_assert(std::is_convertible<array_builder, array>::value, "");
 static_assert(std::is_convertible<array_builder, basic_array<std::vector<char>, std::vector<char>>>::value, "");
