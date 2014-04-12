@@ -1,12 +1,11 @@
 jbson is a library for building & iterating BSON data, and JSON documents in C++14.
 
 ## Features
-* UTF-8 support only (currently).
 * Header only.
 * Depends only on Boost headers & C++14 standard library. [note](#notes)
 * Fully compatible with documented BSON specs.
 * A strict, iterator-based JSON parser. Mostly compliant with JSON standard. [note](#notes)
-* Parses [MongoDB extended JSON](http://docs.mongodb.org/manual/reference/mongodb-extended-json/).
+* Parses [MongoDB extended JSON](http://docs.mongodb.org/manual/reference/mongodb-extended-json/) from UTF-8,16,32 strings.
 * User-defined JSON literals `""_json_set`, `""_json_doc`, `""_json_arr`.
 * An implementation of [JSONPath](http://goessner.net/articles/JsonPath/), with some support for filtering with boolean expressions.
 
