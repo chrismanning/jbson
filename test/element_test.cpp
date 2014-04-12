@@ -137,8 +137,15 @@ TEST(ElementTest, ElementConstructTest2) {
     EXPECT_EQ("val", el1.name());
     EXPECT_EQ(123, get<element_type::int32_element>(el1));
 
-    EXPECT_THROW((el1 = element{"nest", builder{}}), incompatible_type_conversion);
+    EXPECT_NO_THROW((el1 = element{"nest", builder{}}));
+    ASSERT_EQ(element_type::document_element, el1.type());
+    EXPECT_EQ("nest", el1.name());
+    EXPECT_EQ(0, boost::distance(get<element_type::document_element>(el1)));
+
     EXPECT_NO_THROW((el1 = element{"nest", element_type::document_element, builder{}}));
+    ASSERT_EQ(element_type::document_element, el1.type());
+    EXPECT_EQ("nest", el1.name());
+    EXPECT_EQ(0, boost::distance(get<element_type::document_element>(el1)));
 
     ASSERT_NO_THROW((el1 = element{"val", false}));
     ASSERT_EQ(element_type::boolean_element, el1.type());

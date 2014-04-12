@@ -19,6 +19,9 @@ class basic_array;
 using document = basic_document<std::vector<char>>;
 using array = basic_array<std::vector<char>>;
 
+struct builder;
+struct array_builder;
+
 struct invalid_document_size;
 
 namespace detail {

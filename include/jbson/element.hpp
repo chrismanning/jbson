@@ -122,6 +122,12 @@ template <class Container> struct basic_element {
     void value(int64_t val) { value<element_type::int64_element>(val); }
     void value(int32_t val) { value<element_type::int32_element>(val); }
 
+    void value(const builder& val) { value<element_type::document_element>(val); }
+    void value(const array_builder& val) { value<element_type::array_element>(val); }
+
+    void value(builder&& val) { value<element_type::document_element>(std::move(val)); }
+    void value(array_builder&& val) { value<element_type::array_element>(std::move(val)); }
+
     template <typename T> void value(T&& val) {
         if(!valid_set_type<T>())
             BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
