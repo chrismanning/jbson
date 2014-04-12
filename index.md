@@ -6,12 +6,11 @@ tagline: C++ BSON & JSON reader/writer
 jbson is a library for building & iterating BSON data, and JSON documents in C++14.
 
 ## Features
-* UTF-8 support only (currently).
 * Header only.
 * Depends only on Boost headers & C++14 standard library. [note](#notes)
 * Fully compatible with documented BSON specs.
 * A strict, iterator-based JSON parser. Mostly compliant with JSON standard. [note](#notes)
-* Parses [MongoDB extended JSON](http://docs.mongodb.org/manual/reference/mongodb-extended-json/).
+* Parses [MongoDB extended JSON](http://docs.mongodb.org/manual/reference/mongodb-extended-json/) from UTF-8,16,32 strings.
 * User-defined JSON literals `""_json_set`, `""_json_doc`, `""_json_arr`.
 * An implementation of [JSONPath](http://goessner.net/articles/JsonPath/), with some support for filtering with boolean expressions.
 
@@ -202,8 +201,8 @@ Performance of the JSON parser is decent, as measured by [json_benchmark](https:
 > rapidjson.small: 1000 iterations of 500 parsings in 0.454047 to 0.48559 sec based on 2 benchmarks  
 > rapidjson.large: 1000 iterations of 1 parsings in 4.8566 to 4.86322 sec based on 2 benchmarks
 
-> jbson.small: 1000 iterations of 500 parsings in 1.46874 to 1.4981 sec based on 2 benchmarks  
-> jbson.large: 1000 iterations of 1 parsings in 46.0871 to 46.0893 sec based on 2 benchmarks
+> jbson.small: 1000 iterations of 500 parsings in 1.24328 to 1.27775 sec based on 2 benchmarks  
+> jbson.large: 1000 iterations of 1 parsings in 43.0072 to 43.0377 sec based on 2 benchmarks
 
 > jsoncons.small: 1000 iterations of 500 parsings in 10.2386 to 10.2747 sec based on 2 benchmarks  
 > jsoncons.large: 1000 iterations of 1 parsings in 243.634 to 243.796 sec based on 2 benchmarks
@@ -216,3 +215,4 @@ BSON is incompatible with JSON in that element names cannot contain `'\0'`, maki
 
 Requires `<codecvt>` header (C++11, missing in gcc-4.8's stdlib), various template aliases (C++14), probably more where gcc's stdlib is behind on the standard.  
 Known only to work with an up-to-date libc++ currently.
+
