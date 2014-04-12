@@ -116,7 +116,7 @@ struct size_func<element_type::scoped_javascript_element, ForwardIterator>
 
         const auto doc_size = size_func<element_type::document_element, ForwardIterator>::operator()(first, last);
 
-        if(str_size + doc_size + sizeof(int32_t) != total_size)
+        if(str_size + doc_size + sizeof(int32_t) != static_cast<size_t>(total_size))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(str_size + doc_size)
                                                          << expected_size(total_size));
 

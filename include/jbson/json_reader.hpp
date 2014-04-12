@@ -455,7 +455,8 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
             break;
         case 'f':
             type = element_type::boolean_element;
-            if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)))) {
+            if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)),
+                            [](char a, auto&& b) { return b == (decltype(b))a; })) {
                 assert(out >= m_data.begin() && out <= m_data.end());
                 out = std::next(m_data.insert(out, false));
                 std::advance(first, 5);
@@ -464,13 +465,15 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "false"));
         case 'n':
             type = element_type::null_element;
-            if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4))))
+            if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4)),
+                             [](char a, auto&& b) { return b == (decltype(b))a; }))
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "null"));
             std::advance(first, 4);
             break;
         case 't':
             type = element_type::boolean_element;
-            if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)))) {
+            if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)),
+                            [](char a, auto&& b) { return b == (decltype(b))a; })) {
                 assert(out >= m_data.begin() && out <= m_data.end());
                 out = std::next(m_data.insert(out, true));
                 std::advance(first, 4);
