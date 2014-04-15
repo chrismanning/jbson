@@ -128,7 +128,7 @@ TEST(JsonWriterTest, JsonWriteTest2) {
                ("some other value", element_type::boolean_element, true)),
                std::back_inserter(json));
 
-    EXPECT_EQ(R"({ "some other value" : true, "some value" : 123 })", json);
+    EXPECT_EQ(R"({ "some value" : 123, "some other value" : true })", json);
 }
 
 TEST(JsonWriterTest, JsonWriteTest3) {
@@ -155,7 +155,7 @@ TEST(JsonWriterTest, JsonWriteTest4) {
                ("some regex", element_type::regex_element, std::make_tuple(".*", "i"))),
                std::back_inserter(json));
 
-    EXPECT_EQ(R"({ "some regex" : { "$options" : "i", "$regex" : ".*" }, "some value" : 123 })", json);
+    EXPECT_EQ(R"({ "some value" : 123, "some regex" : { "$regex" : ".*", "$options" : "i" } })", json);
 }
 
 TEST(JsonWriterTest, JsonWriteTest5) {
@@ -204,7 +204,7 @@ TEST(JsonWriterTest, JsonWriteTest7) {
     write_json(static_cast<document>(builder("some ref", element_type::db_pointer_element,
                                                                        std::make_tuple("some collection", oid))),
                std::back_inserter(json));
-    EXPECT_EQ(R"({ "some ref" : { "$id" : { "$oid" : "507f1f77bcf86cd799439011" }, "$ref" : "some collection" } })", json);
+    EXPECT_EQ(R"({ "some ref" : { "$ref" : "some collection", "$id" : { "$oid" : "507f1f77bcf86cd799439011" } } })", json);
 }
 
 TEST(JsonWriterTest, JsonWriteTest8) {

@@ -123,7 +123,11 @@ struct set_visitor<EType, C, A, std::enable_if_t<EType == element_type::document
     void operator()(Container& data, T&& val,
                     std::enable_if_t<std::is_constructible<basic_document<Container, Container>, T>::value>* = nullptr)
         const {
-        data = basic_document<Container, Container>(std::forward<T>(val)).data();
+        auto doc = basic_document<Container, Container>(std::forward<T>(val)).data();
+        if(data.empty())
+            data = std::move(doc);
+        else
+            boost::range::push_back(data, doc);
     }
     template <typename... Args> void operator()(Args&&...) const {
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
@@ -138,7 +142,11 @@ struct set_visitor<EType, C, A, std::enable_if_t<EType == element_type::array_el
     void
     operator()(Container& data, T&& val,
                std::enable_if_t<std::is_constructible<basic_array<Container, Container>, T>::value>* = nullptr) const {
-        data = basic_array<Container, Container>(std::forward<T>(val)).data();
+        auto arr = basic_array<Container, Container>(std::forward<T>(val)).data();
+        if(data.empty())
+            data = std::move(arr);
+        else
+            boost::range::push_back(data, arr);
     }
     template <typename... Args> void operator()(Args&&...) const {
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{});

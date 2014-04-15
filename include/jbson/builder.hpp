@@ -14,9 +14,12 @@
 namespace jbson {
 
 struct builder {
-    builder() noexcept = default;
+    builder() {
+        std::array<char, 4> arr{{0, 0, 0, 0}};
+        boost::range::push_back(m_elements, arr);
+    }
 
-    template <typename... Args> builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
+    template <typename... Args> builder(Args&&... args) : builder() { emplace(std::forward<Args>(args)...); }
 
     // lvalue funcs
 
@@ -26,7 +29,15 @@ struct builder {
     }
 
     template <typename... Args> builder& emplace(Args&&... args) & {
-        m_elements.emplace(std::forward<Args>(args)...);
+        auto old_size = m_elements.size();
+        try {
+            basic_element<decltype(m_elements)>::write_to_container(m_elements, std::forward<Args>(args)...);
+        }
+        catch(...) {
+            m_elements.resize(old_size);
+            throw;
+        }
+
         return *this;
     }
 
@@ -40,20 +51,41 @@ struct builder {
         return std::move(emplace(std::forward<Args>(args)...));
     }
 
-    template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const {
-        return basic_document<Container, EContainer>(m_elements);
+    template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const& {
+        m_elements.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_elements.begin());
+        auto doc = basic_document<Container, EContainer>(m_elements);
+        m_elements.pop_back();
+        return std::move(doc);
+    }
+
+    template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() && {
+        m_elements.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_elements.begin());
+        return basic_document<Container, EContainer>(std::move(m_elements));
     }
 
   private:
-    document_set m_elements;
+    mutable std::vector<char> m_elements;
 };
 static_assert(std::is_convertible<builder, document>::value, "");
 static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 
 struct array_builder {
-    array_builder() noexcept = default;
+    array_builder() {
+        std::array<char, 4> arr{{0, 0, 0, 0}};
+        boost::range::push_back(m_elements, arr);
+    }
 
-    template <typename... Args> array_builder(Args&&... args) { emplace(std::forward<Args>(args)...); }
+    template <typename... Args> array_builder(Args&&... args) : array_builder() {
+        emplace(std::forward<Args>(args)...);
+    }
 
     // lvalue funcs
 
@@ -65,22 +97,18 @@ struct array_builder {
 
     template <typename... Args> array_builder& emplace(Args&&... args) & {
         static_assert(sizeof...(Args) > 0, "");
-        m_elements.emplace_back(std::to_string(m_elements.size()), std::forward<Args>(args)...);
-        return *this;
-    }
+        std::array<char, std::numeric_limits<decltype(m_count)>::digits10 + 1> int_str;
+        auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", m_count++);
+        auto old_size = m_elements.size();
+        try {
+            basic_element<decltype(m_elements)>::write_to_container(
+                m_elements, boost::string_ref{int_str.data(), static_cast<size_t>(n)}, std::forward<Args>(args)...);
+        }
+        catch(...) {
+            m_elements.resize(old_size);
+            throw;
+        }
 
-    template <typename... Args, typename = std::enable_if_t<(sizeof...(Args) > 0)>>
-    array_builder& emplace(size_t idx, Args&&... args) & {
-        static_assert(sizeof...(Args) > 0, "");
-        m_elements.emplace_back(std::to_string(idx), std::forward<Args>(args)...);
-        return *this;
-    }
-
-    template <typename... Args, typename = std::enable_if_t<(sizeof...(Args) > 0)>>
-    array_builder& emplace(int idx, Args&&... args) & {
-        static_assert(sizeof...(Args) > 0, "");
-        assert(idx >= 0);
-        m_elements.emplace_back(std::to_string(idx), std::forward<Args>(args)...);
         return *this;
     }
 
@@ -94,23 +122,29 @@ struct array_builder {
         return std::move(emplace(std::forward<Args>(args)...));
     }
 
-    template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const {
-        auto fun = [](auto&& a, auto&& b) {
-#ifdef _GNU_SOURCE
-            // natural sort
-            return strverscmp(a.name().data(), b.name().data());
-#else
-            return a.name().compare(b.name());
-#endif
-        };
-        std::sort(m_elements.begin(), m_elements.end(), [fun](auto&& a, auto&& b) { return fun(a, b) < 0; });
-        assert(std::unique(m_elements.begin(), m_elements.end(),
-                           [fun](auto&& a, auto&& b) { return fun(a, b) == 0; }) == m_elements.end());
-        return basic_array<Container, EContainer>(m_elements);
+    template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const& {
+        m_elements.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_elements.begin());
+        auto doc = basic_array<Container, EContainer>(m_elements);
+        m_elements.pop_back();
+        return std::move(doc);
+    }
+
+    template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() && {
+        m_elements.push_back('\0');
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_elements.begin());
+        return basic_array<Container, EContainer>(std::move(m_elements));
     }
 
   private:
-    mutable std::vector<element> m_elements;
+    mutable std::vector<char> m_elements;
+    uint32_t m_count{0u};
 };
 static_assert(std::is_convertible<array_builder, array>::value, "");
 static_assert(std::is_convertible<array_builder, basic_array<std::vector<char>, std::vector<char>>>::value, "");

@@ -124,3 +124,18 @@ TEST_F(PerfTest, ParseToSetTest) {
         auto set = document_set(document(std::move(reader)));
     }
 }
+
+TEST(NoFixPerfTest, BuildTest) {
+    for (int32_t i = 0; i < 1000000; i++) {
+        auto build = builder
+                     ("foo", builder
+                      ("bar", builder
+                       ("baz", array_builder
+                        (i)(2)(3)
+                       )
+                      )
+                     );
+        auto d = document(std::move(build));
+        ASSERT_EQ(1, boost::distance(d));
+    }
+}

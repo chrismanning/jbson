@@ -38,8 +38,7 @@ TEST(BuilderTest, BuildTest1) {
 
 TEST(BuilderTest, BuildTest2) {
     builder builder_;
-    ASSERT_NO_THROW(builder_ = builder("hello", element_type::string_element));
-    EXPECT_THROW((void)document(builder_), invalid_element_size);
+    EXPECT_THROW(builder_ = builder("hello", element_type::string_element), incompatible_type_conversion);
     ASSERT_NO_THROW(builder_ = builder("hello", element_type::null_element));
     EXPECT_NO_THROW((void)document(builder_));
     EXPECT_THROW(builder_ = builder("hello", element_type::undefined_element, 0), incompatible_type_conversion);
@@ -73,10 +72,7 @@ TEST(BuilderTest, BuildTest3) {
 
 TEST(BuilderTest, ArrayBuildTest1) {
     static_assert(std::is_same<decltype(array_builder(123)(321)), array_builder&&>::value, "");
-    auto arrb = array_builder
-                (1, 15)
-                (2, "str")
-                (0, 4.6);
+    auto arrb = array_builder(15)("str")(4.6);
     static_assert(std::is_same<decltype(arrb), array_builder>::value, "");
     array arr;
     EXPECT_NO_THROW(arr = array(arrb));
@@ -85,41 +81,41 @@ TEST(BuilderTest, ArrayBuildTest1) {
     const auto end = arr.end();
     ASSERT_NE(end, it);
     EXPECT_EQ("0", it->name());
-    EXPECT_EQ(element_type::double_element, it->type());
-    EXPECT_DOUBLE_EQ(4.6, get<element_type::double_element>(*it));
-    it++;
-    EXPECT_EQ("1", it->name());
     EXPECT_EQ(element_type::int32_element, it->type());
     EXPECT_EQ(15, get<element_type::int32_element>(*it));
     it++;
-    EXPECT_EQ("2", it->name());
+    EXPECT_EQ("1", it->name());
     EXPECT_EQ(element_type::string_element, it->type());
     EXPECT_EQ("str", get<element_type::string_element>(*it));
+    it++;
+    EXPECT_EQ("2", it->name());
+    EXPECT_EQ(element_type::double_element, it->type());
+    EXPECT_DOUBLE_EQ(4.6, get<element_type::double_element>(*it));
     it++;
     ASSERT_EQ(it, end);
 }
 
 TEST(BuilderTest, BuildNestTest1) {
-    auto doc = document(builder
+    document doc;
+    doc = document(builder
                         ("hello", element_type::string_element, "world")
                         ("embedded array", element_type::array_element, array_builder
-                         ("awesome")
-                         (5.05)
-                         (1986)
+                         ("awesome")(5.05)(1986)
                         ));
 
     auto it = doc.begin();
     auto end = doc.end();
     ASSERT_NE(it, end);
 
-    auto e = *++it;
+    auto e = *it;
     EXPECT_EQ(element_type::string_element, e.type());
     EXPECT_EQ("hello", e.name());
     EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 
-    it = doc.begin();
+    it++;
+    ASSERT_NE(it, end);
     auto arr_el = *it++;
-//    ASSERT_EQ(it, end);
+    ASSERT_EQ(it, end);
 
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto arr = get<element_type::array_element>(arr_el);
@@ -157,14 +153,15 @@ TEST(BuilderTest, BuildNestTest2) {
     auto end = root_doc.end();
     ASSERT_NE(it, end);
 
-    auto e = *++it;
+    auto e = *it;
     EXPECT_EQ(element_type::string_element, e.type());
     EXPECT_EQ("hello", e.name());
     EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 
-    it = root_doc.begin();
+    it++;
+    ASSERT_NE(it, end);
     auto doc_el = *it++;
-//    ASSERT_EQ(it, end);
+    ASSERT_EQ(it, end);
 
     EXPECT_EQ(element_type::document_element, doc_el.type());
     auto doc = get<element_type::document_element>(doc_el);
@@ -205,14 +202,15 @@ TEST(BuilderTest, BuildNestTest3) {
     auto end = root_doc.end();
     ASSERT_NE(it, end);
 
-    auto e = *++it;
+    auto e = *it;
     EXPECT_EQ(element_type::string_element, e.type());
     EXPECT_EQ("hello", e.name());
     EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 
-    it = root_doc.begin();
+    it++;
+    ASSERT_NE(it, end);
     auto arr_el = *it++;
-//    ASSERT_EQ(it, end);
+    ASSERT_EQ(it, end);
 
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto doc = get<element_type::array_element>(arr_el);
@@ -266,14 +264,15 @@ TEST(BuilderTest, BuildNestTest4) {
     auto end = root_doc.end();
     ASSERT_NE(it, end);
 
-    auto e = *++it;
+    auto e = *it;
     EXPECT_EQ(element_type::string_element, e.type());
     EXPECT_EQ("hello", e.name());
     EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 
-    it = root_doc.begin();
+    it++;
+    ASSERT_NE(it, end);
     auto doc_el = *it++;
-//    ASSERT_EQ(it, end);
+    ASSERT_EQ(it, end);
 
     EXPECT_EQ(element_type::document_element, doc_el.type());
     auto doc = get<element_type::document_element>(doc_el);

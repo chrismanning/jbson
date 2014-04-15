@@ -197,6 +197,12 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const noexcept { return !m_data.empty(); }
 
+    static void write_to_container(container_type&, boost::string_ref, element_type);
+    template <typename T>
+    static void write_to_container(container_type&, boost::string_ref, T&&);
+    template <typename T>
+    static void write_to_container(container_type&, boost::string_ref, element_type, T&&);
+
     template <typename OutContainer> void write_to_container(OutContainer&) const;
     template <typename OutContainer> explicit operator OutContainer() const;
 
@@ -253,14 +259,83 @@ void basic_element<Container>::write_to_container(OutContainer& c) const {
     static_assert(std::is_same<typename OutContainer::value_type, char>::value, "");
     if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
+
     c.push_back(static_cast<uint8_t>(m_type));
     boost::range::push_back(c, m_name);
     c.push_back('\0');
+
     if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
         BOOST_THROW_EXCEPTION(invalid_element_size{}
                               << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
                               << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
     boost::range::push_back(c, m_data);
+}
+
+namespace detail {
+
+inline element_type deduce_type(const boost::string_ref&) noexcept { return element_type::string_element; }
+inline element_type deduce_type(const std::string&) noexcept { return element_type::string_element; }
+inline element_type deduce_type(const char*) noexcept { return element_type::string_element; }
+
+inline element_type deduce_type(bool) noexcept { return element_type::boolean_element; }
+inline element_type deduce_type(float) noexcept { return element_type::double_element; }
+inline element_type deduce_type(double) noexcept { return element_type::double_element; }
+inline element_type deduce_type(int64_t) noexcept { return element_type::int64_element; }
+inline element_type deduce_type(int32_t) noexcept { return element_type::int32_element; }
+
+inline element_type deduce_type(const builder&) noexcept { return element_type::document_element; }
+inline element_type deduce_type(const array_builder&) noexcept { return element_type::array_element; }
+
+inline element_type deduce_type(builder&&) noexcept { return element_type::document_element; }
+inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
+
+template <typename T>
+inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
+
+} // namespace detail
+
+template <typename Container>
+template <typename T>
+void basic_element<Container>::
+write_to_container(container_type& c, boost::string_ref name, T&& val) {
+    static_assert(!std::is_same<element_type, T>::value, "");
+    write_to_container(c, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
+}
+
+template <typename Container>
+template <typename T>
+void basic_element<Container>::
+write_to_container(container_type& c, boost::string_ref name, element_type type, T&& val) {
+    if(!(bool)type)
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
+
+    c.push_back(static_cast<uint8_t>(type));
+    boost::range::push_back(c, name);
+    c.push_back('\0');
+
+    if(!valid_set_type<T>(type))
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
+                              << actual_type(typeid(T)));
+
+    detail::visit<detail::set_visitor>(type, c, std::forward<T>(val));
+}
+
+template <typename Container>
+void basic_element<Container>::
+write_to_container(container_type& c, boost::string_ref name, element_type type) {
+    if(!(bool)type)
+        BOOST_THROW_EXCEPTION(invalid_element_type{});
+
+    if(type != element_type::undefined_element
+            && type != element_type::null_element
+            && type != element_type::min_key
+            && type != element_type::max_key)
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{} << actual_type(typeid(void))
+                              << expected_type(detail::visit<detail::typeid_visitor>(type, basic_element())));
+
+    c.push_back(static_cast<uint8_t>(type));
+    boost::range::push_back(c, name);
+    c.push_back('\0');
 }
 
 template <class Container> template <typename OutContainer> basic_element<Container>::operator OutContainer() const {
@@ -296,6 +371,10 @@ template <typename ForwardRange>
 basic_element<Container>::basic_element(
     ForwardRange&& range, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*,
     std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>*) {
+    if(boost::distance(range) < 2)
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << expected_size(2)
+                                                     << actual_size(boost::distance(range)));
+
     auto first = std::begin(range), last = std::end(range);
     m_type = static_cast<element_type>(*first++);
     if(!(bool)m_type)
