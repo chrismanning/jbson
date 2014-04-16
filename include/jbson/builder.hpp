@@ -19,7 +19,8 @@ struct builder {
         boost::range::push_back(m_elements, arr);
     }
 
-    template <typename... Args> builder(Args&&... args) : builder() { emplace(std::forward<Args>(args)...); }
+    template <typename... Args, typename = std::enable_if_t<std::is_constructible<element, Args&&...>::value>>
+    explicit builder(Args&&... args) : builder() { emplace(std::forward<Args>(args)...); }
 
     // lvalue funcs
 
@@ -83,7 +84,9 @@ struct array_builder {
         boost::range::push_back(m_elements, arr);
     }
 
-    template <typename... Args> array_builder(Args&&... args) : array_builder() {
+    template <typename... Args,
+              typename = std::enable_if_t<std::is_constructible<element, std::string, Args&&...>::value>>
+    explicit array_builder(Args&&... args) : array_builder() {
         emplace(std::forward<Args>(args)...);
     }
 
@@ -148,6 +151,18 @@ struct array_builder {
 };
 static_assert(std::is_convertible<array_builder, array>::value, "");
 static_assert(std::is_convertible<array_builder, basic_array<std::vector<char>, std::vector<char>>>::value, "");
+
+// builder
+template <typename Container, typename IteratorT>
+void serialise(Container& c, IteratorT& it, builder val) {
+    serialise(c, it, document(std::move(val)));
+}
+
+// array_builder
+template <typename Container, typename IteratorT>
+void serialise(Container& c, IteratorT& it, array_builder val) {
+    serialise(c, it, array(std::move(val)));
+}
 
 } // namespace jbson
 

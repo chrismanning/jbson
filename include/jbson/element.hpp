@@ -133,10 +133,6 @@ template <class Container> struct basic_element {
     void value(array_builder&& val) { value<element_type::array_element>(std::move(val)); }
 
     template <typename T> void value(T&& val) {
-        if(!valid_set_type<T>())
-            BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
-                                  << actual_type(typeid(T))
-                                  << expected_type(detail::visit<detail::typeid_visitor>(m_type, *this)));
         container_type data;
         detail::visit<detail::set_visitor>(m_type, data, std::forward<T>(val));
         using std::swap;
@@ -316,10 +312,6 @@ write_to_container(container_type& c, boost::string_ref name, element_type type,
     c.push_back(static_cast<uint8_t>(type));
     boost::range::push_back(c, name);
     c.push_back('\0');
-
-    if(!valid_set_type<T>(type))
-        BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
-                              << actual_type(typeid(T)));
 
     detail::visit<detail::set_visitor>(type, c, std::forward<T>(val));
 }

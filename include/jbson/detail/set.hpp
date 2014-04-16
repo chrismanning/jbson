@@ -70,13 +70,13 @@ void serialise(Container& c, IteratorT& it, const std::array<char, 12>& val) {
 template <typename Container, typename IteratorT, typename StringT>
 void serialise(Container& c, IteratorT& it, const std::tuple<StringT, StringT>& val,
                std::enable_if_t<std::is_convertible<StringT, boost::string_ref>::value>* = nullptr) {
-    decltype(auto) str1 = std::get<0>(val);
+    boost::string_ref str1 = std::get<0>(val);
     it = c.insert(it, std::begin(str1), std::end(str1));
     if(it != std::end(c))
         std::advance(it, boost::distance(str1));
     it = std::next(c.insert(it, '\0'));
 
-    decltype(auto) str2 = std::get<1>(val);
+    boost::string_ref str2 = std::get<1>(val);
     it = c.insert(it, std::begin(str2), std::end(str2));
     if(it != std::end(c))
         std::advance(it, boost::distance(str2));
@@ -134,10 +134,11 @@ struct set_visitor<EType, Container, A,
     }
 
     template <typename T>
-    void operator()(container_type&, T&&,
+    void operator()(container_type& data, T&& val,
                     std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
                     std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
-        BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
+        auto it = std::end(data);
+        serialise(data, it, std::forward<T>(val));
     }
 };
 

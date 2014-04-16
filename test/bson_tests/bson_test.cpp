@@ -99,6 +99,11 @@ void deserialise(const Container& data, std::chrono::duration<RepT, RatioT>& dur
     deserialise(data, rep);
     dur = std::chrono::duration_cast<std::chrono::duration<RepT, RatioT>>(std::chrono::duration<RepT, std::milli>{rep});
 }
+template <typename Container, typename IteratorT, typename RepT, typename RatioT>
+void serialise(Container& data, IteratorT& it, const std::chrono::duration<RepT, RatioT>& dur) {
+    using jbson::serialise;
+    serialise(data, it, dur.count());
+}
 }
 
 TEST_F(BsonTest, FileTest4) {
@@ -113,6 +118,14 @@ TEST_F(BsonTest, FileTest4) {
     ASSERT_EQ(element_type::date_element, it->type());
     EXPECT_EQ(1319285594123, it->value<int64_t>());
     EXPECT_EQ(1319285594123ms, it->value<std::chrono::milliseconds>());
+    try {
+    auto b = builder("date", element_type::date_element, 1319285594123ms);
+    auto e = element("date", element_type::date_element, 1319285594123ms);
+    }
+    catch(...) {
+        std::clog << boost::current_exception_diagnostic_information();
+        FAIL();
+    }
 
     ++it;
     ASSERT_EQ(end, it);

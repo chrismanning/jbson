@@ -310,6 +310,12 @@ void swap(basic_array<Container, EContainer>& a, basic_array<Container, EContain
     a.swap(b);
 }
 
+// document_set
+template <typename Container, typename IteratorT, typename SetContainer>
+void serialise(Container& c, IteratorT& it, const basic_document_set<SetContainer>& val) {
+   serialise(c, it, document(val));
+}
+
 } // namespace jbson
 
 #endif // JBSON_DOCUMENT_HPP
