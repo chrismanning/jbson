@@ -358,14 +358,4 @@ TEST(BuilderTest, BuildNestTest5) {
     EXPECT_EQ(57, get<element_type::int32_element>(*it));
     it++;
     ASSERT_EQ(it, doc.end());
-
-    std::vector<document> doc_vec;
-    EXPECT_NO_THROW((void)array(doc_vec));
-    EXPECT_NO_THROW(root_doc = builder
-                               ("hello", element_type::string_element, "world")
-                               ("embedded doc", element_type::document_element, builder
-                                ("a", "awesome")
-                                ("b", 5.05)
-                                ("c", element_type::array_element, doc_vec)
-                               ));
 }

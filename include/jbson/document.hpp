@@ -272,19 +272,6 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     basic_array(Args&&... args) noexcept(std::is_nothrow_constructible<base, Args&&...>::value)
         : base(std::forward<Args>(args)...) {}
 
-    template <typename SomeRangeT, typename = std::enable_if_t<!detail::is_document<std::decay_t<SomeRangeT>>::value>,
-              typename = std::enable_if_t<
-                  detail::is_range_of_value<SomeRangeT, boost::mpl::quote1<detail::is_document>>::value>>
-    explicit basic_array(SomeRangeT&& range) {
-        std::vector<element> vec;
-        size_t i{0};
-        for(auto&& v : range) {
-            vec.emplace_back(std::to_string(i++), v);
-        }
-        auto other = basic_array(std::move(vec));
-        std::swap(m_data, other.m_data);
-    }
-
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
     template <typename SequenceContainer,
