@@ -21,6 +21,8 @@ namespace jbson {
 namespace detail {
 
 template <typename StringT> struct make_string {
+    static_assert(!std::is_same<std::decay_t<StringT>, const char*>::value, "");
+    static_assert(!std::is_same<std::decay_t<StringT>, char*>::value, "");
     template <typename Iterator> static StringT call(const Iterator& first, const Iterator& last) {
         return StringT{first, last};
     }
@@ -93,13 +95,10 @@ template <typename RangeT> void deserialise(const RangeT& data, std::array<char,
 template <size_t N, typename TupleT> using tuple_element_t = typename std::tuple_element<N, std::decay_t<TupleT>>::type;
 
 // regex
-template <typename RangeT, typename TupleT>
-void deserialise(
-    const RangeT& data, TupleT& tuple,
-    std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
-                     std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value&&
-                         std::is_same<tuple_element_t<0, TupleT>, tuple_element_t<1, TupleT>>::value>* = nullptr) {
-    using string_maker = detail::make_string<std::decay_t<tuple_element_t<1, TupleT>>>;
+template <typename RangeT, typename StringT>
+void deserialise(const RangeT& data, std::tuple<StringT, StringT>& tuple,
+                 std::enable_if_t<std::is_constructible<std::string, std::decay_t<StringT>>::value>* = nullptr) {
+    using string_maker = detail::make_string<std::decay_t<StringT>>;
 
     auto first = std::find(data.begin(), data.end(), '\0');
     if(first == data.end())
@@ -113,13 +112,9 @@ void deserialise(
 }
 
 // db pointer
-template <typename RangeT, typename TupleT>
-void
-deserialise(const RangeT& data, TupleT& tuple,
-            std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
-                             std::is_same<std::array<char, 12>, std::decay_t<tuple_element_t<1, TupleT>>>::value&&
-                                 std::is_constructible<std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>* =
-                nullptr) {
+template <typename RangeT, typename StringT>
+void deserialise(const RangeT& data, std::tuple<StringT, std::array<char, 12>>& tuple,
+                 std::enable_if_t<std::is_constructible<std::string, std::decay_t<StringT>>::value>* = nullptr) {
     deserialise(data, std::get<0>(tuple));
     deserialise(boost::make_iterator_range(std::next(data.begin(), detail::detect_size(element_type::string_element,
                                                                                        data.begin(), data.end())),
@@ -128,12 +123,9 @@ deserialise(const RangeT& data, TupleT& tuple,
 }
 
 // scoped javascript
-template <typename RangeT, typename TupleT>
-void deserialise(
-    const RangeT& data, TupleT& tuple,
-    std::enable_if_t<std::tuple_size<std::decay_t<TupleT>>::value == 2 &&
-                     detail::is_document<std::decay_t<tuple_element_t<1, TupleT>>>::value&& std::is_constructible<
-                         std::string, std::decay_t<tuple_element_t<0, TupleT>>>::value>* = nullptr) {
+template <typename RangeT, typename StringT, typename DocContainerT, typename DocEContainerT>
+void deserialise(const RangeT& data, std::tuple<StringT, basic_document<DocContainerT, DocEContainerT>>& tuple,
+                 std::enable_if_t<std::is_constructible<std::string, std::decay_t<StringT>>::value>* = nullptr) {
     int32_t length;
     auto it = data.begin();
     deserialise(boost::make_iterator_range(it, std::next(it, 4)), length);
