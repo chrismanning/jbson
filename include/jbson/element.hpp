@@ -108,7 +108,11 @@ template <class Container> struct basic_element {
     element_type type() const noexcept { return m_type; }
     void type(element_type type) noexcept { m_type = type; }
 
-    template <typename T> T value() const { return detail::get_impl<T>::call(m_data); }
+    template <typename T> T value() const {
+        T ret{};
+        deserialise(m_data, ret);
+        return std::move(ret);
+    }
 
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
     void value(std::string val) {
@@ -161,8 +165,8 @@ template <class Container> struct basic_element {
         static_assert(std::is_same<std::decay_t<T>, T2>::value, "");
 
         container_type data;
-        detail::set_visitor<EType, container_type, T2> {}
-        (data, std::forward<T>(val));
+        auto it = data.end();
+        serialise(data, it, std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
         type(EType);
@@ -177,8 +181,8 @@ template <class Container> struct basic_element {
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
 
         container_type data;
-        detail::set_visitor<EType, container_type, T2> {}
-        (data, T2(std::forward<T>(val)));
+        auto it = data.end();
+        serialise(data, it, static_cast<T2>(std::forward<T>(val)));
         using std::swap;
         swap(m_data, data);
         type(EType);

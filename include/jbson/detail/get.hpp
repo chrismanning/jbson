@@ -138,18 +138,6 @@ void deserialise(const RangeT& data, std::tuple<StringT, basic_document<DocConta
                 std::get<1>(tuple));
 }
 
-namespace detail {
-
-template <typename ReturnT> struct get_impl {
-    static_assert(!std::is_void<ReturnT>::value, "cannot get void");
-    template <typename RangeT> static ReturnT call(const RangeT& data) {
-        ReturnT ret{};
-        deserialise(data, ret);
-        return std::move(ret);
-    }
-};
-
-} // namespace detail
 } // namespace jbson
 
 #endif // JBSON_GET_HPP
