@@ -843,13 +843,8 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
     char* pos;
     const int64_t val = std::strtoll(buf, &pos, 10);
 
-    if(errno == ERANGE) {
+    if(pos == buf || pos != buf_end || errno == ERANGE) {
         errno = 0;
-        BOOST_THROW_EXCEPTION(
-            make_parse_exception(json_error_num::unexpected_token, first_, last_, "integer that fits in 8 bytes")
-            << boost::errinfo_errno(ERANGE));
-    }
-    if(pos == buf || pos != buf_end) {
         char* pos;
         const double val = std::strtod(buf, &pos);
 
