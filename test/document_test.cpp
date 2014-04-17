@@ -287,3 +287,212 @@ TEST(DocumentTest, DocumentContainerTest1) {
     basic_document<std::array<char, 5>> doc{data};
     ASSERT_EQ(0, boost::distance(doc));
 }
+
+TEST(DocumentTest, DocumentModifyTest1) {
+    document doc = document(builder
+                            ("first name", element_type::string_element, "Chris")
+                            ("surname", element_type::string_element, "Manning")
+                            ("yob", element_type::int32_element, 1991)
+                           );
+    ASSERT_EQ(3, boost::distance(doc));
+
+    auto it = doc.insert(doc.begin(), element{"country", "United Kingdom"});
+    ASSERT_EQ(doc.begin(), it);
+    ASSERT_EQ(4, boost::distance(doc));
+
+    const auto end = doc.end();
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("country", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("United Kingdom", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("first name", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Chris", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("surname", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Manning", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("yob", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1991, it->value<int32_t>());
+
+    it++;
+    ASSERT_EQ(end, it);
+}
+
+TEST(DocumentTest, DocumentModifyTest2) {
+    document doc = document(builder
+                            ("first name", element_type::string_element, "Chris")
+                            ("surname", element_type::string_element, "Manning")
+                            ("yob", element_type::int32_element, 1991)
+                           );
+    ASSERT_EQ(3, boost::distance(doc));
+
+    auto it = doc.insert(doc.end(), element{"country", "United Kingdom"});
+    ASSERT_EQ(std::next(doc.begin(), 3), it);
+    it = doc.begin();
+    ASSERT_EQ(4, boost::distance(doc));
+
+    const auto end = doc.end();
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("first name", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Chris", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("surname", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Manning", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("yob", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1991, it->value<int32_t>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("country", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("United Kingdom", it->value<std::string>());
+
+    it++;
+    ASSERT_EQ(end, it);
+}
+
+TEST(DocumentTest, DocumentModifyTest3) {
+    document doc = document(builder
+                            ("first name", element_type::string_element, "Chris")
+                            ("surname", element_type::string_element, "Manning")
+                            ("yob", element_type::int32_element, 1991)
+                           );
+    ASSERT_EQ(3, boost::distance(doc));
+
+    auto it = doc.emplace(doc.begin(), "country", "United Kingdom");
+    ASSERT_EQ(doc.begin(), it);
+    ASSERT_EQ(4, boost::distance(doc));
+
+    const auto end = doc.end();
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("country", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("United Kingdom", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("first name", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Chris", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("surname", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Manning", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("yob", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1991, it->value<int32_t>());
+
+    it++;
+    ASSERT_EQ(end, it);
+}
+
+TEST(DocumentTest, DocumentModifyTest4) {
+    document doc = document(builder
+                            ("first name", element_type::string_element, "Chris")
+                            ("surname", element_type::string_element, "Manning")
+                            ("yob", element_type::int32_element, 1991)
+                           );
+    ASSERT_EQ(3, boost::distance(doc));
+
+    auto it = doc.emplace(doc.end(), "country", "United Kingdom");
+    ASSERT_EQ(std::next(doc.begin(), 3), it);
+    it = doc.begin();
+    ASSERT_EQ(4, boost::distance(doc));
+
+    const auto end = doc.end();
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("first name", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Chris", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("surname", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Manning", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("yob", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1991, it->value<int32_t>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("country", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("United Kingdom", it->value<std::string>());
+
+    it++;
+    ASSERT_EQ(end, it);
+}
+
+TEST(DocumentTest, DocumentModifyTest6) {
+    document doc = document(builder
+                            ("first name", element_type::string_element, "Chris")
+                            ("surname", element_type::string_element, "Manning")
+                            ("yob", element_type::int32_element, 1991)
+                           );
+    ASSERT_EQ(3, boost::distance(doc));
+
+    auto it = doc.erase(doc.begin());
+    ASSERT_EQ(doc.begin(), it);
+    ASSERT_NE(doc.end(), it);
+    ASSERT_EQ(2, boost::distance(doc));
+
+    const auto end = doc.end();
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("surname", it->name());
+    EXPECT_EQ(element_type::string_element, it->type());
+    EXPECT_EQ("Manning", it->value<std::string>());
+
+    it++;
+    ASSERT_NE(end, it);
+
+    EXPECT_EQ("yob", it->name());
+    EXPECT_EQ(element_type::int32_element, it->type());
+    EXPECT_EQ(1991, it->value<int32_t>());
+
+    it++;
+    ASSERT_EQ(end, it);
+}

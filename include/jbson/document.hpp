@@ -54,7 +54,7 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
 
   private:
     friend class boost::iterator_core_access;
-    template <typename, typename> friend struct document_iter;
+    template <typename, typename> friend class jbson::basic_document;
 
     template <typename OtherValue, typename OtherIterator>
     bool equal(const document_iter<OtherValue, OtherIterator>& other) const {
@@ -88,8 +88,6 @@ static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail:
 struct builder;
 
 template <class Container, class ElementContainer> class basic_document {
-    template <class, class> friend struct detail::document_iter;
-
   public:
     using container_type = Container;
     using element_type = basic_element<ElementContainer>;
@@ -211,6 +209,47 @@ template <class Container, class ElementContainer> class basic_document {
                 return i;
         }
         return end;
+    }
+
+    const_iterator erase(const const_iterator& it) {
+        auto pos = m_data.erase(it.m_start, std::next(it.m_start, it.m_cur->size()));
+
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_data.begin());
+
+        return {pos, std::prev(m_data.end())};
+    }
+
+    template <typename EContainer>
+    const_iterator insert(const const_iterator& it, const basic_element<EContainer>& el) {
+        container_type data;
+        el.write_to_container(data, data.end());
+
+        auto pos = m_data.insert(it.m_start, data.begin(), data.end());
+
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_data.begin());
+
+        return {pos, std::prev(m_data.end())};
+    }
+
+    template <typename... Args>
+    const_iterator emplace(const const_iterator& it, Args&&... args) {
+        container_type data;
+        basic_element<container_type>::write_to_container(data, data.end(), std::forward<Args>(args)...);
+
+        auto pos = m_data.insert(it.m_start, data.begin(), data.end());
+
+        auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
+        static_assert(4 == size.size(), "");
+
+        boost::range::copy(size, m_data.begin());
+
+        return {pos, std::prev(m_data.end())};
     }
 
     int32_t size() const noexcept { return boost::distance(m_data); }
