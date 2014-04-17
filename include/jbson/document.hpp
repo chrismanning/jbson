@@ -125,39 +125,37 @@ template <class Container, class ElementContainer> class basic_document {
     }
 
     template <typename CharT, size_t N> explicit basic_document(CharT (&)[N]) = delete;
-
     template <typename CharT, size_t N> explicit basic_document(const CharT (&)[N]) = delete;
 
-    template <typename CharT, size_t N,
-              typename = std::enable_if_t<std::is_same<std::array<CharT, N>, container_type>::value>>
-    explicit basic_document(const std::array<CharT, N>& arr)
+    template <typename CharT, size_t N>
+    explicit basic_document(const std::array<CharT, N>& arr,
+                            std::enable_if_t<std::is_same<std::array<CharT, N>, container_type>::value>* = nullptr)
         : m_data(arr) {}
 
-    template <typename CharT, size_t N,
-              typename = std::enable_if_t<!std::is_same<std::array<CharT, N>, container_type>::value>>
-    explicit basic_document(std::array<CharT, N>) = delete;
+    template <typename CharT, size_t N>
+    explicit basic_document(std::array<CharT, N>,
+                            std::enable_if_t<!std::is_same<std::array<CharT, N>, container_type>::value>* = nullptr) =
+        delete;
 
-    template <
-        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
-        typename =
-            std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
-                             !detail::is_iterator_range<container_type>::value &&
-                             detail::is_range_of_iterator<
-                                 ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
-                                                                boost::mpl::_1, boost::mpl::_1>>::value>>
-    explicit basic_document(ForwardRange&& rng)
+    template <typename ForwardRange>
+    explicit basic_document(
+        ForwardRange&& rng, std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>* = nullptr,
+        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
+        std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
+                         !detail::is_iterator_range<container_type>::value &&
+                         detail::is_range_of_iterator<
+                             ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
+                                                            boost::mpl::_1, boost::mpl::_1>>::value>* = nullptr)
         : basic_document(container_type(std::begin(rng), std::end(rng))) {}
 
-    template <
-        typename ForwardRange, typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>,
-        typename = std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>,
-        typename = std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>,
-        typename =
-            std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
-                ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
-                                               boost::mpl::_1>>::value>>
-    explicit basic_document(ForwardRange&& rng, std::enable_if_t<true>* = nullptr)
+    template <typename ForwardRange>
+    explicit basic_document(
+        ForwardRange&& rng, std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>* = nullptr,
+        std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>* = nullptr,
+        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
+        std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
+            ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
+                                           boost::mpl::_1>>::value>* = nullptr)
         : basic_document(container_type(rng)) {}
 
     template <typename ForwardIterator>
@@ -313,7 +311,7 @@ void swap(basic_array<Container, EContainer>& a, basic_array<Container, EContain
 // document_set
 template <typename Container, typename IteratorT, typename SetContainer>
 void serialise(Container& c, IteratorT& it, const basic_document_set<SetContainer>& val) {
-   serialise(c, it, document(val));
+    serialise(c, it, document(val));
 }
 
 } // namespace jbson
