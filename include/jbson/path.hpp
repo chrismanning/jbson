@@ -292,7 +292,6 @@ template <> struct CompareVariable<op_neq> : CompareVariable_impl<CompareVariabl
     }
     template <typename T, typename U>
     bool operator()(const T& lhs, const U& rhs, std::enable_if_t<boost::has_equal_to<T, U>::value>* = nullptr) const {
-        assert(false);
         return !(lhs == rhs);
     }
 };
@@ -413,7 +412,7 @@ template <typename ElemRangeT> auto eval_expr(ElemRangeT&& doc, const std::vecto
                 --stack_ptr;
                 assert(stack_ptr != stack.begin());
                 assert(stack_ptr != stack.end());
-                stack_ptr[-1] = !boost::apply_visitor(CompareVariable<op_eq>{}, stack_ptr[-1], stack_ptr[0]);
+                stack_ptr[-1] = boost::apply_visitor(CompareVariable<op_neq>{}, stack_ptr[-1], stack_ptr[0]);
                 break;
             case op_lt:
                 --stack_ptr;
