@@ -23,8 +23,7 @@ void serialise(Container& c, IteratorT& it, T val, std::enable_if_t<std::is_arit
 }
 
 // string
-template <typename Container, typename IteratorT>
-void serialise(Container& c, IteratorT& it, boost::string_ref val) {
+template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, boost::string_ref val) {
     serialise(c, it, static_cast<int32_t>(val.size() + 1));
     it = c.insert(it, std::begin(val), std::end(val));
     if(it != std::end(c))
@@ -101,43 +100,44 @@ void serialise(Container&, IteratorT&, const std::tuple<StringT, basic_document<
 namespace detail {
 
 // set visitor
-template <element_type EType, typename C, typename A = void, typename Enable = void> struct set_visitor;
+template <element_type EType, typename C, typename It, typename A, typename Enable = void> struct set_visitor;
 
 // voids
-template <element_type EType, typename C, typename A>
-struct set_visitor<EType, C, A, std::enable_if_t<size_func<EType, void*>::value == 0>> {
+template <element_type EType, typename C, typename It, typename A>
+struct set_visitor<EType, C, It, A, std::enable_if_t<std::is_void<ElementTypeMapSet<EType, std::decay_t<C>>>::value>> {
     template <typename... Args> void operator()(Args&&...) const {
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
     }
 };
 
 // everything else
-template <element_type EType, typename Container, typename A>
-struct set_visitor<EType, Container, A,
-        std::enable_if_t<!std::is_convertible<size_func<EType, void*>, int>::value>> {
+template <element_type EType, typename Container, typename IteratorT, typename A>
+struct set_visitor<EType, Container, IteratorT, A,
+                   std::enable_if_t<!std::is_void<ElementTypeMapSet<EType, std::decay_t<Container>>>::value>> {
     static_assert(detail::container_has_push_back<Container>::value,
                   "Cannot set value of an element without a modifiable container");
 
     using container_type = std::decay_t<Container>;
     using set_type = ElementTypeMapSet<EType, container_type>;
 
-    void operator()(container_type& data, set_type val) const {
-        auto it = std::end(data);
+    template <typename T> void operator()(container_type& data, T&& val) const {
+        (*this)(data, std::end(data), std::forward<T>(val));
+    }
+
+    void operator()(container_type& data, typename container_type::const_iterator it, set_type val) const {
         serialise(data, it, std::move(val));
     }
 
     template <typename T>
-    void operator()(container_type& data, T&& val,
+    void operator()(container_type& data, typename container_type::const_iterator it, T&& val,
                     std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr) const {
-        auto it = std::end(data);
         serialise(data, it, set_type(std::forward<T>(val)));
     }
 
     template <typename T>
-    void operator()(container_type& data, T&& val,
+    void operator()(container_type& data, typename container_type::const_iterator it, T&& val,
                     std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
                     std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
-        auto it = std::end(data);
         serialise(data, it, std::forward<T>(val));
     }
 };

@@ -134,7 +134,7 @@ template <class Container> struct basic_element {
 
     template <typename T> void value(T&& val) {
         container_type data;
-        detail::visit<detail::set_visitor>(m_type, data, std::forward<T>(val));
+        detail::visit<detail::set_visitor>(m_type, data, data.end(), std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
     }
@@ -197,13 +197,16 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const noexcept { return !m_data.empty(); }
 
-    static void write_to_container(container_type&, boost::string_ref, element_type);
+    static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
+                                   element_type);
     template <typename T>
-    static void write_to_container(container_type&, boost::string_ref, T&&);
+    static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, T&&);
     template <typename T>
-    static void write_to_container(container_type&, boost::string_ref, element_type, T&&);
+    static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
+                                   element_type, T&&);
 
-    template <typename OutContainer> void write_to_container(OutContainer&) const;
+    template <typename OutContainer>
+    void write_to_container(OutContainer&, typename OutContainer::const_iterator) const;
     template <typename OutContainer> explicit operator OutContainer() const;
 
     bool operator==(const basic_element& other) const {
@@ -255,20 +258,21 @@ void swap(basic_element<Container>& a, basic_element<Container>& b) noexcept(noe
 
 template <class Container>
 template <typename OutContainer>
-void basic_element<Container>::write_to_container(OutContainer& c) const {
+void basic_element<Container>::write_to_container(OutContainer& c, typename OutContainer::const_iterator it) const {
     static_assert(std::is_same<typename OutContainer::value_type, char>::value, "");
     if(!(bool)m_type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
-    c.push_back(static_cast<uint8_t>(m_type));
-    boost::range::push_back(c, m_name);
-    c.push_back('\0');
+    it = std::next(c.insert(it, static_cast<uint8_t>(m_type)));
+    it = c.insert(it, m_name.begin(), m_name.end());
+    std::advance(it, m_name.size());
+    it = std::next(c.insert(it, '\0'));
 
     if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
         BOOST_THROW_EXCEPTION(invalid_element_size{}
                               << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
                               << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
-    boost::range::push_back(c, m_data);
+    c.insert(it, m_data.begin(), m_data.end());
 }
 
 namespace detail {
@@ -289,54 +293,54 @@ inline element_type deduce_type(const array_builder&) noexcept { return element_
 inline element_type deduce_type(builder&&) noexcept { return element_type::document_element; }
 inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
 
-template <typename T>
-inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
+template <typename T> inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
 
 } // namespace detail
 
 template <typename Container>
 template <typename T>
-void basic_element<Container>::
-write_to_container(container_type& c, boost::string_ref name, T&& val) {
+void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
+                                                  boost::string_ref name, T&& val) {
     static_assert(!std::is_same<element_type, T>::value, "");
-    write_to_container(c, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
+    write_to_container(c, it, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
 }
 
 template <typename Container>
 template <typename T>
-void basic_element<Container>::
-write_to_container(container_type& c, boost::string_ref name, element_type type, T&& val) {
+void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
+                                                  boost::string_ref name, element_type type, T&& val) {
     if(!(bool)type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
-    c.push_back(static_cast<uint8_t>(type));
-    boost::range::push_back(c, name);
-    c.push_back('\0');
+    it = std::next(c.insert(it, static_cast<uint8_t>(type)));
+    it = c.insert(it, name.begin(), name.end());
+    std::advance(it, name.size());
+    it = std::next(c.insert(it, '\0'));
 
-    detail::visit<detail::set_visitor>(type, c, std::forward<T>(val));
+    detail::visit<detail::set_visitor>(type, c, it, std::forward<T>(val));
 }
 
 template <typename Container>
-void basic_element<Container>::
-write_to_container(container_type& c, boost::string_ref name, element_type type) {
+void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
+                                                  boost::string_ref name, element_type type) {
     if(!(bool)type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
-    if(type != element_type::undefined_element
-            && type != element_type::null_element
-            && type != element_type::min_key
-            && type != element_type::max_key)
-        BOOST_THROW_EXCEPTION(incompatible_type_conversion{} << actual_type(typeid(void))
+    if(type != element_type::undefined_element && type != element_type::null_element && type != element_type::min_key &&
+       type != element_type::max_key)
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
+                              << actual_type(typeid(void))
                               << expected_type(detail::visit<detail::typeid_visitor>(type, basic_element())));
 
-    c.push_back(static_cast<uint8_t>(type));
-    boost::range::push_back(c, name);
-    c.push_back('\0');
+    it = std::next(c.insert(it, static_cast<uint8_t>(type)));
+    it = c.insert(it, name.begin(), name.end());
+    std::advance(it, name.size());
+    it = std::next(c.insert(it, '\0'));
 }
 
 template <class Container> template <typename OutContainer> basic_element<Container>::operator OutContainer() const {
     OutContainer c;
-    write_to_container(c);
+    write_to_container(c, c.end());
     return std::move(c);
 }
 
@@ -368,8 +372,7 @@ basic_element<Container>::basic_element(
     ForwardRange&& range, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*,
     std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>*) {
     if(boost::distance(range) < 2)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << expected_size(2)
-                                                     << actual_size(boost::distance(range)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << expected_size(2) << actual_size(boost::distance(range)));
 
     auto first = std::begin(range), last = std::end(range);
     m_type = static_cast<element_type>(*first++);

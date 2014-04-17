@@ -178,7 +178,7 @@ template <class Container, class ElementContainer> class basic_document {
         std::array<char, 4> arr{{0, 0, 0, 0}};
         boost::range::push_back(m_data, arr);
         for(auto&& e : rng) {
-            e.write_to_container(m_data);
+            e.write_to_container(m_data, m_data.end());
         }
         m_data.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));

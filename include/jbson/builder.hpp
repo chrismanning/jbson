@@ -20,7 +20,10 @@ struct builder {
     }
 
     template <typename... Args, typename = std::enable_if_t<std::is_constructible<element, Args&&...>::value>>
-    explicit builder(Args&&... args) : builder() { emplace(std::forward<Args>(args)...); }
+    explicit builder(Args&&... args)
+        : builder() {
+        emplace(std::forward<Args>(args)...);
+    }
 
     // lvalue funcs
 
@@ -32,7 +35,8 @@ struct builder {
     template <typename... Args> builder& emplace(Args&&... args) & {
         auto old_size = m_elements.size();
         try {
-            basic_element<decltype(m_elements)>::write_to_container(m_elements, std::forward<Args>(args)...);
+            basic_element<decltype(m_elements)>::write_to_container(m_elements, m_elements.end(),
+                                                                    std::forward<Args>(args)...);
         }
         catch(...) {
             m_elements.resize(old_size);
@@ -86,7 +90,8 @@ struct array_builder {
 
     template <typename... Args,
               typename = std::enable_if_t<std::is_constructible<element, std::string, Args&&...>::value>>
-    explicit array_builder(Args&&... args) : array_builder() {
+    explicit array_builder(Args&&... args)
+        : array_builder() {
         emplace(std::forward<Args>(args)...);
     }
 
@@ -105,7 +110,8 @@ struct array_builder {
         auto old_size = m_elements.size();
         try {
             basic_element<decltype(m_elements)>::write_to_container(
-                m_elements, boost::string_ref{int_str.data(), static_cast<size_t>(n)}, std::forward<Args>(args)...);
+                m_elements, m_elements.end(), boost::string_ref{int_str.data(), static_cast<size_t>(n)},
+                std::forward<Args>(args)...);
         }
         catch(...) {
             m_elements.resize(old_size);
@@ -153,14 +159,12 @@ static_assert(std::is_convertible<array_builder, array>::value, "");
 static_assert(std::is_convertible<array_builder, basic_array<std::vector<char>, std::vector<char>>>::value, "");
 
 // builder
-template <typename Container, typename IteratorT>
-void serialise(Container& c, IteratorT& it, builder val) {
+template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, builder val) {
     serialise(c, it, document(std::move(val)));
 }
 
 // array_builder
-template <typename Container, typename IteratorT>
-void serialise(Container& c, IteratorT& it, array_builder val) {
+template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, array_builder val) {
     serialise(c, it, array(std::move(val)));
 }
 
