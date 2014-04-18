@@ -105,7 +105,7 @@ visit(element_type type, Args&&... args) {
 // non-void visit
 template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
 std::enable_if_t<!std::is_void<decltype(
-                      std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value,
+                     std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value,
                  decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>
 visit(element_type type, Args&&... args) {
     switch(type) {
@@ -170,8 +170,8 @@ visit(element_type type, Args&&... args) {
             return Visitor<element_type::max_key, Args...> {}
             (std::forward<Args>(args)...);
         default:
-            BOOST_THROW_EXCEPTION(
-                invalid_element_type{} << actual_type(typeid(Visitor<element_type::min_key, Args...>)));
+            BOOST_THROW_EXCEPTION(invalid_element_type{}
+                                  << detail::actual_type(typeid(Visitor<element_type::min_key, Args...>)));
     };
 }
 

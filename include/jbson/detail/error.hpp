@@ -33,11 +33,14 @@ struct invalid_element_size : jbson_error {
     const char* what() const noexcept override { return "invalid_element_size"; }
 };
 
+namespace detail {
+
 using expected_type = boost::error_info<struct expected_type_, std::type_index>;
 using actual_type = boost::error_info<struct actual_type_, std::type_index>;
 using expected_size = boost::error_info<struct expected_size_, ptrdiff_t>;
 using actual_size = boost::error_info<struct actual_size_, ptrdiff_t>;
 
+} // namespace detail
 } // namespace jbson
 
 #endif // JBSON_ERROR_HPP

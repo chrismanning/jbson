@@ -41,8 +41,8 @@ template <> struct make_string<boost::string_ref> {
 template <typename RangeT, typename ArithT>
 void deserialise(const RangeT& data, ArithT& num, std::enable_if_t<std::is_arithmetic<ArithT>::value>* = nullptr) {
     if(boost::distance(data) != sizeof(ArithT))
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data))
-                                                     << expected_size(sizeof(ArithT)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(boost::distance(data))
+                                                     << detail::expected_size(sizeof(ArithT)));
     num = detail::little_endian_to_native<ArithT>(data.begin(), data.end());
 }
 
@@ -52,16 +52,16 @@ void deserialise(const RangeT& data, StringT& str,
                  std::enable_if_t<std::is_convertible<std::decay_t<StringT>, boost::string_ref>::value>* = nullptr) {
     auto first = data.begin(), last = data.end();
     if(std::distance(first, last) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                     << expected_size(sizeof(int32_t)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
+                                                     << detail::expected_size(sizeof(int32_t)));
     std::advance(first, sizeof(int32_t));
     const auto length = detail::little_endian_to_native<int32_t>(data.begin(), first) - 1;
     if(length < 0)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(length));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(length));
     last = std::find(first, last, '\0');
     if(std::distance(first, last) != length)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                     << expected_size(length));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
+                                                     << detail::expected_size(length));
 
     str = detail::make_string<StringT>::call(first, last);
 }
@@ -88,7 +88,8 @@ template <typename RangeT> void deserialise(const RangeT& data, RangeT& vec) { v
 // oid
 template <typename RangeT> void deserialise(const RangeT& data, std::array<char, 12>& oid) {
     if(boost::distance(data) != 12)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(12));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(boost::distance(data))
+                                                     << detail::expected_size(12));
     std::copy(data.begin(), data.end(), oid.data());
 }
 
@@ -102,12 +103,12 @@ void deserialise(const RangeT& data, std::tuple<StringT, StringT>& tuple,
 
     auto first = std::find(data.begin(), data.end(), '\0');
     if(first == data.end())
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(boost::distance(data)));
     std::get<0>(tuple) = string_maker::call(data.begin(), first);
 
     auto last = std::find(++first, data.end(), '\0');
     if(last == data.end())
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(boost::distance(data)));
     std::get<1>(tuple) = string_maker::call(first, last);
 }
 
@@ -130,7 +131,8 @@ void deserialise(const RangeT& data, std::tuple<StringT, basic_document<DocConta
     auto it = data.begin();
     deserialise(boost::make_iterator_range(it, std::next(it, 4)), length);
     if(length != boost::distance(data))
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(boost::distance(data)) << expected_size(length));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(boost::distance(data))
+                                                     << detail::expected_size(length));
     std::advance(it, 4);
     deserialise(boost::make_iterator_range(it, data.end()), std::get<0>(tuple));
     deserialise(boost::make_iterator_range(

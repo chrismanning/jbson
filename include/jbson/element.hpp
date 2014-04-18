@@ -270,8 +270,8 @@ void basic_element<Container>::write_to_container(OutContainer& c, typename OutC
 
     if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
         BOOST_THROW_EXCEPTION(invalid_element_size{}
-                              << actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
-                              << expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
+                              << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
+                              << detail::expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
     c.insert(it, m_data.begin(), m_data.end());
 }
 
@@ -329,8 +329,8 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
     if(type != element_type::undefined_element && type != element_type::null_element && type != element_type::min_key &&
        type != element_type::max_key)
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
-                              << actual_type(typeid(void))
-                              << expected_type(detail::visit<detail::typeid_visitor>(type, basic_element())));
+                              << detail::actual_type(typeid(void))
+                              << detail::expected_type(detail::visit<detail::typeid_visitor>(type, basic_element())));
 
     it = std::next(c.insert(it, static_cast<uint8_t>(type)));
     it = c.insert(it, name.begin(), name.end());
@@ -372,7 +372,8 @@ basic_element<Container>::basic_element(
     ForwardRange&& range, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>*,
     std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>*) {
     if(boost::distance(range) < 2)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << expected_size(2) << actual_size(boost::distance(range)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::expected_size(2)
+                                                     << detail::actual_size(boost::distance(range)));
 
     auto first = std::begin(range), last = std::end(range);
     m_type = static_cast<element_type>(*first++);
@@ -383,8 +384,8 @@ basic_element<Container>::basic_element(
     first = str_end;
     const auto elem_size = detail::detect_size(m_type, first, last);
     if(std::distance(first, last) < elem_size)
-        BOOST_THROW_EXCEPTION(invalid_element_size{} << expected_size(elem_size)
-                                                     << actual_size(std::distance(first, last)));
+        BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::expected_size(elem_size)
+                                                     << detail::actual_size(std::distance(first, last)));
     last = std::next(first, elem_size);
     m_data = container_type{first, last};
 }

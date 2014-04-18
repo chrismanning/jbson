@@ -88,19 +88,21 @@ void init_empty(Container& c, std::enable_if_t<container_has_push_back<Container
 }
 
 template <typename Container>
-void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-                std::enable_if_t<std::is_constructible<typename Container::iterator,
-                std::array<char, 5>::const_iterator>::value>* = nullptr) {
+void init_empty(
+    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* =
+        nullptr) {
     static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
     c = Container{arr.begin(), arr.end()};
 }
 
 template <typename Container>
-void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-                std::enable_if_t<!std::is_constructible<typename Container::iterator,
-                std::array<char, 5>::const_iterator>::value>* = nullptr,
-                std::enable_if_t<std::is_constructible<typename Container::iterator,
-                std::vector<char>::const_iterator>::value>* = nullptr) {
+void init_empty(
+    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+    std::enable_if_t<
+        !std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* = nullptr,
+    std::enable_if_t<std::is_constructible<typename Container::iterator, std::vector<char>::const_iterator>::value>* =
+        nullptr) {
     static const std::vector<char> arr{{5, 0, 0, 0, '\0'}};
     c = Container{arr.begin(), arr.end()};
 }
@@ -131,9 +133,10 @@ template <class Container, class ElementContainer> class basic_document {
             BOOST_THROW_EXCEPTION(invalid_document_size{});
         if(static_cast<ptrdiff_t>(boost::distance(m_data)) !=
            detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
-            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(detail::little_endian_to_native<int32_t>(
-                                                                 m_data.begin(), m_data.end()))
-                                                          << actual_size(boost::distance(m_data)));
+            BOOST_THROW_EXCEPTION(invalid_document_size{}
+                                  << detail::expected_size(
+                                         detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+                                  << detail::actual_size(boost::distance(m_data)));
     }
 
     template <typename OtherContainer>
@@ -263,8 +266,7 @@ template <class Container, class ElementContainer> class basic_document {
         return {pos, std::prev(m_data.end())};
     }
 
-    template <typename... Args>
-    const_iterator emplace(const const_iterator& it, Args&&... args) {
+    template <typename... Args> const_iterator emplace(const const_iterator& it, Args&&... args) {
         container_type data;
         basic_element<container_type>::write_to_container(data, data.end(), std::forward<Args>(args)...);
 

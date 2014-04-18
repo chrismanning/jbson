@@ -43,17 +43,17 @@ struct size_func<element_type::undefined_element, ForwardIterator> : std::integr
 template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                         << expected_size(sizeof(int32_t)));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
+                                                         << detail::expected_size(sizeof(int32_t)));
         const auto str_size = detail::little_endian_to_native<int32_t>(first, last);
         if(str_size <= 0) // should always be at least 1 (null char)
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(str_size));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(str_size));
         auto it = std::next(first, sizeof(int32_t) + str_size - 1);
         if(std::distance(it, last) <= 0)
             BOOST_THROW_EXCEPTION(invalid_element_size{});
         if(*it != '\0')
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, it) + 1)
-                                                         << expected_size(str_size));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, it) + 1)
+                                                         << detail::expected_size(str_size));
         return sizeof(int32_t) + str_size;
     }
 };
@@ -77,18 +77,18 @@ struct size_func<element_type::binary_element, ForwardIterator>
 template <typename ForwardIterator> struct size_func<element_type::document_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                         << expected_size(sizeof(int32_t)));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
+                                                         << detail::expected_size(sizeof(int32_t)));
         const auto size = detail::little_endian_to_native<int32_t>(first, last);
         if(static_cast<ptrdiff_t>(size) < static_cast<ptrdiff_t>(sizeof(int32_t) + sizeof('\0')))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last)));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last)));
 
         auto it = std::next(first, size - 1);
         if(std::distance(it, last) <= 0)
             BOOST_THROW_EXCEPTION(invalid_element_size{});
         if(*it != '\0')
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, it) + 1)
-                                                         << expected_size(size));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, it) + 1)
+                                                         << detail::expected_size(size));
         return size;
     }
 };
@@ -103,11 +103,11 @@ struct size_func<element_type::scoped_javascript_element, ForwardIterator>
       private size_func<element_type::document_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last))
-                                                         << expected_size(sizeof(int32_t)));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
+                                                         << detail::expected_size(sizeof(int32_t)));
         const auto total_size = detail::little_endian_to_native<int32_t>(first, last);
         if(total_size < 0)
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(std::distance(first, last)));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last)));
 
         std::advance(first, sizeof(int32_t));
 
@@ -117,8 +117,8 @@ struct size_func<element_type::scoped_javascript_element, ForwardIterator>
         const auto doc_size = size_func<element_type::document_element, ForwardIterator>::operator()(first, last);
 
         if(str_size + doc_size + sizeof(int32_t) != static_cast<size_t>(total_size))
-            BOOST_THROW_EXCEPTION(invalid_element_size{} << actual_size(str_size + doc_size)
-                                                         << expected_size(total_size));
+            BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(str_size + doc_size)
+                                                         << detail::expected_size(total_size));
 
         return total_size;
     }

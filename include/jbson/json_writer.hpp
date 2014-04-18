@@ -140,12 +140,13 @@ std::decay_t<OutputIterator> stringify(const basic_array<C, EC>& arr, OutputIter
 
 namespace details {
 #include <boost/concept/detail/concept_def.hpp>
-BOOST_concept(OutputIterator,(TT)(ValueT)) {
+BOOST_concept(OutputIterator, (TT)(ValueT)) {
     BOOST_CONCEPT_USAGE(OutputIterator) {
-        ++i;                // require preincrement operator
-        i++;                // require postincrement operator
-        *i++ = t;           // require postincrement and assignment
+        ++i;      // require preincrement operator
+        i++;      // require postincrement operator
+        *i++ = t; // require postincrement and assignment
     }
+
   private:
     TT i{std::declval<TT>()}, j{std::declval<TT>()};
     ValueT t = ValueT();

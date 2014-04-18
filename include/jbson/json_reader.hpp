@@ -311,7 +311,7 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
         int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
         if(size != 5)
-            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::expected_size(5) << detail::actual_size(size));
         boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
         return out;
     }
@@ -352,7 +352,7 @@ OutputIterator json_reader::parse_document(line_pos_iterator<ForwardIterator>& f
 
             int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
             if(size < 5)
-                BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+                BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::expected_size(5) << detail::actual_size(size));
             boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
             return out;
         }
@@ -384,7 +384,7 @@ OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& firs
 
         const int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
         if(size != 5)
-            BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::expected_size(5) << detail::actual_size(size));
         boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
         return out;
     }
@@ -427,7 +427,7 @@ OutputIterator json_reader::parse_array(line_pos_iterator<ForwardIterator>& firs
 
             int32_t size = std::distance(std::next(m_data.begin(), start_idx), out);
             if(size < 5)
-                BOOST_THROW_EXCEPTION(invalid_document_size{} << expected_size(5) << actual_size(size));
+                BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::expected_size(5) << detail::actual_size(size));
             boost::range::copy(detail::native_to_little_endian(size), std::next(m_data.begin(), start_idx));
             return out;
         }
@@ -516,7 +516,7 @@ std::tuple<boost::optional<OutputIterator>, element_type>
 json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputIterator out) {
     if(doc.size() < 5)
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "extended json value")
-                              << expected_size(5) << actual_size(doc.size()));
+                              << detail::expected_size(5) << detail::actual_size(doc.size()));
     auto type = element_type::null_element;
     const auto name = doc.begin()->name();
     if(name == "$binary" || name == "$type") {
