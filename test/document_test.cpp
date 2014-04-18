@@ -23,6 +23,13 @@ static_assert(std::is_same<decltype(std::declval<document&>().data()), const std
 static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
 static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
 
+TEST(DocumentTest, EmptyDocumentTest) {
+    ASSERT_EQ(0, boost::distance(document()));
+    ASSERT_EQ(0, boost::distance(basic_document<boost::iterator_range<const char*>>()));
+    ASSERT_EQ(0, boost::distance(array()));
+    ASSERT_EQ(0, boost::distance(basic_array<boost::iterator_range<const char*>>()));
+}
+
 TEST(DocumentTest, DocumentParseTest1) {
     const auto test_bson = "\x16\x00\x00\x00\x02hello\x00\x06\x00\x00\x00world\x00\x00"s;
     auto doc = document{test_bson};

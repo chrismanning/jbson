@@ -81,6 +81,30 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
     boost::optional<std::decay_t<Value>> m_cur;
 };
 
+template <typename Container>
+void init_empty(Container& c, std::enable_if_t<container_has_push_back<Container>::value>* = nullptr) {
+    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
+    boost::range::push_back(c, arr);
+}
+
+template <typename Container>
+void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+                std::enable_if_t<std::is_constructible<typename Container::iterator,
+                std::array<char, 5>::const_iterator>::value>* = nullptr) {
+    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
+    c = Container{arr.begin(), arr.end()};
+}
+
+template <typename Container>
+void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+                std::enable_if_t<!std::is_constructible<typename Container::iterator,
+                std::array<char, 5>::const_iterator>::value>* = nullptr,
+                std::enable_if_t<std::is_constructible<typename Container::iterator,
+                std::vector<char>::const_iterator>::value>* = nullptr) {
+    static const std::vector<char> arr{{5, 0, 0, 0, '\0'}};
+    c = Container{arr.begin(), arr.end()};
+}
+
 } // namespace detail
 
 static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail::is_element>>::value, "");
@@ -95,7 +119,9 @@ template <class Container, class ElementContainer> class basic_document {
     using const_iterator = iterator;
     using value_type = element_type;
 
-    basic_document() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
+    basic_document() {
+        detail::init_empty(m_data);
+    }
 
     template <typename SomeType>
     explicit basic_document(SomeType&& c,
@@ -302,8 +328,6 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     using base::data;
     using base::size;
     using base::swap;
-
-    basic_array() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
 
     template <typename... Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
     basic_array(Args&&... args) noexcept(std::is_nothrow_constructible<base, Args&&...>::value)
