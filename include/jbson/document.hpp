@@ -27,9 +27,12 @@ struct invalid_document_size : jbson_error {
 
 namespace detail {
 
-template <typename Value, typename BaseIterator>
-struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag,
-                                              std::add_lvalue_reference_t<std::add_const_t<Value>>> {
+template <typename Value, typename BaseIterator> struct document_iter;
+
+template <typename Con, typename BaseIterator>
+struct document_iter<basic_element<Con>, BaseIterator>
+    : boost::iterator_facade<document_iter<basic_element<Con>, BaseIterator>, const basic_element<Con>,
+                             boost::forward_traversal_tag, const basic_element<Con>&> {
     document_iter() = default;
     document_iter(document_iter&&) = default;
     document_iter& operator=(document_iter&&) = default;
@@ -39,21 +42,22 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
     document_iter(BaseIterator it1, BaseIterator it2) : m_start(it1), m_end(it2) {
         if(m_start == m_end)
             return;
-        m_cur = Value{m_start, m_end};
+        m_cur = basic_element<Con>{m_start, m_end};
     }
 
     template <class OtherValue, typename OtherIt>
     document_iter(const document_iter<OtherValue, OtherIt>& other,
-                  std::enable_if_t<std::is_convertible<OtherValue, Value>::value&&
+                  std::enable_if_t<std::is_convertible<OtherValue, basic_element<Con>>::value&&
                                        std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
         : m_start(other.m_start), m_end(other.m_end) {
         if(m_start == m_end)
             return;
-        m_cur = Value{m_start, m_end};
+        m_cur = basic_element<Con>{m_start, m_end};
     }
 
   private:
     friend class boost::iterator_core_access;
+    template <typename, typename> friend struct document_iter;
     template <typename, typename> friend class jbson::basic_document;
 
     template <typename OtherValue, typename OtherIterator>
@@ -71,14 +75,14 @@ struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>
         if(m_start == m_end)
             m_cur = boost::none;
         else
-            m_cur = Value{m_start, m_end};
+            m_cur = basic_element<Con>{m_start, m_end};
     }
 
-    std::add_lvalue_reference_t<std::add_const_t<Value>> dereference() const { return *m_cur; }
+    const basic_element<Con>& dereference() const { return *m_cur; }
 
     BaseIterator m_start;
     BaseIterator m_end;
-    boost::optional<std::decay_t<Value>> m_cur;
+    boost::optional<basic_element<Con>> m_cur;
 };
 
 template <typename Container>
@@ -88,12 +92,23 @@ void init_empty(Container& c, std::enable_if_t<container_has_push_back<Container
 }
 
 template <typename Container>
+void init_empty(Container& c,
+                std::enable_if_t<std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr) {
+    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
+    c = arr;
+}
+
+template <typename Container>
 void init_empty(
     Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* =
+    std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr,
+    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::iterator>::value>* =
+        nullptr,
+    std::enable_if_t<
+        std::is_constructible<Container, std::array<char, 5>::iterator, std::array<char, 5>::iterator>::value>* =
         nullptr) {
     static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
-    c = Container{arr.begin(), arr.end()};
+    c = Container{(std::array<char, 5>::iterator)arr.begin(), (std::array<char, 5>::iterator)arr.end()};
 }
 
 template <typename Container>
@@ -115,7 +130,7 @@ struct builder;
 
 template <class Container, class ElementContainer> class basic_document {
   public:
-    using container_type = Container;
+    using container_type = std::decay_t<Container>;
     using element_type = basic_element<ElementContainer>;
     using iterator = typename detail::document_iter<element_type, typename container_type::const_iterator>;
     using const_iterator = iterator;

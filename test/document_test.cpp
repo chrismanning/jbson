@@ -25,8 +25,10 @@ static_assert(std::is_same<decltype(std::declval<const document&&>().data()), st
 
 TEST(DocumentTest, EmptyDocumentTest) {
     ASSERT_EQ(0, boost::distance(document()));
+    ASSERT_EQ(0, boost::distance(basic_document<std::array<char, 5>>()));
     ASSERT_EQ(0, boost::distance(basic_document<boost::iterator_range<const char*>>()));
     ASSERT_EQ(0, boost::distance(array()));
+    ASSERT_EQ(0, boost::distance(basic_array<std::array<char, 5>>()));
     ASSERT_EQ(0, boost::distance(basic_array<boost::iterator_range<const char*>>()));
 }
 

@@ -96,6 +96,23 @@ TEST(ElementTest, ElementConstructTest1) {
     el1.value(val);
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ(val, get<element_type::double_element>(el1));
+
+    {
+        decltype(auto) a = "name";
+        decltype(auto) b = "value";
+        auto el2 = element{a, b};
+        ASSERT_EQ(element_type::string_element, el2.type());
+        EXPECT_EQ("name", el2.name());
+        EXPECT_EQ("value", get<element_type::string_element>(el2));
+    }
+    {
+        auto a = "name";
+        auto b = "value";
+        auto el2 = element{a, b};
+        ASSERT_EQ(element_type::string_element, el2.type());
+        EXPECT_EQ("name", el2.name());
+        EXPECT_EQ("value", get<element_type::string_element>(el2));
+    }
 }
 
 TEST(ElementTest, ElementConstructTest2) {

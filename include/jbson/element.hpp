@@ -68,7 +68,9 @@ template <class Container> struct basic_element {
 
     template <typename ForwardIterator>
     basic_element(ForwardIterator&& first, ForwardIterator&& last,
-                  std::enable_if_t<!detail::is_string_literal<ForwardIterator>::value>* = nullptr,
+                  std::enable_if_t<
+                      !std::is_constructible<boost::string_ref, ForwardIterator>::value ||
+                      std::is_convertible<ForwardIterator, typename container_type::const_iterator>::value>* = nullptr,
                   std::enable_if_t<detail::is_range_of_same_value<decltype(boost::make_iterator_range(first, last)),
                                                                   typename Container::value_type>::value>* = nullptr)
         : basic_element(boost::make_iterator_range(first, last)) {}
@@ -157,6 +159,7 @@ template <class Container> struct basic_element {
     value(T&& val,
           std::enable_if_t<std::is_same<std::decay_t<T>, detail::ElementTypeMapSet<EType, container_type>>::value>* =
               nullptr) {
+        static_assert(detail::container_has_push_back<container_type>::value, "");
         using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_same<std::decay_t<T>, T2>::value, "");
 
@@ -173,6 +176,7 @@ template <class Container> struct basic_element {
     value(T&& val,
           std::enable_if_t<!std::is_same<std::decay_t<T>, detail::ElementTypeMapSet<EType, container_type>>::value>* =
               nullptr) {
+        static_assert(detail::container_has_push_back<container_type>::value, "");
         using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
 
