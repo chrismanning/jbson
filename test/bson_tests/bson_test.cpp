@@ -822,6 +822,8 @@ TEST_F(BsonTest, DISABLED_FileTest24) {
     FAIL() << "binary elements not implemented";
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 TEST_F(BsonTest, FileTest25) {
     init_bson("test25.bson");
     ASSERT_EQ(1, boost::distance(doc));
@@ -839,6 +841,7 @@ TEST_F(BsonTest, FileTest25) {
     ++it;
     ASSERT_EQ(end, it);
 }
+#pragma GCC diagnostic pop
 
 TEST_F(BsonTest, FileTest26) {
     init_bson("test26.bson");
@@ -897,6 +900,8 @@ TEST_F(BsonTest, FileTest27b) {
     ASSERT_EQ(end, it);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 TEST_F(BsonTest, FileTest28) {
     init_bson("test28.bson");
     ASSERT_EQ(1, boost::distance(doc));
@@ -942,6 +947,7 @@ TEST_F(BsonTest, FileTest28b) {
     ++it;
     ASSERT_EQ(end, it);
 }
+#pragma GCC diagnostic pop
 
 TEST_F(BsonTest, FileTest29) {
     init_bson("test29.bson");
@@ -1016,6 +1022,8 @@ TEST_F(BsonTest, FileTest31) {
     ASSERT_EQ(end, it);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 TEST_F(BsonTest, FileTest32) {
     init_bson("test32.bson");
     ASSERT_EQ(1, boost::distance(doc));
@@ -1031,6 +1039,7 @@ TEST_F(BsonTest, FileTest32) {
     ++it;
     ASSERT_EQ(end, it);
 }
+#pragma GCC diagnostic pop
 
 TEST_F(BsonTest, FileTest33) {
     init_bson("test33.bson");

@@ -8,7 +8,6 @@
 using namespace std::literals;
 
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/range/as_array.hpp>
 
 #include <gtest/gtest.h>
 

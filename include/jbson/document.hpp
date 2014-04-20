@@ -10,9 +10,12 @@
 #include <vector>
 #include <set>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
 #include <boost/optional.hpp>
+#pragma GCC diagnostic pop
 
 #include "document_fwd.hpp"
 #include "element_fwd.hpp"
@@ -21,13 +24,21 @@
 
 namespace jbson {
 
+/*!
+ * \brief Exception thrown when an document's data size differs from that reported.
+ */
 struct invalid_document_size : jbson_error {
     const char* what() const noexcept override { return "invalid_document_size"; }
 };
 
 namespace detail {
 
+/*!
+ * \brief Forward traversal iterator type for traversing basic_document and basic_array
+ */
 template <typename Value, typename BaseIterator> struct document_iter;
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 template <typename Con, typename BaseIterator>
 struct document_iter<basic_element<Con>, BaseIterator>
@@ -85,6 +96,15 @@ struct document_iter<basic_element<Con>, BaseIterator>
     boost::optional<basic_element<Con>> m_cur;
 };
 
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+#ifdef DOXYGEN_SHOULD_SKIP_THIS
+/*!
+ * \brief Initialises a container or range for a valid empty basic_document or basic_array
+ */
+template <typename Container>
+void init_empty(Container& c);
+#else
 template <typename Container>
 void init_empty(Container& c, std::enable_if_t<container_has_push_back<Container>::value>* = nullptr) {
     static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
@@ -122,6 +142,8 @@ void init_empty(
     c = Container{arr.begin(), arr.end()};
 }
 
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 } // namespace detail
 
 static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail::is_element>>::value, "");
@@ -136,9 +158,11 @@ template <class Container, class ElementContainer> class basic_document {
     using const_iterator = iterator;
     using value_type = element_type;
 
-    basic_document() {
-        detail::init_empty(m_data);
-    }
+    /*!
+     * \brief Default constructor
+     * Results in an empty, but valid document
+     */
+    basic_document() { detail::init_empty(m_data); }
 
     template <typename SomeType>
     explicit basic_document(SomeType&& c,

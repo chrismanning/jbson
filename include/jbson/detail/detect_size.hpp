@@ -35,10 +35,15 @@ struct size_func<element_type::max_key, ForwardIterator> : std::integral_constan
     template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 template <typename ForwardIterator>
 struct size_func<element_type::undefined_element, ForwardIterator> : std::integral_constant<int, 0> {
     template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
 };
+
+#pragma GCC diagnostic pop
 
 template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {
@@ -62,9 +67,14 @@ template <typename ForwardIterator>
 struct size_func<element_type::javascript_element, ForwardIterator>
     : size_func<element_type::string_element, ForwardIterator> {};
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 template <typename ForwardIterator>
 struct size_func<element_type::symbol_element, ForwardIterator>
     : size_func<element_type::string_element, ForwardIterator> {};
+
+#pragma GCC diagnostic pop
 
 template <typename ForwardIterator>
 struct size_func<element_type::binary_element, ForwardIterator>
@@ -124,6 +134,9 @@ struct size_func<element_type::scoped_javascript_element, ForwardIterator>
     }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 template <typename ForwardIterator>
 struct size_func<element_type::db_pointer_element, ForwardIterator>
     : private size_func<element_type::oid_element, ForwardIterator>,
@@ -134,6 +147,8 @@ struct size_func<element_type::db_pointer_element, ForwardIterator>
         return size + size_func<element_type::oid_element, ForwardIterator>::operator()(first, last);
     }
 };
+
+#pragma GCC diagnostic pop
 
 template <typename ForwardIterator> struct size_func<element_type::regex_element, ForwardIterator> {
     size_t operator()(ForwardIterator first, ForwardIterator last) const {

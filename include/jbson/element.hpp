@@ -11,10 +11,13 @@
 #include <chrono>
 #include <array>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/mpl/or.hpp>
+#pragma GCC diagnostic pop
 
 #include "element_fwd.hpp"
 #include "document_fwd.hpp"
@@ -36,9 +39,15 @@ template <element_type EType, typename Element> struct typeid_visitor {
 
 } // namespace detail
 
+/*!
+ * \brief Access element value of specific element_type
+ */
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
 
+/*!
+ * blah blah
+ */
 template <class Container> struct basic_element {
     using container_type = std::decay_t<Container>;
     static_assert(!std::is_convertible<container_type, std::string>::value,
@@ -110,6 +119,9 @@ template <class Container> struct basic_element {
     element_type type() const noexcept { return m_type; }
     void type(element_type type) noexcept { m_type = type; }
 
+    /*!
+     * \brief access value
+     */
     template <typename T> T value() const {
         T ret{};
         deserialise(m_data, ret);
@@ -330,11 +342,14 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
     if(!(bool)type)
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     if(type != element_type::undefined_element && type != element_type::null_element && type != element_type::min_key &&
        type != element_type::max_key)
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
                               << detail::actual_type(typeid(void))
                               << detail::expected_type(detail::visit<detail::typeid_visitor>(type, basic_element())));
+#pragma GCC diagnostic pop
 
     it = std::next(c.insert(it, static_cast<uint8_t>(type)));
     it = c.insert(it, name.begin(), name.end());
@@ -422,12 +437,17 @@ template <element_type EType, typename Visitor, typename Element> struct element
     auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), get<EType>(elem), EType); }
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 template <typename Visitor, typename Element>
 struct element_visitor<element_type::undefined_element, Visitor, Element> {
     auto operator()(Visitor&& visitor, Element&& elem) const {
         return visitor(elem.name(), element_type::undefined_element);
     }
 };
+#pragma GCC diagnostic pop
 
 template <typename Visitor, typename Element> struct element_visitor<element_type::null_element, Visitor, Element> {
     auto operator()(Visitor&& visitor, Element&& elem) const {
@@ -442,6 +462,8 @@ template <typename Visitor, typename Element> struct element_visitor<element_typ
 template <typename Visitor, typename Element> struct element_visitor<element_type::max_key, Visitor, Element> {
     auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), element_type::max_key); }
 };
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 } // namespace detail
 
@@ -544,9 +566,12 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
         case element_type::binary_element:
             os << "binary_element";
             break;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::undefined_element:
             os << "undefined_element";
             break;
+#pragma GCC diagnostic pop
         case element_type::oid_element:
             os << "oid_element";
             break;
@@ -562,15 +587,21 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
         case element_type::regex_element:
             os << "regex_element";
             break;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::db_pointer_element:
             os << "db_pointer_element";
             break;
+#pragma GCC diagnostic pop
         case element_type::javascript_element:
             os << "javascript_element";
             break;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::symbol_element:
             os << "symbol_element";
             break;
+#pragma GCC diagnostic pop
         case element_type::scoped_javascript_element:
             os << "scoped_javascript_element";
             break;

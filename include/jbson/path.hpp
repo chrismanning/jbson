@@ -8,9 +8,12 @@
 
 #include <vector>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/type_traits/has_operator.hpp>
+#pragma GCC diagnostic pop
 
 #include "document.hpp"
 #include "expression_parser.hpp"

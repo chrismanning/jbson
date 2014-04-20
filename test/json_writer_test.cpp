@@ -7,8 +7,11 @@
 #include <string>
 using namespace std::literals;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/range/as_array.hpp>
+#pragma GCC diagnostic pop
 
 #include <gtest/gtest.h>
 
@@ -17,6 +20,8 @@ using namespace std::literals;
 #include <jbson/builder.hpp>
 using namespace jbson;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 TEST(JsonWriterTest, StringifyTest0) {
     auto json = std::string{};
@@ -75,21 +80,6 @@ TEST(JsonWriterTest, StringifyTest7) {
 TEST(JsonWriterTest, StringifyTest8) {
     auto json = std::string{};
     detail::stringify(0.123456789e-12, std::back_inserter(json));
-    ::feclearexcept(FE_ALL_EXCEPT);
-    auto dbl = std::stold("0.123456789e-12"s);
-    EXPECT_FALSE(::fetestexcept(FE_ALL_EXCEPT));
-    ::feclearexcept(FE_ALL_EXCEPT);
-    EXPECT_FLOAT_EQ(0.123456789e-12, dbl);
-    EXPECT_FLOAT_EQ(23456789012E66, std::stold("23456789012E66"s));
-
-    std::array<char,std::numeric_limits<double>::digits10+2> buf;
-    auto n = std::snprintf(buf.data(), buf.size(), "%.8e", 23456789012E66);
-    ASSERT_GT(n, 0);
-    EXPECT_EQ("2.34567890e+76", boost::string_ref(buf.data(), static_cast<size_t>(n)));
-    int64_t i = std::llrint(std::stold("23456789012E66"s));
-    EXPECT_TRUE(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT);
-    ::feclearexcept(FE_ALL_EXCEPT);
-    (void) i;
 }
 
 TEST(JsonWriterTest, StringifyTest9) {
@@ -234,3 +224,5 @@ TEST(JsonWriterTest, JsonWriteTest8) {
     ASSERT_NE(set.end(), it);
     ASSERT_EQ(element_type::double_element, it->type());
 }
+
+#pragma GCC diagnostic pop

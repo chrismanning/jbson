@@ -9,9 +9,12 @@
 #include <string>
 #include <iterator>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/utility/string_ref.hpp>
 #include <boost/range/as_literal.hpp>
 #include <boost/concept_check.hpp>
+#pragma GCC diagnostic pop
 
 #include "element.hpp"
 #include "document.hpp"
@@ -138,7 +141,9 @@ std::decay_t<OutputIterator> stringify(const basic_array<C, EC>& arr, OutputIter
 
 } // namespace
 
-namespace details {
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+namespace concepts {
 #include <boost/concept/detail/concept_def.hpp>
 BOOST_concept(OutputIterator, (TT)(ValueT)) {
     BOOST_CONCEPT_USAGE(OutputIterator) {
@@ -154,9 +159,11 @@ BOOST_concept(OutputIterator, (TT)(ValueT)) {
 #include <boost/concept/detail/concept_undef.hpp>
 } // namespace concepts
 
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 template <element_type EType, typename Element, typename OutputIteratorT> struct json_element_visitor {
     static_assert(detail::is_element<std::decay_t<Element>>::value, "");
-    BOOST_CONCEPT_ASSERT((details::OutputIteratorConcept<OutputIteratorT, char>));
+    BOOST_CONCEPT_ASSERT((concepts::OutputIteratorConcept<OutputIteratorT, char>));
 
     json_element_visitor() = default;
 
@@ -164,6 +171,8 @@ template <element_type EType, typename Element, typename OutputIteratorT> struct
         return stringify(get<EType>(e), out);
     }
 };
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 // oid
 template <typename Element, typename OutputIterator>
@@ -179,6 +188,8 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
     }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 // db pointer
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::db_pointer_element, Element, OutputIterator> {
@@ -193,6 +204,7 @@ struct json_element_visitor<element_type::db_pointer_element, Element, OutputIte
                          out);
     }
 };
+#pragma GCC diagnostic pop
 
 // date
 template <typename Element, typename OutputIterator>
@@ -229,12 +241,15 @@ struct json_element_visitor<element_type::null_element, Element, OutputIterator>
     }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::undefined_element, Element, OutputIterator> {
     std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
+#pragma GCC diagnostic pop
 
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::max_key, Element, OutputIterator> {
@@ -249,6 +264,8 @@ struct json_element_visitor<element_type::min_key, Element, OutputIterator> {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 } // namespace detail
 

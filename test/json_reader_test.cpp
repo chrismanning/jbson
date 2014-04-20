@@ -15,25 +15,6 @@ using namespace std::literals;
 #include <jbson/json_reader.hpp>
 using namespace jbson;
 
-TEST(JsonReaderTest, LongDoubleConv) {
-    int64_t val = std::numeric_limits<int64_t>::max();
-    long double dbl = static_cast<long double>(val);
-    ::feclearexcept(FE_ALL_EXCEPT);
-    ASSERT_EQ(val, std::llrint(dbl));
-    if(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT) {
-        ::feclearexcept(FE_ALL_EXCEPT);
-        FAIL();
-    }
-
-    val = std::numeric_limits<int64_t>::min();
-    dbl = static_cast<long double>(val);
-    ASSERT_EQ(val, std::llrint(dbl));
-    if(::fetestexcept(FE_ALL_EXCEPT) & FE_INEXACT) {
-        ::feclearexcept(FE_ALL_EXCEPT);
-        FAIL();
-    }
-}
-
 TEST(JsonReaderTest, JsonParseTest1) {
     auto json = boost::string_ref{R"({})"};
     auto reader = json_reader{};

@@ -37,10 +37,13 @@ visit(element_type type, Args&&... args) {
             //            Visitor<element_type::binary_element, Args...> {}
             //            (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::undefined_element:
             Visitor<element_type::undefined_element, Args...> {}
             (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic pop
         case element_type::oid_element:
             Visitor<element_type::oid_element, Args...> {}
             (std::forward<Args>(args)...);
@@ -61,18 +64,24 @@ visit(element_type type, Args&&... args) {
             Visitor<element_type::regex_element, Args...> {}
             (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::db_pointer_element:
             Visitor<element_type::db_pointer_element, Args...> {}
             (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic pop
         case element_type::javascript_element:
             Visitor<element_type::javascript_element, Args...> {}
             (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::symbol_element:
             Visitor<element_type::symbol_element, Args...> {}
             (std::forward<Args>(args)...);
             return;
+#pragma GCC diagnostic pop
         case element_type::scoped_javascript_element:
             Visitor<element_type::scoped_javascript_element, Args...> {}
             (std::forward<Args>(args)...);
@@ -124,9 +133,12 @@ visit(element_type type, Args&&... args) {
         case element_type::binary_element:
         //            return Visitor<element_type::binary_element, Args...> {}
         //            (std::forward<Args>(args)...);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::undefined_element:
             return Visitor<element_type::undefined_element, Args...> {}
             (std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
         case element_type::oid_element:
             return Visitor<element_type::oid_element, Args...> {}
             (std::forward<Args>(args)...);
@@ -142,15 +154,21 @@ visit(element_type type, Args&&... args) {
         case element_type::regex_element:
             return Visitor<element_type::regex_element, Args...> {}
             (std::forward<Args>(args)...);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::db_pointer_element:
             return Visitor<element_type::db_pointer_element, Args...> {}
             (std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
         case element_type::javascript_element:
             return Visitor<element_type::javascript_element, Args...> {}
             (std::forward<Args>(args)...);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         case element_type::symbol_element:
             return Visitor<element_type::symbol_element, Args...> {}
             (std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
         case element_type::scoped_javascript_element:
             return Visitor<element_type::scoped_javascript_element, Args...> {}
             (std::forward<Args>(args)...);

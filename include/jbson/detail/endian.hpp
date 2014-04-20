@@ -8,7 +8,10 @@
 
 #include <type_traits>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/predef/other/endian.h>
+#pragma GCC diagnostic pop
 
 namespace jbson {
 namespace detail {

@@ -11,8 +11,9 @@
 #include <memory>
 #include <codecvt>
 #include <vector>
-#include <cfenv>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/range/as_literal.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -20,6 +21,7 @@
 #include <boost/exception/exception.hpp>
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 #include <boost/io/ios_state.hpp>
+#pragma GCC diagnostic pop
 
 #include "document.hpp"
 #include "detail/traits.hpp"
@@ -584,12 +586,16 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
         if(it == doc.end() || it->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
         auto coll = get<element_type::string_element>(*it);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         type = element_type::db_pointer_element;
         serialise(m_data, out, std::make_tuple(coll, oid));
     } else if(name == "$undefined") {
         if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "undefined element"));
         type = element_type::undefined_element;
+#pragma GCC diagnostic pop
     } else if(name == "$minkey") {
         if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "minkey element"));

@@ -10,7 +10,10 @@
 #include <array>
 #include <chrono>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdocumentation"
 #include <boost/utility/string_ref.hpp>
+#pragma GCC diagnostic pop
 
 #include "traits.hpp"
 #include "endian.hpp"
@@ -92,8 +95,6 @@ template <typename RangeT> void deserialise(const RangeT& data, std::array<char,
                                                      << detail::expected_size(12));
     std::copy(data.begin(), data.end(), oid.data());
 }
-
-template <size_t N, typename TupleT> using tuple_element_t = typename std::tuple_element<N, std::decay_t<TupleT>>::type;
 
 // regex
 template <typename RangeT, typename StringT>

@@ -102,6 +102,8 @@ namespace detail {
 // set visitor
 template <element_type EType, typename C, typename It, typename A, typename Enable = void> struct set_visitor;
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
 // voids
 template <element_type EType, typename C, typename It, typename A>
 struct set_visitor<EType, C, It, A, std::enable_if_t<std::is_void<ElementTypeMapSet<EType, std::decay_t<C>>>::value>> {
@@ -141,6 +143,8 @@ struct set_visitor<EType, Container, IteratorT, A,
         serialise(data, it, std::forward<T>(val));
     }
 };
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 } // namespace detail
 } // namespace jbson
