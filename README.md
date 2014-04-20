@@ -4,7 +4,7 @@ jbson is a library for building & iterating BSON data, and JSON documents in C++
 
 # Features # {#features}
 
-* Header only.
+* Header only. Boost licensed.
 * Depends only on Boost headers & C++14 standard library. [note 3](#notes)
 * Fully compatible with documented BSON specs.
 * A strict, iterator-based JSON parser. Mostly compliant with JSON standard. [note 2](#notes)
