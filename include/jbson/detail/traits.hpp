@@ -89,8 +89,6 @@ template <typename T> struct is_iterator_range : std::false_type {};
 
 template <typename IteratorT> struct is_iterator_range<boost::iterator_range<IteratorT>> : std::true_type {};
 
-template <typename T, typename T2> using lazy_enable_if = typename boost::lazy_enable_if<T, T2>;
-
 BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator)
 BOOST_MPL_HAS_XXX_TRAIT_DEF(const_iterator)
 
@@ -114,10 +112,13 @@ static_assert(!container_has_push_back<std::set<char>>::value, "");
 static_assert(!container_has_push_back<char>::value, "");
 static_assert(!container_has_push_back<double>::value, "");
 
+template <typename RangeT>
+using is_range = typename mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>::type;
+
 template <typename RangeT, typename ElementTrait, typename RangeTrait>
 using is_range_of = typename mpl::apply<
-    ElementTrait,
-    typename mpl::eval_if<mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>,
+    typename mpl::eval_if<is_range<RangeT>, mpl::identity<ElementTrait>, mpl::identity<mpl::always<mpl::false_>>>::type,
+    typename mpl::eval_if<is_range<RangeT>,
                           mpl::apply<RangeTrait, std::decay_t<RangeT>>, mpl::identity<void>>::type>::type;
 
 template <typename RangeT, typename ElementTrait>
@@ -146,10 +147,7 @@ template <typename T> constexpr bool is_nothrow_swappable_impl() {
     return noexcept(swap(std::declval<std::decay_t<T>&>(), std::declval<std::decay_t<T>&>()));
 }
 
-template <typename T> struct is_nothrow_swappable {
-    using type = is_nothrow_swappable<T>;
-    static constexpr bool value = is_nothrow_swappable_impl<T>();
-};
+template <typename T> struct is_nothrow_swappable : std::integral_constant<bool, is_nothrow_swappable_impl<T>()> {};
 
 } // namespace detail
 } // namespace jbson
