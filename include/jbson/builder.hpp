@@ -14,14 +14,10 @@
 namespace jbson {
 
 struct builder {
-    builder() {
-        std::array<char, 4> arr{{0, 0, 0, 0}};
-        boost::range::push_back(m_elements, arr);
-    }
+    builder() = default;
 
     template <typename Arg1, typename... ArgN>
-    explicit builder(Arg1&& arg, ArgN&&... args)
-        : builder() {
+    explicit builder(Arg1&& arg, ArgN&&... args) {
         emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
@@ -77,20 +73,16 @@ struct builder {
     }
 
   private:
-    mutable std::vector<char> m_elements;
+    mutable std::vector<char> m_elements{{0,0,0,0}};
 };
 static_assert(std::is_convertible<builder, document>::value, "");
 static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 
 struct array_builder {
-    array_builder() {
-        std::array<char, 4> arr{{0, 0, 0, 0}};
-        boost::range::push_back(m_elements, arr);
-    }
+    array_builder() = default;
 
     template <typename Arg1, typename... ArgN>
-    explicit array_builder(Arg1&& arg, ArgN&&... args)
-        : array_builder() {
+    explicit array_builder(Arg1&& arg, ArgN&&... args) {
         emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
@@ -151,7 +143,7 @@ struct array_builder {
     }
 
   private:
-    mutable std::vector<char> m_elements;
+    mutable std::vector<char> m_elements{{0,0,0,0}};
     uint32_t m_count{0u};
 };
 static_assert(std::is_convertible<array_builder, array>::value, "");
