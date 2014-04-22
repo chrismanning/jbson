@@ -30,15 +30,12 @@ template <typename T, typename ForwardIterator> T little_endian_to_native(Forwar
     std::copy(first, last, source.u8);
 
 #if BOOST_ENDIAN_BIG_BYTE
-    decltype(source) dest;
-    for(size_t k = 0; k < sizeof(T); k++)
-        dest.u8[k] = source.u8[sizeof(T) - k - 1];
-    return dest.u;
+#warning "big endian untested"
+    std::reverse(std::begin(source.u8), std::end(source.u8));
 #elif !BOOST_ENDIAN_LITTLE_BYTE
 #error "unsupported endianness"
-#else
-    return source.u;
 #endif
+    return source.u;
 }
 
 template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T val) {
@@ -53,15 +50,12 @@ template <typename T> std::array<char, sizeof(T)> native_to_little_endian(T val)
     source.u = val;
 
 #if BOOST_ENDIAN_BIG_BYTE
-    decltype(source) dest;
-    for(size_t k = 0; k < sizeof(T); k++)
-        dest.u8[k] = source.u8[sizeof(T) - k - 1];
-    return dest.u8;
+#warning "big endian untested"
+    std::reverse(std::begin(source.u8), std::end(source.u8));
 #elif !BOOST_ENDIAN_LITTLE_BYTE
 #error "unsupported endianness"
-#else
-    return source.u8;
 #endif
+    return source.u8;
 }
 
 } // namespace detail
