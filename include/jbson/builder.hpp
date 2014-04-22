@@ -97,12 +97,18 @@ struct array_builder {
     template <typename... Args> array_builder& emplace(Args&&... args) & {
         static_assert(sizeof...(Args) > 0, "");
         std::array<char, std::numeric_limits<decltype(m_count)>::digits10 + 1> int_str;
-        auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", m_count++);
+        auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", m_count);
+        if(n <= 0) {
+            if(errno)
+                BOOST_THROW_EXCEPTION(std::system_error(errno, std::generic_category()));
+            return *this;
+        }
         auto old_size = m_elements.size();
         try {
             basic_element<decltype(m_elements)>::write_to_container(
                 m_elements, m_elements.end(), boost::string_ref{int_str.data(), static_cast<size_t>(n)},
                 std::forward<Args>(args)...);
+            m_count++;
         }
         catch(...) {
             m_elements.resize(old_size);
