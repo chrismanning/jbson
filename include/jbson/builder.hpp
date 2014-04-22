@@ -19,10 +19,10 @@ struct builder {
         boost::range::push_back(m_elements, arr);
     }
 
-    template <typename... Args, typename = std::enable_if_t<std::is_constructible<element, Args&&...>::value>>
-    explicit builder(Args&&... args)
+    template <typename Arg1, typename... ArgN>
+    explicit builder(Arg1&& arg, ArgN&&... args)
         : builder() {
-        emplace(std::forward<Args>(args)...);
+        emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
     // lvalue funcs
@@ -88,11 +88,10 @@ struct array_builder {
         boost::range::push_back(m_elements, arr);
     }
 
-    template <typename... Args,
-              typename = std::enable_if_t<std::is_constructible<element, std::string, Args&&...>::value>>
-    explicit array_builder(Args&&... args)
+    template <typename Arg1, typename... ArgN>
+    explicit array_builder(Arg1&& arg, ArgN&&... args)
         : array_builder() {
-        emplace(std::forward<Args>(args)...);
+        emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
     // lvalue funcs
