@@ -54,16 +54,17 @@ template <typename Iterator, typename Enable = void> struct is_iterator_pointer 
 
 template <typename Iterator> struct is_iterator_pointer<Iterator*, bool> : std::true_type {};
 
-template <typename Iterator>
-struct is_iterator_pointer<
-    Iterator,
-    std::enable_if_t<std::is_constructible<Iterator, typename std::iterator_traits<Iterator>::value_type*>::value>>
-    : std::true_type {};
+BOOST_MPL_HAS_XXX_TRAIT_DEF(iterator_type)
 
 // libc++, libstdc++
 template <typename Iterator>
-struct is_iterator_pointer<Iterator, std::enable_if_t<std::is_pointer<typename Iterator::iterator_type>::value>>
-    : std::true_type {};
+struct is_iterator_pointer<Iterator, std::enable_if_t<has_iterator_type<Iterator>::value>>
+    : mpl::or_<std::is_pointer<typename Iterator::iterator_type>,
+               std::is_constructible<Iterator, typename std::iterator_traits<Iterator>::pointer>> {};
+
+template <typename Iterator>
+struct is_iterator_pointer<Iterator, std::enable_if_t<!has_iterator_type<Iterator>::value>>
+    : std::is_constructible<Iterator, typename std::iterator_traits<Iterator>::pointer> {};
 
 template <typename Iterator>
 struct is_iterator_pointer<boost::iterator_range<Iterator>> : is_iterator_pointer<Iterator> {};
