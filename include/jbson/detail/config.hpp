@@ -15,7 +15,7 @@
 #ifdef DOXYGEN_SHOULD_SKIP_THIS
     #define JBSON_DEPRECATED
 #else
-    #if defined(__GNUC__)
+    #if defined(BOOST_CLANG)
         #define JBSON_DEPRECATED __attribute__((deprecated))
     #elif defined(BOOST_MSVC)
         #define JBSON_DEPRECATED __declspec(deprecated)
@@ -45,6 +45,21 @@
     #endif
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
+#ifdef JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
+    #undef JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
+#endif
+
+#ifdef DOXYGEN_SHOULD_SKIP_THIS
+    #define JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
+#else
+    #if defined(BOOST_CLANG)
+        #define JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING _Pragma("GCC diagnostic push")\
+                _Pragma("GCC diagnostic ignored \"-Wdocumentation\"")
+    #else
+        #define JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
+    #endif
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 #ifdef JBSON_POP_WARNINGS
     #undef JBSON_POP_WARNINGS
 #endif
@@ -58,6 +73,20 @@
         #define JBSON_POP_WARNINGS _Pragma("warning(pop)")
     #else
         #define JBSON_POP_WARNINGS
+    #endif
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
+#ifdef JBSON_CLANG_POP_WARNINGS
+    #undef JBSON_CLANG_POP_WARNINGS
+#endif
+
+#ifdef DOXYGEN_SHOULD_SKIP_THIS
+    #define JBSON_CLANG_POP_WARNINGS
+#else
+    #if defined(BOOST_CLANG)
+        #define JBSON_CLANG_POP_WARNINGS JBSON_POP_WARNINGS
+    #else
+        #define JBSON_CLANG_POP_WARNINGS
     #endif
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

@@ -10,10 +10,11 @@
 #include <array>
 #include <chrono>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "./config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/utility/string_ref.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "traits.hpp"
 #include "endian.hpp"

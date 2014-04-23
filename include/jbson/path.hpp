@@ -8,12 +8,13 @@
 
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "detail/config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/type_traits/has_operator.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "document.hpp"
 #include "expression_parser.hpp"

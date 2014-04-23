@@ -12,8 +12,9 @@
 #include <codecvt>
 #include <vector>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "detail/config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/as_literal.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -21,7 +22,7 @@
 #include <boost/exception/exception.hpp>
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 #include <boost/io/ios_state.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "document.hpp"
 #include "detail/traits.hpp"

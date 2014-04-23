@@ -6,13 +6,14 @@
 #ifndef JBSON_EXPRESSION_PARSER_HPP
 #define JBSON_EXPRESSION_PARSER_HPP
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "detail/config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/variant/recursive_variant.hpp>
 #include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/spirit/home/qi.hpp>
 #include <boost/optional.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #ifdef BOOST_SPIRIT_DEBUG_OUT
 #undef BOOST_SPIRIT_DEBUG_OUT

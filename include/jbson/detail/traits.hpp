@@ -8,8 +8,9 @@
 
 #include <type_traits>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "./config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/iterator_range.hpp>
 #include <boost/mpl/not.hpp>
 #include <boost/mpl/and.hpp>
@@ -23,7 +24,7 @@
 #include <boost/mpl/quote.hpp>
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "../element_fwd.hpp"
 

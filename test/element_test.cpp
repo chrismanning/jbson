@@ -8,11 +8,12 @@ using namespace std::literals;
 #include <list>
 #include <deque>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include <jbson/detail/config.hpp>
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/container/stable_vector.hpp>
 #include <boost/container/vector.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>

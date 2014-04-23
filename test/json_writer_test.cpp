@@ -7,11 +7,12 @@
 #include <string>
 using namespace std::literals;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include <jbson/detail/config.hpp>
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/range/as_array.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include <gtest/gtest.h>
 

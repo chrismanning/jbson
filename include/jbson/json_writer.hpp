@@ -9,12 +9,13 @@
 #include <string>
 #include <iterator>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "detail/config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/utility/string_ref.hpp>
 #include <boost/range/as_literal.hpp>
 #include <boost/concept_check.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "element.hpp"
 #include "document.hpp"

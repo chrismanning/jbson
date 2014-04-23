@@ -11,13 +11,14 @@
 #include <chrono>
 #include <array>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdocumentation"
+#include "detail/config.hpp"
+
+JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/mpl/or.hpp>
-#pragma GCC diagnostic pop
+JBSON_CLANG_POP_WARNINGS
 
 #include "element_fwd.hpp"
 #include "document_fwd.hpp"
