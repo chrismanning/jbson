@@ -30,14 +30,14 @@ namespace jbson {
  * Example of implicit move conversion:
  * To create the JSON object: `{ "abc": "some string", "def": 123, "xyz": {} }`
  * \code
-    document doc = builder("abc", "some string")
-                          ("def", 123);
-                          ("xyz", builder());
+    auto doc = (document)builder("abc", "some string")
+                                ("def", 123);
+                                ("xyz", builder());
     // equivalent to:
     auto build = builder("abc", "some string")
                         ("def", 123);
                         ("xyz", builder());
-    document doc = std::move(build);
+    auto doc = document(std::move(build));
    \endcode
  * \sa array_builder
  */
