@@ -58,7 +58,7 @@ template <class Container> struct basic_element {
                   "container_type's value_type must be char");
     static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
 
-    basic_element() noexcept(std::is_nothrow_default_constructible<container_type>::value) = default;
+    basic_element() = default;
 
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
