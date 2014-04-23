@@ -102,8 +102,7 @@ struct document_iter<basic_element<Con>, BaseIterator>
 /*!
  * \brief Initialises a container or range for a valid empty basic_document or basic_array
  */
-template <typename Container>
-void init_empty(Container& c);
+template <typename Container> void init_empty(Container& c);
 #else
 template <typename Container>
 void init_empty(Container& c, std::enable_if_t<container_has_push_back<Container>::value>* = nullptr) {
@@ -150,6 +149,11 @@ static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail:
 
 struct builder;
 
+/*!
+ * basic_document represents a range of BSON elements
+ * \tparam Container Type of underlying storage container/range. Must be range of `char`.
+ * \tparam ElementContainer Type of underlying storage of constituent elements.
+ */
 template <class Container, class ElementContainer> class basic_document {
   public:
     using container_type = std::decay_t<Container>;
@@ -159,11 +163,21 @@ template <class Container, class ElementContainer> class basic_document {
     using value_type = element_type;
 
     /*!
-     * \brief Default constructor
-     * Results in an empty, but valid document
+     * \brief Constructs an empty, but valid document.
      */
     basic_document() { detail::init_empty(m_data); }
 
+    /*!
+     * \brief Constructs a document with an existing container of data.
+     *
+     * \tparam SomeType Type which decays to `container_type`.
+     * \param c Accepts all forms of `container_type`.
+     *
+     * Forwards c to `container_type` initialiser.
+     *
+     * \throws invalid_document_size When the size of c is insufficient.
+     *                               When the size of c differs from the size specified by c's data.
+     */
     template <typename SomeType>
     explicit basic_document(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
@@ -178,60 +192,39 @@ template <class Container, class ElementContainer> class basic_document {
                                   << detail::actual_size(boost::distance(m_data)));
     }
 
+    /*!
+     * \brief Copy constructor from a basic_document with a compatible `container_type`.
+     */
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
                    std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
                        nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
 
-    template <typename OtherContainer>
-    basic_document(const basic_document<OtherContainer>& other,
-                   std::enable_if_t<!std::is_constructible<Container, OtherContainer>::value>* = nullptr) {
-        boost::range::push_back(m_data, other.m_data);
-    }
+    //! \brief Disallows construction from arrays of invalid document size.
+    template <size_t N> explicit basic_document(std::array<char, N>, std::enable_if_t<(N < 5)>* = nullptr) = delete;
 
-    template <typename CharT, size_t N> explicit basic_document(CharT (&)[N]) = delete;
-    template <typename CharT, size_t N> explicit basic_document(const CharT (&)[N]) = delete;
-
-    template <typename CharT, size_t N>
-    explicit basic_document(const std::array<CharT, N>& arr,
-                            std::enable_if_t<std::is_same<std::array<CharT, N>, container_type>::value>* = nullptr)
-        : m_data(arr) {}
-
-    template <typename CharT, size_t N>
-    explicit basic_document(std::array<CharT, N>,
-                            std::enable_if_t<!std::is_same<std::array<CharT, N>, container_type>::value>* = nullptr) =
-        delete;
-
+    /*!
+     * \brief Constructs a document from a range of `char`, that is not `container_type`.
+     */
     template <typename ForwardRange>
     explicit basic_document(
-        ForwardRange&& rng, std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>* = nullptr,
-        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
-        std::enable_if_t<!std::is_constructible<container_type, ForwardRange>::value &&
-                         !detail::is_iterator_range<container_type>::value &&
+        ForwardRange&& rng, std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
+        std::enable_if_t<
+            std::conditional_t<detail::is_iterator_range<container_type>::value,
+                               detail::is_range_of_iterator<
+                                   ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>,
+                                                                  typename container_type::iterator, boost::mpl::_1>>,
+                               std::true_type>::value>* = nullptr,
+        std::enable_if_t<!std::is_same<container_type, std::decay_t<ForwardRange>>::value &&
                          detail::is_range_of_iterator<
                              ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
                                                             boost::mpl::_1, boost::mpl::_1>>::value>* = nullptr)
         : basic_document(container_type(std::begin(rng), std::end(rng))) {}
 
-    template <typename ForwardRange>
-    explicit basic_document(
-        ForwardRange&& rng, std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, builder>::value>* = nullptr,
-        std::enable_if_t<!std::is_same<std::decay_t<ForwardRange>, container_type>::value>* = nullptr,
-        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
-        std::enable_if_t<std::is_constructible<container_type, ForwardRange>::value&& detail::is_range_of_iterator<
-            ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, typename container_type::iterator,
-                                           boost::mpl::_1>>::value>* = nullptr)
-        : basic_document(container_type(rng)) {}
-
-    template <typename ForwardIterator>
-    basic_document(
-        ForwardIterator first, ForwardIterator last,
-        std::enable_if_t<detail::is_range_of_same_value<boost::iterator_range<ForwardIterator>, char>::value>* =
-            nullptr,
-        std::enable_if_t<std::is_constructible<container_type, ForwardIterator, ForwardIterator>::value>* = nullptr)
-        : basic_document(container_type{first, last}) {}
-
+    /*!
+     * \brief Constructs a document from a container of `basic_element`.
+     */
     template <typename ForwardRange>
     explicit basic_document(
         ForwardRange&& rng,
@@ -253,10 +246,13 @@ template <class Container, class ElementContainer> class basic_document {
         boost::range::copy(size, m_data.begin());
     }
 
+    /*!
+     * \brief Constructs a document from two iterators. Forwards to the range-based constructors.
+     */
     template <typename ForwardIterator>
     basic_document(ForwardIterator first, ForwardIterator last,
-                   std::enable_if_t<detail::is_element<typename boost::iterator_value<ForwardIterator>::type>::value &&
-                                    !detail::is_iterator_range<container_type>::value>* = nullptr)
+                   std::enable_if_t<
+                       std::is_constructible<basic_document, boost::iterator_range<ForwardIterator>>::value>* = nullptr)
         : basic_document(boost::make_iterator_range(first, last)) {}
 
     const_iterator begin() const {

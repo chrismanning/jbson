@@ -23,6 +23,63 @@ static_assert(std::is_same<decltype(std::declval<document&>().data()), const std
 static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
 static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
 
+// vector
+static_assert(std::is_constructible<document, builder>::value, "");
+static_assert(!std::is_constructible<document, array_builder>::value, "");
+static_assert(std::is_constructible<document, std::array<char,12>>::value, "");
+static_assert(!std::is_constructible<document, std::array<char,2>>::value, "");
+static_assert(!std::is_constructible<document, char[12]>::value, "");
+static_assert(!std::is_constructible<document, char[2]>::value, "");
+static_assert(std::is_constructible<document, std::deque<char>>::value, "");
+static_assert(std::is_constructible<document, std::list<char>>::value, "");
+static_assert(std::is_constructible<document, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(std::is_constructible<document, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(std::is_constructible<document, document::const_iterator, document::const_iterator>::value, "");
+static_assert(std::is_constructible<document, boost::iterator_range<char*>>::value, "");
+static_assert(std::is_constructible<document, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
+static_assert(!std::is_constructible<document, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(!std::is_constructible<document, basic_document<std::deque<char>>>::value, "");
+static_assert(!std::is_constructible<document, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+
+// iterator_range<vector>
+using document_range = basic_document<boost::iterator_range<std::vector<char>::const_iterator>>;
+//static_assert(!std::is_constructible<document_range, builder>::value, "");
+static_assert(!std::is_constructible<document_range, array_builder>::value, "");
+static_assert(!std::is_constructible<document_range, std::array<char,12>>::value, "");
+static_assert(!std::is_constructible<document_range, std::array<char,2>>::value, "");
+static_assert(!std::is_constructible<document_range, std::deque<char>>::value, "");
+static_assert(!std::is_constructible<document_range, std::list<char>>::value, "");
+static_assert(!std::is_constructible<document_range, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(!std::is_constructible<document_range, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(!std::is_constructible<document_range, document::const_iterator, document::const_iterator>::value, "");
+static_assert(!std::is_constructible<document_range, document_range::const_iterator, document_range::const_iterator>::value, "");
+static_assert(!std::is_constructible<document_range, boost::iterator_range<char*>>::value, "");
+static_assert(std::is_constructible<document_range, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(!std::is_constructible<document_range, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document_range, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_range, document>::value, "");
+static_assert(!std::is_constructible<document_range, basic_document<std::deque<char>>>::value, "");
+static_assert(!std::is_constructible<document_range, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+
+// deque
+using document_deque = basic_document<std::deque<char>>;
+static_assert(std::is_constructible<document_deque, builder>::value, "");
+static_assert(!std::is_constructible<document_deque, array_builder>::value, "");
+static_assert(std::is_constructible<document_deque, std::array<char,12>>::value, "");
+static_assert(!std::is_constructible<document_deque, std::array<char,2>>::value, "");
+static_assert(std::is_constructible<document_deque, std::deque<char>>::value, "");
+static_assert(std::is_constructible<document_deque, std::list<char>>::value, "");
+static_assert(std::is_constructible<document_deque, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(std::is_constructible<document_deque, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(std::is_constructible<document_deque, document::const_iterator, document::const_iterator>::value, "");
+static_assert(std::is_constructible<document_deque, boost::iterator_range<char*>>::value, "");
+static_assert(std::is_constructible<document_deque, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document_deque, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
+static_assert(!std::is_constructible<document_deque, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_deque, basic_document<std::deque<char>>>::value, "");
+static_assert(!std::is_constructible<document_deque, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+
 TEST(DocumentTest, EmptyDocumentTest) {
     ASSERT_EQ(0, boost::distance(document()));
     ASSERT_EQ(0, boost::distance(basic_document<std::array<char, 5>>()));
