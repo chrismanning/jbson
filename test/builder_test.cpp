@@ -36,8 +36,7 @@ TEST(BuilderTest, BuildTest1) {
     EXPECT_EQ("world", get<jbson::element_type::string_element>(e));
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TEST(BuilderTest, BuildTest2) {
     builder builder_;
     EXPECT_THROW(builder_ = builder("hello", element_type::string_element), incompatible_type_conversion);
@@ -45,7 +44,7 @@ TEST(BuilderTest, BuildTest2) {
     EXPECT_NO_THROW((void)document(builder_));
     EXPECT_THROW(builder_ = builder("hello", element_type::undefined_element, 0), incompatible_type_conversion);
 }
-#pragma GCC diagnostic pop
+JBSON_POP_WARNINGS
 
 TEST(BuilderTest, BuildTest3) {
     auto doc = static_cast<document>(

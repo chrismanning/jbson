@@ -21,6 +21,8 @@
 #include "builder.hpp"
 #include "detail/visit.hpp"
 
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
+
 namespace jbson {
 
 struct json_writer;
@@ -188,8 +190,6 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
     }
 };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 // db pointer
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::db_pointer_element, Element, OutputIterator> {
@@ -204,7 +204,6 @@ struct json_element_visitor<element_type::db_pointer_element, Element, OutputIte
                          out);
     }
 };
-#pragma GCC diagnostic pop
 
 // date
 template <typename Element, typename OutputIterator>
@@ -241,15 +240,12 @@ struct json_element_visitor<element_type::null_element, Element, OutputIterator>
     }
 };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::undefined_element, Element, OutputIterator> {
     std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
-#pragma GCC diagnostic pop
 
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::max_key, Element, OutputIterator> {
@@ -280,5 +276,7 @@ std::decay_t<OutputIterator> write_json(const basic_document<Container>& doc, Ou
 }
 
 } // namespace jbson
+
+JBSON_POP_WARNINGS
 
 #endif // JBSON_JSON_WRITER_HPP

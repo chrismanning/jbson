@@ -20,8 +20,7 @@ using namespace std::literals;
 #include <jbson/builder.hpp>
 using namespace jbson;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 
 TEST(JsonWriterTest, StringifyTest0) {
     auto json = std::string{};
@@ -225,4 +224,4 @@ TEST(JsonWriterTest, JsonWriteTest8) {
     ASSERT_EQ(element_type::double_element, it->type());
 }
 
-#pragma GCC diagnostic pop
+JBSON_POP_WARNINGS

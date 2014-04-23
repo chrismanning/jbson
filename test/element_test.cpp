@@ -344,8 +344,7 @@ struct ParameterizedContainerTest : ::testing::Test {
 };
 TYPED_TEST_CASE_P(ParameterizedContainerTest);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
     const typename TestFixture::template ElementTypeMap<element_type::oid_element> oid{{1,2,3,4,5,6,7,8,9,10,11,12}};
     basic_element<typename TestFixture::container_type> el{"_id", element_type::oid_element, oid};
@@ -358,7 +357,7 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
     EXPECT_EQ("some collection", coll);
     EXPECT_EQ(oid, new_oid);
 }
-#pragma GCC diagnostic pop
+JBSON_POP_WARNINGS
 
 TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
     using regex_type = typename TestFixture::template ElementTypeMap<element_type::regex_element>;

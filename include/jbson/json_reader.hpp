@@ -26,6 +26,8 @@
 #include "document.hpp"
 #include "detail/traits.hpp"
 
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
+
 namespace jbson {
 
 using boost::spirit::line_pos_iterator;
@@ -587,15 +589,12 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
         auto coll = get<element_type::string_element>(*it);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         type = element_type::db_pointer_element;
         serialise(m_data, out, std::make_tuple(coll, oid));
     } else if(name == "$undefined") {
         if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "undefined element"));
         type = element_type::undefined_element;
-#pragma GCC diagnostic pop
     } else if(name == "$minkey") {
         if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "minkey element"));
@@ -963,5 +962,7 @@ inline array operator"" _json_arr(const char32_t* str, size_t len) {
 } // namespace literal
 
 } // namesapce jbson
+
+JBSON_POP_WARNINGS
 
 #endif // JBSON_JSON_READER_HPP

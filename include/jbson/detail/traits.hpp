@@ -27,6 +27,8 @@
 
 #include "../element_fwd.hpp"
 
+JBSON_PUSH_DISABLE_DEPRECATED_WARNING
+
 namespace jbson {
 namespace detail {
 
@@ -95,8 +97,6 @@ public:
 #ifdef DOXYGEN_SHOULD_SKIP_THIS
     typedef boost::mpl::map<...> map_type;
 #else // DOXYGEN_SHOULD_SKIP_THIS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, string_type>,
@@ -119,7 +119,6 @@ public:
         mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
         mpl::pair<element_type_c<element_type::min_key>, void>,
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
-#pragma GCC diagnostic pop
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 };
 
@@ -250,5 +249,7 @@ template <typename T> struct is_nothrow_swappable : std::integral_constant<bool,
 
 } // namespace detail
 } // namespace jbson
+
+JBSON_POP_WARNINGS
 
 #endif // JBSON_TRAITS_HPP
