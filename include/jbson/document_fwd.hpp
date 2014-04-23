@@ -35,14 +35,7 @@ using document = basic_document<std::vector<char>>;
  */
 using array = basic_array<std::vector<char>>;
 
-/*!
- * \brief builder provides a simple interface for document construction
- */
 struct builder;
-
-/*!
- * \brief array_builder provides a simple interface for array construction
- */
 struct array_builder;
 
 struct invalid_document_size;

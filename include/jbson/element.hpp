@@ -213,14 +213,18 @@ template <class Container> struct basic_element {
 
     explicit operator bool() const noexcept { return !m_data.empty(); }
 
+    //! \brief Constructs a BSON element without data in place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
                                    element_type);
+    //! \brief Constructs a type-deduced BSON element in place into a container.
     template <typename T>
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, T&&);
+    //! \brief Constructs a BSON element in place into a container.
     template <typename T>
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
                                    element_type, T&&);
 
+    //! \brief Writes data to BSON.
     template <typename OutContainer>
     void write_to_container(OutContainer&, typename OutContainer::const_iterator) const;
     template <typename OutContainer> explicit operator OutContainer() const;
@@ -313,6 +317,12 @@ template <typename T> inline element_type deduce_type(T&&) noexcept { return sta
 
 } // namespace detail
 
+/*!
+ * Performs basic type deduction for JSON types only.
+ * Any other type results in an invalid element_type being passed to typed overload.
+ *
+ * \throws invalid_element_type When deduced type is invalid
+ */
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
@@ -321,6 +331,10 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
     write_to_container(c, it, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
 }
 
+/*!
+ * \throws invalid_element_type When type is invalid
+ * \throws incompatible_type_conversion When type is void, i.e. should not contain data.
+ */
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
@@ -336,6 +350,10 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
     detail::visit<detail::set_visitor>(type, c, it, std::forward<T>(val));
 }
 
+/*!
+ * \throws invalid_element_type When type is invalid
+ * \throws incompatible_type_conversion When type is non-void, i.e. should contain data.
+ */
 template <typename Container>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
                                                   boost::string_ref name, element_type type) {

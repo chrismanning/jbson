@@ -13,21 +13,88 @@
 
 namespace jbson {
 
+/*!
+ * \brief builder provides a simple interface for document construction.
+ *
+ * builder uses basic_element::write_to_container() to construct elements directly to a container,
+ * in an easier manner than by doing so manually.
+ * builder is implicitly convertible to a basic_document.
+ * After conversion, it is still a valid builder object and can be expanded and/or converted again.
+ *
+ * builder can also be used on rvalues, propagating itself as an rvalue reference (builder&&)
+ * rather than an lvalue reference (builder&).
+ * This means that rvalue builders can be implicitly move converted to a document
+ * (basic_document<std::vector<char>>), without an explicit cast or std::move().
+ * This is generally only beneficial in this case.
+ *
+ * Example of implicit move conversion:
+ * To create the JSON object: `{ "abc": "some string", "def": 123, "xyz": {} }`
+ * \code
+    document doc = builder("abc", "some string")
+                          ("def", 123);
+                          ("xyz", builder());
+    // equivalent to:
+    auto build = builder("abc", "some string")
+                        ("def", 123);
+                        ("xyz", builder());
+    document doc = std::move(build);
+   \endcode
+ * \sa array_builder
+ */
 struct builder {
+    /*!
+     * \brief Default constructor.
+     *
+     * A default constructed builder can be converted to a valid, empty basic_document.
+     *
+     * \throws something if vector constructor throws
+     */
     builder() = default;
 
-    template <typename Arg1, typename... ArgN>
-    explicit builder(Arg1&& arg, ArgN&&... args) {
+    /*!
+     * \brief Constructor which forwards to emplace.
+     *
+     * Equivalent to `builder().emplace(arg, args...)`.
+     *
+     * \sa emplace()
+     *
+     * \throws something if vector constructor throws
+     * \throws invalid_element_type When supplied/deduced element_type is invalid.
+     * \throws incompatible_type_conversion When data is supplied to a void element_type.
+     *                                      When data is not supplied to a non-void element_type.
+     */
+    template <typename Arg1, typename... ArgN> explicit builder(Arg1&& arg, ArgN&&... args) {
         emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
     // lvalue funcs
 
+    /*!
+     * \brief Forwards to emplace.
+     * \sa emplace()
+     *
+     * \throws something if vector constructor throws
+     * \throws invalid_element_type When supplied/deduced element_type is invalid.
+     * \throws incompatible_type_conversion When data is supplied to a void element_type.
+     *                                      When data is not supplied to a non-void element_type.
+     */
     template <typename... Args> builder& operator()(Args&&... args) & {
         emplace(std::forward<Args>(args)...);
         return *this;
     }
 
+    /*!
+     * \brief Constructs a BSON element in place with the supplied args.
+     *
+     * Exception safety: Strong
+     *
+     * \sa basic_element::write_to_container()
+     *
+     * \throws something if vector constructor throws
+     * \throws invalid_element_type When supplied/deduced element_type is invalid.
+     * \throws incompatible_type_conversion When data is supplied to a void element_type.
+     *                                      When data is not supplied to a non-void element_type.
+     */
     template <typename... Args> builder& emplace(Args&&... args) & {
         auto old_size = m_elements.size();
         try {
@@ -44,15 +111,47 @@ struct builder {
 
     // rvalue funcs
 
+    /*!
+     * \brief Rvalue overload. Forwards `*this` as an rvalue reference.
+     * Constructs a BSON element in place with the supplied args.
+     *
+     * Exception safety: Strong
+     *
+     * \sa basic_element::write_to_container()
+     *
+     * \throws something if vector constructor throws
+     * \throws invalid_element_type When supplied/deduced element_type is invalid.
+     * \throws incompatible_type_conversion When data is supplied to a void element_type.
+     *                                      When data is not supplied to a non-void element_type.
+     */
     template <typename... Args> builder&& operator()(Args&&... args) && {
         return std::move(emplace(std::forward<Args>(args)...));
     }
 
+    /*!
+     * \brief Rvalue overload. Forwards `*this` as an rvalue reference.
+     * Constructs a BSON element in place with the supplied args.
+     *
+     * Exception safety: Strong
+     *
+     * \sa basic_element::write_to_container()
+     *
+     * \throws something if vector constructor throws
+     * \throws invalid_element_type When supplied/deduced element_type is invalid.
+     * \throws incompatible_type_conversion When data is supplied to a void element_type.
+     *                                      When data is not supplied to a non-void element_type.
+     */
     template <typename... Args> builder&& emplace(Args&&... args) && {
         return std::move(emplace(std::forward<Args>(args)...));
     }
 
+    /*!
+     * \brief Implicit conversion to basic_document.
+     *
+     * Constructs a basic_document with copy of internal storage.
+     */
     template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const& {
+        static_assert(!detail::is_iterator_range<Container>::value, "");
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
         static_assert(4 == size.size(), "");
@@ -63,7 +162,13 @@ struct builder {
         return std::move(doc);
     }
 
+    /*!
+     * \brief Implicit move-conversion to basic_document.
+     *
+     * Constructs a basic_document with the internal storage.
+     */
     template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() && {
+        static_assert(!detail::is_iterator_range<Container>::value, "");
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
         static_assert(4 == size.size(), "");
@@ -73,16 +178,20 @@ struct builder {
     }
 
   private:
-    mutable std::vector<char> m_elements{{0,0,0,0}};
+    mutable std::vector<char> m_elements{{0, 0, 0, 0}};
 };
 static_assert(std::is_convertible<builder, document>::value, "");
 static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 
+/*!
+ * \brief array_builder provides a simple interface for array construction
+ *
+ * \sa builder
+ */
 struct array_builder {
     array_builder() = default;
 
-    template <typename Arg1, typename... ArgN>
-    explicit array_builder(Arg1&& arg, ArgN&&... args) {
+    template <typename Arg1, typename... ArgN> explicit array_builder(Arg1&& arg, ArgN&&... args) {
         emplace(std::forward<Arg1>(arg), std::forward<ArgN>(args)...);
     }
 
@@ -149,7 +258,7 @@ struct array_builder {
     }
 
   private:
-    mutable std::vector<char> m_elements{{0,0,0,0}};
+    mutable std::vector<char> m_elements{{0, 0, 0, 0}};
     uint32_t m_count{0u};
 };
 static_assert(std::is_convertible<array_builder, array>::value, "");
