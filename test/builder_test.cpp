@@ -215,13 +215,13 @@ TEST(BuilderTest, BuildNestTest3) {
     ASSERT_EQ(it, end);
 
     EXPECT_EQ(element_type::array_element, arr_el.type());
-    auto doc = get<element_type::array_element>(arr_el);
-    static_assert(detail::is_document<decltype(doc)>::value, "");
+    auto arr = get<element_type::array_element>(arr_el);
+    static_assert(detail::is_document<decltype(arr)>::value, "");
     static_assert(
-        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(doc)>::value, "");
+        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
 
-    it = doc.begin();
-    end = doc.end();
+    it = arr.begin();
+    end = arr.end();
     EXPECT_EQ("0", it->name());
     EXPECT_EQ(element_type::string_element, it->type());
     EXPECT_EQ("awesome", get<element_type::string_element>(*it));
@@ -232,6 +232,7 @@ TEST(BuilderTest, BuildNestTest3) {
     it++;
     EXPECT_EQ("2", it->name());
     EXPECT_EQ(element_type::document_element, it->type());
+    decltype(get<element_type::document_element>(*it)) doc;
     ASSERT_NO_THROW(doc = get<element_type::document_element>(*it));
     it++;
     ASSERT_EQ(it, end);

@@ -54,46 +54,39 @@ struct json_reader {
         parse(line_it{std::cbegin(range)}, line_it{std::cend(range)});
     }
 
-    operator basic_document_set<range_type>() const& {
+    template <typename C>
+    operator basic_document_set<C>() const& {
         if(m_data.size() < 5)
-            return basic_document_set<range_type>{};
-        return basic_document_set<range_type>(basic_document<range_type>(*this));
+            return basic_document_set<C>{};
+        return basic_document_set<C>(basic_document<C>(*this));
     }
 
-    operator basic_document<range_type>() const& {
+    template <typename C1, typename C2>
+    operator basic_document<C1, C2>() const& {
         if(m_data.size() < 5)
-            return basic_document<range_type>{};
-        return basic_document<range_type>{boost::make_iterator_range(m_data)};
+            return basic_document<C1, C2>{};
+        return basic_document<C1, C2>{m_data};
     }
 
-    operator basic_array<range_type>() const& {
+    template <typename C1, typename C2>
+    operator basic_array<C1, C2>() const& {
         if(m_data.size() < 5)
-            return basic_array<range_type>{};
-        return basic_array<range_type>{boost::make_iterator_range(m_data)};
+            return basic_array<C1, C2>{};
+        return basic_array<C1, C2>{m_data};
     }
 
-    operator document() const& {
+    template <typename Vec>
+    operator basic_document<container_type, Vec>() && {
         if(m_data.size() < 5)
-            return document{};
-        return document{m_data};
+            return basic_document<container_type, Vec>{};
+        return basic_document<container_type, Vec>{std::move(m_data)};
     }
 
-    operator document() && {
+    template <typename Vec>
+    operator basic_array<container_type, Vec>() && {
         if(m_data.size() < 5)
-            return document{};
-        return document{std::move(m_data)};
-    }
-
-    operator array() const& {
-        if(m_data.size() < 5)
-            return array{};
-        return array{m_data};
-    }
-
-    operator array() && {
-        if(m_data.size() < 5)
-            return array{};
-        return array{std::move(m_data)};
+            return basic_array<container_type, Vec>{};
+        return basic_array<container_type, Vec>{std::move(m_data)};
     }
 
   private:
@@ -891,7 +884,7 @@ inline namespace literal {
 inline document_set operator"" _json_set(const char* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return document_set(document(std::move(reader)));
+    return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char* str, size_t len) {
@@ -909,7 +902,7 @@ inline array operator"" _json_arr(const char* str, size_t len) {
 inline document_set operator"" _json_set(const wchar_t* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return document_set(document(std::move(reader)));
+    return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const wchar_t* str, size_t len) {
@@ -927,7 +920,7 @@ inline array operator"" _json_arr(const wchar_t* str, size_t len) {
 inline document_set operator"" _json_set(const char16_t* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return document_set(document(std::move(reader)));
+    return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char16_t* str, size_t len) {
@@ -945,7 +938,7 @@ inline array operator"" _json_arr(const char16_t* str, size_t len) {
 inline document_set operator"" _json_set(const char32_t* str, size_t len) {
     auto reader = json_reader{};
     reader.parse(str, str + len);
-    return document_set(document(std::move(reader)));
+    return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char32_t* str, size_t len) {

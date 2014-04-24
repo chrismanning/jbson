@@ -367,9 +367,25 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     using base::size;
     using base::swap;
 
-    template <typename... Args, typename = std::enable_if_t<std::is_constructible<base, Args...>::value>>
-    basic_array(Args&&... args) noexcept(std::is_nothrow_constructible<base, Args&&...>::value)
-        : base(std::forward<Args>(args)...) {}
+    basic_array() : base() {}
+
+    template <typename OtherContainer>
+    basic_array(const basic_array<OtherContainer>& other,
+                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                       nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+        : base(other.m_data) {}
+
+    template <typename Arg>
+    explicit basic_array(Arg&& arg, std::enable_if_t<std::is_constructible<base, Arg&&>::value &&
+                                            !std::is_convertible<Arg&&, base>::value>* = nullptr)
+            noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
+        : base(std::forward<Arg>(arg)) {}
+
+    template <typename Arg1, typename Arg2>
+    basic_array(Arg1&& arg1, Arg2&& arg2,
+                std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* = nullptr)
+            noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
+        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
