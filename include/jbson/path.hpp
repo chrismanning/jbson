@@ -634,6 +634,7 @@ template <typename ElemRangeT, typename StrRngT>
 auto path_select(
     ElemRangeT&& doc, StrRngT&& path_rng,
     std::enable_if_t<detail::is_range_of_value<ElemRangeT, boost::mpl::quote1<detail::is_element>>::value>* = nullptr) {
+    static_assert(std::is_lvalue_reference<ElemRangeT>::value, "");
     auto path = boost::as_literal(path_rng);
     std::vector<typename std::decay_t<ElemRangeT>::value_type> vec;
 
