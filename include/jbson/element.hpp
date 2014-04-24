@@ -62,10 +62,13 @@ template <class Container> struct basic_element {
 
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
-                  std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
+                  std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
-                  std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
+                  std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr,
+                  std::enable_if_t<std::is_constructible<container_type,
+                                                         typename OtherContainer::const_iterator,
+                                                         typename OtherContainer::const_iterator>::value>* = nullptr);
 
     template <typename OtherContainer>
     basic_element(basic_element<OtherContainer>&&,
@@ -387,10 +390,11 @@ template <class Container>
 template <typename OtherContainer>
 basic_element<Container>::basic_element(
     const basic_element<OtherContainer>& elem,
-    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*)
-    : m_name(elem.m_name), m_type(elem.m_type) {
-    boost::range::push_back(m_data, elem.m_data);
-}
+    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*,
+            std::enable_if_t<std::is_constructible<container_type,
+                                                   typename OtherContainer::const_iterator,
+                                                   typename OtherContainer::const_iterator>::value>*)
+    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data.begin(), elem.m_data.end()) {}
 
 template <class Container>
 template <typename OtherContainer>
