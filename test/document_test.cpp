@@ -354,7 +354,7 @@ TEST(DocumentTest, DocumentContainerTest1) {
     ASSERT_EQ(0, boost::distance(doc));
 }
 
-TEST(DocumentTest, DocumentModifyTest1) {
+TEST(DocumentTest, DocumentInsertTest1) {
     document doc = document(builder
                             ("first name", element_type::string_element, "Chris")
                             ("surname", element_type::string_element, "Manning")
@@ -398,7 +398,7 @@ TEST(DocumentTest, DocumentModifyTest1) {
     ASSERT_EQ(end, it);
 }
 
-TEST(DocumentTest, DocumentModifyTest2) {
+TEST(DocumentTest, DocumentInsertTest2) {
     document doc = document(builder
                             ("first name", element_type::string_element, "Chris")
                             ("surname", element_type::string_element, "Manning")
@@ -443,7 +443,7 @@ TEST(DocumentTest, DocumentModifyTest2) {
     ASSERT_EQ(end, it);
 }
 
-TEST(DocumentTest, DocumentModifyTest3) {
+TEST(DocumentTest, DocumentEmplaceTest1) {
     document doc = document(builder
                             ("first name", element_type::string_element, "Chris")
                             ("surname", element_type::string_element, "Manning")
@@ -487,7 +487,7 @@ TEST(DocumentTest, DocumentModifyTest3) {
     ASSERT_EQ(end, it);
 }
 
-TEST(DocumentTest, DocumentModifyTest4) {
+TEST(DocumentTest, DocumentEmplaceTest2) {
     document doc = document(builder
                             ("first name", element_type::string_element, "Chris")
                             ("surname", element_type::string_element, "Manning")
@@ -532,7 +532,7 @@ TEST(DocumentTest, DocumentModifyTest4) {
     ASSERT_EQ(end, it);
 }
 
-TEST(DocumentTest, DocumentModifyTest6) {
+TEST(DocumentTest, DocumentEraseTest1) {
     document doc = document(builder
                             ("first name", element_type::string_element, "Chris")
                             ("surname", element_type::string_element, "Manning")
