@@ -122,7 +122,12 @@ template <class Container> struct basic_element {
     size_t size() const noexcept;
 
     element_type type() const noexcept { return m_type; }
-    void type(element_type type) noexcept { m_type = type; }
+
+    void type(element_type type) {
+        if(!(bool)type)
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
+        m_type = type;
+    }
 
     /*!
      * \brief access value
@@ -158,12 +163,12 @@ template <class Container> struct basic_element {
         swap(m_data, data);
     }
 
-    template <typename T> void value(element_type type, T&& val) {
+    template <typename T> void value(element_type new_type, T&& val) {
         const auto old_type = m_type;
-        m_type = type;
+        type(new_type);
         try {
             value<T>(std::forward<T>(val));
-            assert(m_type == type);
+            assert(m_type == new_type);
         }
         catch(...) {
             m_type = old_type;
@@ -419,9 +424,9 @@ basic_element<Container>::basic_element(
                                                      << detail::actual_size(boost::distance(range)));
 
     auto first = std::begin(range), last = std::end(range);
-    m_type = static_cast<element_type>(*first++);
-    if(!(bool)m_type)
-        BOOST_THROW_EXCEPTION(invalid_element_type{});
+
+    this->type(static_cast<element_type>(*first++));
+
     auto str_end = std::find(first, last, '\0');
     m_name.assign(first, str_end++);
     first = str_end;
@@ -437,18 +442,14 @@ template <class Container>
 template <typename ForwardIterator>
 basic_element<Container>::basic_element(std::string name, element_type type, ForwardIterator first,
                                         ForwardIterator last)
-    : m_name(std::move(name)), m_type(type) {
-    if(!(bool)m_type)
-        BOOST_THROW_EXCEPTION(invalid_element_type{});
-    last = std::next(first, detail::detect_size(m_type, first, last));
-    m_data = Container{first, last};
+    : m_name(std::move(name)), m_data(first, last) {
+    this->type(type);
 }
 
 template <class Container>
 basic_element<Container>::basic_element(std::string name, element_type type)
-    : m_name(std::move(name)), m_type(type) {
-    if(!(bool)m_type)
-        BOOST_THROW_EXCEPTION(invalid_element_type{});
+    : m_name(std::move(name)) {
+    this->type(type);
 }
 
 template <class Container> size_t basic_element<Container>::size() const noexcept {
