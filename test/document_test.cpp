@@ -347,6 +347,32 @@ TEST(DocumentTest, SetTest2) {
     EXPECT_EQ("Manning", it->value<boost::string_ref>());
 }
 
+TEST(DocumentTest, SetTest3) {
+    document_set set;
+    set.emplace("key", element_type::string_element, "ææ");
+    set.emplace("key", element_type::string_element, "aa");
+    set.emplace("key", element_type::string_element, "bb");
+    set.emplace("key", element_type::string_element, "ää");
+    set.emplace("key", element_type::string_element, "ââ");
+    auto it = set.begin();
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("aa", it->value<boost::string_ref>());
+    it++;
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("ââ", it->value<boost::string_ref>());
+    it++;
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("ää", it->value<boost::string_ref>());
+    it++;
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("ææ", it->value<boost::string_ref>());
+    it++;
+    ASSERT_NE(set.end(), it);
+    EXPECT_EQ("bb", it->value<boost::string_ref>());
+    it++;
+    ASSERT_EQ(set.end(), it);
+}
+
 TEST(DocumentTest, DocumentContainerTest1) {
     std::array<char, 5> data;
     *reinterpret_cast<int32_t*>(data.data()) = data.size();

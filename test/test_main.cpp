@@ -6,6 +6,9 @@
 #include "gtest/gtest.h"
 
 GTEST_API_ int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+    std::locale loc{"en_GB.UTF-8"};
+    std::locale::global(loc);
+    loc = std::locale{};
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
