@@ -81,7 +81,7 @@ template <typename Container> struct is_element<basic_element<Container>> : std:
 /*!
  * \brief BSON document in the form of a std::set for ease of manipulation
  */
-template <typename Container> using basic_document_set = std::set<basic_element<Container>, detail::elem_compare>;
+template <typename Container> using basic_document_set = std::multiset<basic_element<Container>, detail::elem_compare>;
 
 /*!
  * \brief Default basic_document_set type alias
