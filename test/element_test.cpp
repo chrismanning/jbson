@@ -105,6 +105,18 @@ TEST(ElementTest, ElementConstructTest1) {
     ASSERT_EQ(element_type::double_element, el1.type());
     EXPECT_EQ(val, get<element_type::double_element>(el1));
 
+    el1 = element{};
+    EXPECT_EQ("", el1.name());
+    ASSERT_EQ(element_type::null_element, el1.type());
+    EXPECT_THROW(el1.value<bool>(), invalid_element_size);
+    EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
+
+    EXPECT_NO_THROW(el1.value(true));
+    ASSERT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_NO_THROW(el1.type(element_type::null_element));
+    EXPECT_NO_THROW(el1.value<bool>());
+    EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
+
     {
         decltype(auto) a = "name";
         decltype(auto) b = "value";
