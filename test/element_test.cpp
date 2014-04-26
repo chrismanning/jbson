@@ -298,12 +298,12 @@ template <typename ElemType> struct VoidVisitor {
 
     explicit VoidVisitor(ElemType v) : m_v(v) {}
 
-    void operator()(boost::string_ref name, ElemType v, element_type e) {
+    void operator()(boost::string_ref name, element_type e, ElemType v) {
         EXPECT_EQ(element_type::double_element, e);
         EXPECT_EQ(m_v, v);
     }
 
-    template <typename T> void operator()(boost::string_ref, T, element_type) {
+    template <typename T> void operator()(boost::string_ref, element_type, T&&) {
         FAIL();
     }
     void operator()(boost::string_ref, element_type) {
@@ -324,12 +324,12 @@ template <typename ElemType> struct BoolVisitor {
 
     explicit BoolVisitor(ElemType v) : m_v(v) {}
 
-    bool operator()(boost::string_ref name, ElemType v, element_type e) {
+    bool operator()(boost::string_ref name, element_type e, ElemType v) {
         EXPECT_EQ(m_v, v);
         return element_type::double_element == e;
     }
 
-    template <typename T> bool operator()(boost::string_ref, T, element_type) { return false; }
+    template <typename T> bool operator()(boost::string_ref, element_type, T&&) { return false; }
     bool operator()(boost::string_ref, element_type) { return false; }
 };
 

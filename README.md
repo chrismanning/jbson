@@ -64,8 +64,8 @@ Elements can also be accessed via the visitor pattern.
     //...
     struct Visitor {
         template <typename T>
-        void operator()(boost::string_ref name, T&& value, element_type etype) const {
-            // not sure why the parameters are in this order
+        void operator()(boost::string_ref name, element_type etype, T&& value) const {
+            // do something
         }
 
         void operator()(boost::string_ref name, element_type etype) const {
@@ -84,7 +84,7 @@ Visitors can also return values. It is not necessary to typedef a `return_type`.
     //...
     struct IsNull {
         template <typename T>
-        bool operator()(boost::string_ref, T&&, element_type) const {
+        bool operator()(boost::string_ref, element_type, T&&) const {
             return false;
         }
         bool operator()(boost::string_ref, element_type) const {

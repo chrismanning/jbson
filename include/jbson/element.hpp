@@ -44,12 +44,6 @@ template <element_type EType, typename Element> struct typeid_visitor {
 } // namespace detail
 
 /*!
- * \brief Access element value of specific element_type
- */
-template <element_type EType, typename Container>
-auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
-
-/*!
  * \tparam Container Type of the underlying data storage.
  *                   Must be range of `char`. Must be detectably noexcept swappable.
  * \internal
@@ -330,16 +324,18 @@ template <class Container> struct basic_element {
         type(EType);
     }
 
+    //! Apply the visitor pattern with a void-return visitor.
     template <typename Visitor>
     void
     visit(Visitor&&,
-          std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
+          std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>* =
               nullptr) const;
+    //! Apply the visitor pattern with a value-returning visitor.
     template <typename Visitor>
     auto visit(
         Visitor&&,
-        std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
-            nullptr) const -> decltype(std::declval<Visitor>()("", double {}, element_type{}));
+        std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>* =
+            nullptr) const -> decltype(std::declval<Visitor>()("", element_type{}, double {}));
 
     //! \brief Constructs a BSON element without data in place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
@@ -381,8 +377,8 @@ template <class Container> struct basic_element {
             if(type() == element_type::double_element)
                 return value<double>() < other.value<double>();
             if(type() == element_type::string_element) {
-                auto a_str = get<element_type::string_element>(*this);
-                auto b_str = get<element_type::string_element>(other);
+                auto a_str = this->value<detail::ElementTypeMap<element_type::string_element, container_type>>();
+                auto b_str = other.value<detail::ElementTypeMap<element_type::string_element, container_type>>();
                 return std::use_facet<std::collate<char>>({}).compare(a_str.data(), a_str.data()+a_str.size(),
                                                                       b_str.data(), b_str.data()+b_str.size()) < 0;
             }
@@ -623,8 +619,19 @@ template <class Container> size_t basic_element<Container>::size() const noexcep
 
 namespace detail {
 
+/*!
+ * \brief Helper class to implement basic_element::visit with detail::visit.
+ *
+ * Also specialised for void `element_type`s.
+ * \sa basic_element::visit detail::visit
+ */
 template <element_type EType, typename Visitor, typename Element> struct element_visitor {
-    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), get<EType>(elem), EType); }
+    //! Functor call operator.
+    auto operator()(Visitor&& visitor, Element&& elem) const {
+        return visitor(elem.name(), EType,
+                       elem.template value<detail::ElementTypeMap<EType,
+                       typename std::decay_t<Element>::container_type>>());
+    }
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -654,23 +661,6 @@ template <typename Visitor, typename Element> struct element_visitor<element_typ
 
 } // namespace detail
 
-template <class Container>
-template <typename Visitor>
-void basic_element<Container>::visit(
-    Visitor&& visitor,
-    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*) const {
-    detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
-    return;
-}
-
-template <class Container>
-template <typename Visitor>
-auto basic_element<Container>::visit(
-    Visitor&& visitor,
-    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>*) const
-    -> decltype(std::declval<Visitor>()("", double {}, element_type{})) {
-    return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
-}
 
 namespace detail {
 
@@ -803,6 +793,53 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
     };
 
     return os;
+}
+
+/*!
+ * \brief Apply the visitor pattern on the element, based on its element_type.
+ *
+ * Will pass the element's value, or nothing when the value type is void, to a supplied functor which returns `void`.
+ * This value is retrieved as if via get(), so the functor must accept all variations of:
+ * \code
+ visitor(boost::string_ref, element_type) // for void types, e.g. element_type::null_element
+ visitor(boost::string_ref, element_type, detail::ElementTypeMap<type>) // for all other element_type
+ \endcode
+ *
+ * \param visitor Functor that should accept multiple signatures.
+ * \throws invalid_element_type When \p type is invalid.
+ * \sa detail::ElementTypeMap
+ */
+template <class Container>
+template <typename Visitor>
+void basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>*) const {
+    detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
+    return;
+}
+
+/*!
+ * \brief Apply the visitor pattern on the element, based on its element_type.
+ *
+ * Will pass the element's value, or nothing when the value type is void, to a supplied functor which returns some
+ * non-void type.
+ * This value is retrieved as if via get(), so the functor must accept all variations of:
+ * \code
+ visitor(boost::string_ref, element_type) // for void types, e.g. element_type::null_element
+ visitor(boost::string_ref, element_type, detail::ElementTypeMap<type>) // for all other element_type
+ \endcode
+ *
+ * \param visitor Functor that should accept multiple signatures.
+ * \throws invalid_element_type When \p type is invalid.
+ * \sa detail::ElementTypeMap
+ */
+template <class Container>
+template <typename Visitor>
+auto basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>*) const
+    -> decltype(std::declval<Visitor>()("", element_type{}, double {})) {
+    return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
 }
 
 } // namespace jbson
