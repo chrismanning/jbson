@@ -509,6 +509,7 @@ template <typename T> inline element_type deduce_type(T&&) noexcept { return sta
  * Performs basic type deduction for JSON types only.
  * Any other type results in an invalid element_type being passed to typed overload.
  *
+ * \warning Basic exception guarantee.
  * \throws invalid_element_type When deduced type is invalid
  */
 template <typename Container>
@@ -520,6 +521,7 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 }
 
 /*!
+ * \warning Basic exception guarantee.
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is void, i.e. should not contain data.
  */
@@ -539,6 +541,7 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 }
 
 /*!
+ * \warning Basic exception guarantee.
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is non-void, i.e. should contain data.
  */
