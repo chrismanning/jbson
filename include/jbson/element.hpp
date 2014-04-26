@@ -234,6 +234,24 @@ template <class Container> struct basic_element {
     //! \warning Strong exception guarantee.
     void value(array_builder&& val) { value<element_type::array_element>(std::move(val)); }
 
+    //! \brief Sets value and type to element_type::document_element.
+    //! \warning Strong exception guarantee.
+    template <typename C, typename C2>
+    void value(const basic_document<C, C2>& val) { value<element_type::document_element>(val); }
+    //! \brief Sets value and type to element_type::array_element.
+    //! \warning Strong exception guarantee.
+    template <typename C, typename C2>
+    void value(const basic_array<C, C2>& val) { value<element_type::array_element>(val); }
+
+    //! \brief Sets value and type to element_type::document_element.
+    //! \warning Strong exception guarantee.
+    template <typename C, typename C2>
+    void value(basic_document<C, C2>&& val) { value<element_type::document_element>(std::move(val)); }
+    //! \brief Sets value and type to element_type::array_element.
+    //! \warning Strong exception guarantee.
+    template <typename C, typename C2>
+    void value(basic_array<C, C2>&& val) { value<element_type::array_element>(std::move(val)); }
+
     /*!
      * \brief Sets value to an undetermined type.
      *
@@ -467,6 +485,20 @@ inline element_type deduce_type(const array_builder&) noexcept { return element_
 inline element_type deduce_type(builder&&) noexcept { return element_type::document_element; }
 //! Helper to deduce element_type::array_element.
 inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
+
+//! Helper to deduce element_type::document_element.
+template <typename C, typename C2>
+inline element_type deduce_type(const basic_document<C, C2>&) noexcept { return element_type::document_element; }
+//! Helper to deduce element_type::array_element.
+template <typename C, typename C2>
+inline element_type deduce_type(const basic_array<C, C2>&) noexcept { return element_type::array_element; }
+
+//! Helper to deduce element_type::document_element.
+template <typename C, typename C2>
+inline element_type deduce_type(basic_document<C, C2>&&) noexcept { return element_type::document_element; }
+//! Helper to deduce element_type::array_element.
+template <typename C, typename C2>
+inline element_type deduce_type(basic_array<C, C2>&&) noexcept { return element_type::array_element; }
 
 //! Helper to deduce an invalid element_type.
 template <typename T> inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
