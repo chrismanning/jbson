@@ -86,7 +86,7 @@ struct builder {
     /*!
      * \brief Constructs a BSON element in place with the supplied args.
      *
-     * Exception safety: Strong
+     * \warning Strong exception guarantee.
      *
      * \sa basic_element::write_to_container()
      *
@@ -115,7 +115,7 @@ struct builder {
      * \brief Rvalue overload. Forwards `*this` as an rvalue reference.
      * Constructs a BSON element in place with the supplied args.
      *
-     * Exception safety: Strong
+     * \warning Strong exception guarantee.
      *
      * \sa basic_element::write_to_container()
      *
@@ -132,7 +132,7 @@ struct builder {
      * \brief Rvalue overload. Forwards `*this` as an rvalue reference.
      * Constructs a BSON element in place with the supplied args.
      *
-     * Exception safety: Strong
+     * \warning Strong exception guarantee.
      *
      * \sa basic_element::write_to_container()
      *
