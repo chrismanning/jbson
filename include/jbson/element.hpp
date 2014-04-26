@@ -413,6 +413,7 @@ template <class Container> struct basic_element {
     template <typename> friend struct basic_element;
 };
 
+//! Non-member swap. Calls member swap.
 template <typename Container>
 void swap(basic_element<Container>& a, basic_element<Container>& b) noexcept(noexcept(a.swap(b))) {
     a.swap(b);
@@ -439,22 +440,35 @@ void basic_element<Container>::write_to_container(OutContainer& c, typename OutC
 
 namespace detail {
 
+//! Helper to deduce element_type::string_element.
 inline element_type deduce_type(const boost::string_ref&) noexcept { return element_type::string_element; }
+//! Helper to deduce element_type::string_element.
 inline element_type deduce_type(const std::string&) noexcept { return element_type::string_element; }
+//! Helper to deduce element_type::string_element.
 inline element_type deduce_type(const char*) noexcept { return element_type::string_element; }
 
+//! Helper to deduce element_type::boolean_element.
 inline element_type deduce_type(bool) noexcept { return element_type::boolean_element; }
+//! Helper to deduce element_type::double_element.
 inline element_type deduce_type(float) noexcept { return element_type::double_element; }
+//! Helper to deduce element_type::double_element.
 inline element_type deduce_type(double) noexcept { return element_type::double_element; }
+//! Helper to deduce element_type::int64_element.
 inline element_type deduce_type(int64_t) noexcept { return element_type::int64_element; }
+//! Helper to deduce element_type::int32_element.
 inline element_type deduce_type(int32_t) noexcept { return element_type::int32_element; }
 
+//! Helper to deduce element_type::document_element.
 inline element_type deduce_type(const builder&) noexcept { return element_type::document_element; }
+//! Helper to deduce element_type::array_element.
 inline element_type deduce_type(const array_builder&) noexcept { return element_type::array_element; }
 
+//! Helper to deduce element_type::document_element.
 inline element_type deduce_type(builder&&) noexcept { return element_type::document_element; }
+//! Helper to deduce element_type::array_element.
 inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
 
+//! Helper to deduce an invalid element_type.
 template <typename T> inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
 
 } // namespace detail
@@ -661,38 +675,32 @@ template <typename Visitor, typename Element> struct element_visitor<element_typ
 
 } // namespace detail
 
-
 namespace detail {
 
-template <typename T, typename Container, typename Enable = void> struct is_valid_func;
-
-} // namespace detail
-
-template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
-    return detail::visit<detail::is_valid_func<T, Container>::template inner>(type);
-}
-
-template <class Container> template <typename T> bool basic_element<Container>::valid_set_type(element_type type) {
-    return detail::visit<detail::is_valid_func<T, Container>::template set_inner>(type);
-}
-
-namespace detail {
-
+/*!
+ * \brief Functor for basic_element comparison.
+ *
+ * Drop-in replacement for std::less, allowing heterogeneous comparison with a name-only comparsion in e.g. std::set.
+ */
 struct elem_compare {
+    //! Enables heterogeneous comparison in some standard algorithms and containers.
     using is_transparent = std::true_type;
+    //! Functor call operator. Normal comparison.
     template <typename EContainer, typename EContainer2>
     bool operator()(const basic_element<EContainer>& lhs, const basic_element<EContainer2>& rhs) const {
         return lhs < rhs;
     }
+    //! Functor call operator. Heterogeneous comparison.
     template <typename EContainer> bool operator()(const basic_element<EContainer>& lhs, boost::string_ref rhs) const {
         return lhs.name() < rhs;
     }
+    //! Functor call operator. Heterogeneous comparison.
     template <typename EContainer> bool operator()(boost::string_ref lhs, const basic_element<EContainer>& rhs) const {
         return lhs < rhs.name();
     }
 };
 
-template <typename T, typename Container, typename Enable> struct is_valid_func {
+template <typename T, typename Container> struct is_valid_func {
     template <element_type EType, typename... Args>
     struct inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
                             std::is_constructible<detail::ElementTypeMap<EType, Container>, T>> {
@@ -712,6 +720,22 @@ using actual_element_type = boost::error_info<struct actual_element_type_, eleme
 
 } // namespace detail
 
+template <class Container> template <typename T> bool basic_element<Container>::valid_type(element_type type) {
+    return detail::visit<detail::is_valid_func<T, Container>::template inner>(type);
+}
+
+template <class Container> template <typename T> bool basic_element<Container>::valid_set_type(element_type type) {
+    return detail::visit<detail::is_valid_func<T, Container>::template set_inner>(type);
+}
+
+/*!
+ * \brief Access element value of specific element_type
+ *
+ * \param elem basic_element to fetch value from.
+ * \tparam EType element_type which maps to the type to fetch.
+ * \throws incompatible_element_conversion When EType does not match the element_type of \p elem.
+ * \throws invalid_element_size When the size of the element's data is invalid for the return type.
+ */
 template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container> {
     if(EType != elem.type())
@@ -721,10 +745,18 @@ auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, 
     return elem.template value<detail::ElementTypeMap<EType, Container>>();
 }
 
+/*!
+ * \brief Get value of specific type from a basic_element.
+ *
+ * \tparam ReturnT Specified return type.
+ * \throws invalid_element_size When the size of the element's data is invalid for the chosen type \p ReturnT.
+ * \sa basic_element::value
+ */
 template <typename ReturnT, typename Container> ReturnT get(const basic_element<Container>& elem) {
     return elem.template value<ReturnT>();
 }
 
+//! \brief Stream operator for getting a string representation of an element_type.
 template <typename CharT, typename TraitsT>
 inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, element_type e) {
     switch(e) {

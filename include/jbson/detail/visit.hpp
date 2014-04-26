@@ -13,7 +13,11 @@ JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 namespace jbson {
 namespace detail {
 
-// void visit
+/*!
+ * \brief void visit.
+ *
+ * \throw invalid_element_type When \p type is invalid.
+ */
 template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
 std::enable_if_t<std::is_void<
     decltype(std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value>
@@ -104,7 +108,11 @@ visit(element_type type, Args&&... args) {
     };
 }
 
-// non-void visit
+/*!
+ * \brief Non-void visit.
+ *
+ * \throw invalid_element_type When \p type is invalid.
+ */
 template <template <element_type EType, typename... VArgs> class Visitor, typename... Args>
 std::enable_if_t<!std::is_void<decltype(
                      std::declval<Visitor<element_type::int64_element, Args...>>()(std::declval<Args&&>()...))>::value,
