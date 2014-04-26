@@ -821,7 +821,8 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
             os << "max_key";
             break;
         default:
-            BOOST_THROW_EXCEPTION(invalid_element_type{});
+            os << "unknown element_type";
+            break;
     };
 
     return os;
