@@ -221,8 +221,6 @@ template <class Container> struct basic_element {
         std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", double {}, element_type{}))>::value>* =
             nullptr) const -> decltype(std::declval<Visitor>()("", double {}, element_type{}));
 
-    explicit operator bool() const noexcept { return !m_data.empty(); }
-
     //! \brief Constructs a BSON element without data in place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
                                    element_type);
@@ -249,9 +247,12 @@ template <class Container> struct basic_element {
         if(res == 0 && type() == other.type()) {
             if(type() == element_type::double_element)
                 return value<double>() < other.value<double>();
-            if(type() == element_type::string_element)
-                return ::strcoll(get<element_type::string_element>(*this).data(),
-                                 get<element_type::string_element>(other).data()) < 0;
+            if(type() == element_type::string_element) {
+                auto a_str = get<element_type::string_element>(*this);
+                auto b_str = get<element_type::string_element>(other);
+                return std::use_facet<std::collate<char>>({}).compare(a_str.data(), a_str.data()+a_str.size(),
+                                                                      b_str.data(), b_str.data()+b_str.size()) < 0;
+            }
             return m_data < other.m_data;
         }
         return res < 0;
