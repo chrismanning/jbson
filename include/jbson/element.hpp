@@ -33,7 +33,9 @@ JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 namespace jbson {
 namespace detail {
 
+//! Visitor for obtaining std::type_index of a mapped element_type.
 template <element_type EType, typename Element> struct typeid_visitor {
+    //! Functor call operator
     template <typename... Args> std::type_index operator()(Args&&...) const {
         return typeid(ElementTypeMap<EType, typename std::decay_t<Element>::container_type>);
     }
@@ -48,9 +50,19 @@ template <element_type EType, typename Container>
 auto get(const basic_element<Container>& elem) -> detail::ElementTypeMap<EType, Container>;
 
 /*!
- * blah blah
+ * \tparam Container Type of the underlying data storage.
+ *                   Must be range of `char`. Must be detectably noexcept swappable.
+ * \internal
+ * Currently stores the name and type separately from the value data.
+ * This is to simplify the implementation and the exception safety of it.
+ *
+ * However, should the storage be unified it would eliminate std::string copies for all non-data-owning elements.
+ * It would also change the semantics to be more reasonable. Modifying the name of an element does not change the
+ * name in the underlying storage, and should thus be disallowed. The only way to enforce this is by using const
+ * basic_elements everywhere, or perhaps some tricky metaprogramming, or unified storage.
  */
 template <class Container> struct basic_element {
+    //! Underlying storage container.
     using container_type = std::decay_t<Container>;
     static_assert(!std::is_convertible<container_type, std::string>::value,
                   "container_type must not be a string type (or convertible)");
@@ -58,11 +70,19 @@ template <class Container> struct basic_element {
                   "container_type's value_type must be char");
     static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
 
+    /*!
+     * \brief Default constructor.
+     *
+     * Resultant basic_element represents a valid, empty-named, null BSON element.
+     */
     basic_element() = default;
 
+    //! \brief Copy constructor.
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* = nullptr);
+
+    //! \brief Copy constructor.
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr,
@@ -70,16 +90,26 @@ template <class Container> struct basic_element {
                                                          typename OtherContainer::const_iterator,
                                                          typename OtherContainer::const_iterator>::value>* = nullptr);
 
+    //! \brief Move constructor.
     template <typename OtherContainer>
     basic_element(basic_element<OtherContainer>&&,
                   std::enable_if_t<std::is_constructible<container_type, OtherContainer&&>::value>* = nullptr);
 
+    //! \brief Construct an element from raw BSON byte sequence.
     template <typename ForwardRange>
     explicit basic_element(
         ForwardRange&&, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr,
         std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>* =
             nullptr);
 
+    //! \brief Construct an element from raw BSON byte sequence.
+    /*!
+     * \param first Iterator to beginning of data.
+     * \param last Iterator past end of data.
+     * \throws invalid_element_size When range is too small.
+     *                              When value data is indicated to be larger than range.
+     * \throws invalid_element_type When the detected element_type is invalid.
+     */
     template <typename ForwardIterator>
     basic_element(ForwardIterator&& first, ForwardIterator&& last,
                   std::enable_if_t<
@@ -89,40 +119,66 @@ template <class Container> struct basic_element {
                                                                   typename Container::value_type>::value>* = nullptr)
         : basic_element(boost::make_iterator_range(first, last)) {}
 
+    /*!
+     * \brief Construct an element with specified name, type and value.
+     *
+     * \throws invalid_element_type When supplied type is invalid.
+     * \throws incompatible_type_conversion When type is value-less, e.g. null_element.
+     */
     template <typename T> basic_element(std::string name, element_type type, T&& val) : basic_element(std::move(name)) {
         value(type, std::forward<T>(val));
     }
+
+    //! \brief Construct an element with specified name, type and value data.
     template <typename ForwardIterator> basic_element(std::string, element_type, ForwardIterator, ForwardIterator);
+
+    //! \brief Construct an element with specified name, and optionally, type.
     explicit basic_element(std::string, element_type = element_type::null_element);
 
-    template <size_t N>
-    explicit basic_element(const char (&name)[N], element_type type = element_type::null_element)
-        : basic_element(std::string(name, N - 1), type) {}
-
+    /*!
+     * \brief Construct an element with specified name and value.
+     *
+     * Attempts type deduction to determine suitable element_type.
+     *
+     * \param name Element name.
+     * \param val JSON compatible value.
+     * \throws incompatible_type_conversion When type deduction fails.
+     */
     template <typename T> basic_element(std::string name, T&& val) : basic_element(std::move(name)) {
         value(std::forward<T>(val));
     }
 
-    template <size_t N, typename T>
-    basic_element(const char (&name)[N], T&& val)
-        : basic_element(std::string(name, N - 1)) {
-        value(std::forward<T>(val));
-    }
+    /*!
+     * \brief Returns name of element.
+     *
+     * \return boost::string_ref. The basic_element must remain alive at least as long as the returned string.
+     */
+    boost::string_ref name() const noexcept(std::is_nothrow_constructible<boost::string_ref, const std::string&>::value)
+    { return m_name; }
 
-    template <size_t N1, size_t N2>
-    basic_element(const char (&name)[N1], const char (&val)[N2])
-        : basic_element(std::string(name, N1 - 1)) {
-        value(boost::string_ref(val, N2 - 1));
-    }
+    /*!
+     * \brief Sets name to n.
+     * \param[in] n Name to set element to.
+     * \warning Strong exception guarantee (parameter \p n construction could throw).
+     */
+    void name(std::string n) { m_name.swap(n); }
 
-    // field name
-    boost::string_ref name() const { return m_name; }
-    void name(std::string n) { m_name = std::move(n); }
-    // size in bytes
+    //! Returns size in bytes.
     size_t size() const noexcept;
 
+    //! Returns BSON type of this element.
     element_type type() const noexcept { return m_type; }
 
+    /*!
+     * \brief Sets type of this element.
+     *
+     * \note No checks are performed if the current value data is compatible with the new type.
+     *
+     * \param type Valid BSON element_type.
+     * \throws invalid_element_type When type is invalid.
+     *
+     * \warning Strong exception guarantee.
+     */
     void type(element_type type) {
         if(!(bool)type)
             BOOST_THROW_EXCEPTION(invalid_element_type{});
@@ -130,32 +186,69 @@ template <class Container> struct basic_element {
     }
 
     /*!
-     * \brief access value
+     * \brief Returns the value data in the form of a specific type.
+     *
+     * \note A compatible deserialise() free function must be available.
+     *
+     * \tparam T The value type to be returned.
+     * \returns Value represented by this basic_element in the form of a \p T.
      */
     template <typename T> T value() const {
+        static_assert(!std::is_void<T>::value, "Cannot assign value to void.");
         T ret{};
         deserialise(m_data, ret);
         return std::move(ret);
     }
 
+    //! \brief Sets value and type to element_type::string_element.
+    //! \warning Strong exception guarantee.
     void value(boost::string_ref val) { value<element_type::string_element>(val); }
-    void value(std::string val) {
-        value<element_type::string_element>(boost::string_ref{val});
-    }
+    //! \brief Sets value and type to element_type::string_element.
+    //! \warning Strong exception guarantee.
+    void value(std::string val) { value(boost::string_ref(val)); }
+    //! \brief Sets value and type to element_type::string_element.
+    //! \warning Strong exception guarantee.
     void value(const char* val) { value(boost::string_ref(val)); }
 
+    //! \brief Sets value and type to element_type::boolean_element.
+    //! \warning Strong exception guarantee.
     void value(bool val) { value<element_type::boolean_element>(val); }
+    //! \brief Sets value and type to element_type::double_element.
+    //! \warning Strong exception guarantee.
     void value(float val) { value<element_type::double_element>(val); }
+    //! \brief Sets value and type to element_type::double_element.
+    //! \warning Strong exception guarantee.
     void value(double val) { value<element_type::double_element>(val); }
+    //! \brief Sets value and type to element_type::int64_element.
+    //! \warning Strong exception guarantee.
     void value(int64_t val) { value<element_type::int64_element>(val); }
+    //! \brief Sets value and type to element_type::int32_element.
+    //! \warning Strong exception guarantee.
     void value(int32_t val) { value<element_type::int32_element>(val); }
 
+    //! \brief Sets value and type to element_type::document_element.
+    //! \warning Strong exception guarantee.
     void value(const builder& val) { value<element_type::document_element>(val); }
+    //! \brief Sets value and type to element_type::array_element.
+    //! \warning Strong exception guarantee.
     void value(const array_builder& val) { value<element_type::array_element>(val); }
 
+    //! \brief Sets value and type to element_type::document_element.
+    //! \warning Strong exception guarantee.
     void value(builder&& val) { value<element_type::document_element>(std::move(val)); }
+    //! \brief Sets value and type to element_type::array_element.
+    //! \warning Strong exception guarantee.
     void value(array_builder&& val) { value<element_type::array_element>(std::move(val)); }
 
+    /*!
+     * \brief Sets value to an undetermined type.
+     *
+     * \param val Value of undeducable type.
+     * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
+     * and the currently set element_type.
+     * \warning Strong exception guarantee.
+     * \sa detail::ElementTypeMapSet serialise()
+     */
     template <typename T> void value(T&& val) {
         container_type data;
         detail::visit<detail::set_visitor>(m_type, data, data.end(), std::forward<T>(val));
@@ -163,6 +256,17 @@ template <class Container> struct basic_element {
         swap(m_data, data);
     }
 
+    /*!
+     * \brief Sets element_type and value.
+     *
+     * \param new_type element_type of supplied value.
+     * \param val Value of undetermined type.
+     * \note Does not perform type deduction. Assumes \p new_type is correct type for \p val.
+     * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
+     * and the currently set element_type.
+     * \warning Strong exception guarantee.
+     * \sa serialise() value(T&&val)
+     */
     template <typename T> void value(element_type new_type, T&& val) {
         const auto old_type = m_type;
         type(new_type);
@@ -176,6 +280,13 @@ template <class Container> struct basic_element {
         }
     }
 
+    /*!
+     * \brief Sets value. Statically ensures type compatibility.
+     * \tparam EType element_type to set and check against.
+     * \param val Value to set.
+     * \warning Strong exception guarantee.
+     * \sa detail::ElementTypeMapSet serialise()
+     */
     template <element_type EType, typename T>
     void
     value(T&& val,
@@ -193,6 +304,15 @@ template <class Container> struct basic_element {
         type(EType);
     }
 
+    /*!
+     * \brief Sets value. Statically ensures type compatibility.
+     *
+     * Performs conversion to type mapped from detail::ElementTypeMapSet.
+     * \tparam EType element_type to set and check against.
+     * \param val Value to set.
+     * \warning Strong exception guarantee.
+     * \sa detail::ElementTypeMapSet serialise()
+     */
     template <element_type EType, typename T>
     void
     value(T&& val,
@@ -237,11 +357,24 @@ template <class Container> struct basic_element {
     void write_to_container(OutContainer&, typename OutContainer::const_iterator) const;
     template <typename OutContainer> explicit operator OutContainer() const;
 
+    //! \brief Checks if this and \p other are equal.
     bool operator==(const basic_element& other) const {
         return m_name == other.m_name && m_type == other.m_type && boost::range::equal(m_data, other.m_data);
     }
+    //! \brief Checks if this and \p other are not equal.
     bool operator!=(const basic_element& other) const { return !(*this == other); }
 
+    /*!
+     * \brief Checks if this is less than (<) \p other.
+     *
+     * When the elements have differing types, simply compares names.
+     *
+     * Only when both the types and names are equal are the values compared.\n
+     * When the values are element_type::string_element, they are fetched and then compared according to the
+     * current global locale.\n
+     * When the values are element_type::double_element, they are fetched and compared with \p <.\n
+     * For all other types, a lexicographical comparison of the data is performed.
+     */
     bool operator<(const basic_element& other) const {
         auto res = name().compare(other.name());
         if(res == 0 && type() == other.type()) {
@@ -258,6 +391,7 @@ template <class Container> struct basic_element {
         return res < 0;
     }
 
+    //! Swaps contents with \p other.
     void swap(basic_element& other) noexcept {
         static_assert(detail::is_nothrow_swappable<decltype(m_name)>::value, "");
         static_assert(detail::is_nothrow_swappable<container_type>::value, "");
@@ -281,8 +415,6 @@ template <class Container> struct basic_element {
     template <typename T> bool valid_set_type() const { return valid_set_type<T>(type()); }
 
     template <typename> friend struct basic_element;
-    template <element_type EType, typename T>
-    friend auto get(const basic_element<T>& elem) -> detail::ElementTypeMap<EType, T>;
 };
 
 template <typename Container>
@@ -392,6 +524,21 @@ template <class Container> template <typename OutContainer> basic_element<Contai
     return std::move(c);
 }
 
+/*!
+ * Copies the contents of a basic_element with a compatible container_type.
+ * \param elem Element to be copied.
+ */
+template <class Container>
+template <typename OtherContainer>
+basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem,
+                                        std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
+    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data) {}
+
+/*!
+ * Copies the contents of a basic_element with an incompatible container_type.
+ * \param elem Element to be copied.
+ * \internal Does this via `container_type(begin(other), end(other))`.
+ */
 template <class Container>
 template <typename OtherContainer>
 basic_element<Container>::basic_element(
@@ -402,12 +549,10 @@ basic_element<Container>::basic_element(
                                                    typename OtherContainer::const_iterator>::value>*)
     : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data.begin(), elem.m_data.end()) {}
 
-template <class Container>
-template <typename OtherContainer>
-basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem,
-                                        std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
-    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data) {}
-
+/*!
+ * Moves the contents of a basic_element with a compatible container_type.
+ * \param elem Element to be moved.
+ */
 template <class Container>
 template <typename OtherContainer>
 basic_element<Container>::basic_element(
@@ -415,6 +560,12 @@ basic_element<Container>::basic_element(
     std::enable_if_t<std::is_constructible<container_type, OtherContainer&&>::value>*)
     : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)), m_data(std::move(elem.m_data)) {}
 
+/*!
+ * \param range Range of bytes representing BSON data.
+ * \throws invalid_element_size When range is too small.
+ *                              When value data is indicated to be larger than range.
+ * \throws invalid_element_type When the detected element_type is invalid.
+ */
 template <class Container>
 template <typename ForwardRange>
 basic_element<Container>::basic_element(
@@ -439,6 +590,14 @@ basic_element<Container>::basic_element(
     m_data = container_type{first, last};
 }
 
+/*!
+ * \param name Name of the element.
+ * \param type Type of element the supplied data represents.
+ * \param first Iterator to start of data.
+ * \param last Iterator past the end of data.
+ * \warning This constructor bypasses any type checking of the data.
+ * \throws invalid_element_type When the supplied element_type is invalid.
+ */
 template <class Container>
 template <typename ForwardIterator>
 basic_element<Container>::basic_element(std::string name, element_type type, ForwardIterator first,
@@ -447,6 +606,11 @@ basic_element<Container>::basic_element(std::string name, element_type type, For
     this->type(type);
 }
 
+/*!
+ * \param name Element name.
+ * \param type Element type. Defaults to element_type::null_element.
+ * \throws invalid_element_type When the supplied element_type is invalid.
+ */
 template <class Container>
 basic_element<Container>::basic_element(std::string name, element_type type)
     : m_name(std::move(name)) {
