@@ -23,6 +23,12 @@ static_assert(std::is_same<decltype(std::declval<document&>().data()), const std
 static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
 static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
 
+static_assert(std::is_nothrow_move_assignable<basic_document<std::vector<char>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<basic_document<std::vector<char>>>::value, "");
+
+static_assert(std::is_nothrow_move_assignable<basic_document<std::deque<char>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<basic_document<std::deque<char>>>::value, "");
+
 // vector
 static_assert(std::is_constructible<document, builder>::value, "");
 static_assert(!std::is_constructible<document, array_builder>::value, "");

@@ -25,6 +25,11 @@ using namespace jbson;
 static_assert(detail::is_nothrow_swappable<element>::value, "");
 static_assert(!detail::is_nothrow_swappable<boost::container::vector<char>>::value, "");
 
+static_assert(std::is_nothrow_move_assignable<basic_element<std::vector<char>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<basic_element<std::vector<char>>>::value, "");
+static_assert(std::is_nothrow_move_assignable<basic_element<std::deque<char>>>::value, "");
+static_assert(std::is_nothrow_move_constructible<basic_element<std::deque<char>>>::value, "");
+
 TEST(ElementTest, ElementParseTest1) {
     auto el1 = element{boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s)};
     ASSERT_EQ(element_type::string_element, el1.type());
