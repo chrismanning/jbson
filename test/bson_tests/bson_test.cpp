@@ -93,12 +93,11 @@ TEST_F(BsonTest, FileTest3) {
 
 namespace std {
 template <typename Container, typename RepT, typename RatioT>
-void deserialise(const Container& data, std::chrono::duration<RepT, RatioT>& dur) {
-    using jbson::deserialise;
-    RepT rep;
-    deserialise(data, rep);
-    dur = std::chrono::duration_cast<std::chrono::duration<RepT, RatioT>>(std::chrono::duration<RepT, std::milli>{rep});
+void value_get(const basic_element<Container>& elem, std::chrono::duration<RepT, RatioT>& dur) {
+    dur = std::chrono::duration_cast
+          <std::chrono::duration<RepT, RatioT>>(std::chrono::duration<RepT, std::milli>{elem.template value<RepT>()});
 }
+
 template <typename Container, typename IteratorT, typename RepT, typename RatioT>
 void serialise(Container& data, IteratorT& it, const std::chrono::duration<RepT, RatioT>& dur) {
     using jbson::serialise;
@@ -291,9 +290,9 @@ TEST_F(BsonTest, FileTest9) {
 
     EXPECT_EQ("null", it->name());
     ASSERT_EQ(element_type::null_element, it->type());
-    EXPECT_THROW(it->value<std::string>(), invalid_element_size);
-    EXPECT_THROW(it->value<int32_t>(), invalid_element_size);
-    EXPECT_THROW(it->value<bool>(), invalid_element_size);
+    EXPECT_THROW(it->value<std::string>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<int32_t>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<bool>(), incompatible_type_conversion);
 
     ++it;
     ASSERT_EQ(end, it);
@@ -696,9 +695,9 @@ TEST_F(BsonTest, FileTest18) {
 
     EXPECT_EQ("hello", it->name());
     ASSERT_EQ(element_type::null_element, it->type());
-    EXPECT_THROW(it->value<std::string>(), invalid_element_size);
-    EXPECT_THROW(it->value<int32_t>(), invalid_element_size);
-    EXPECT_THROW(it->value<bool>(), invalid_element_size);
+    EXPECT_THROW(it->value<std::string>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<int32_t>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<bool>(), incompatible_type_conversion);
 
     ++it;
     ASSERT_EQ(end, it);
@@ -833,9 +832,9 @@ TEST_F(BsonTest, FileTest25) {
 
     EXPECT_EQ("undefined", it->name());
     ASSERT_EQ(element_type::undefined_element, it->type());
-    EXPECT_THROW(it->value<std::string>(), invalid_element_size);
-    EXPECT_THROW(it->value<int32_t>(), invalid_element_size);
-    EXPECT_THROW(it->value<bool>(), invalid_element_size);
+    EXPECT_THROW(it->value<std::string>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<int32_t>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<bool>(), incompatible_type_conversion);
 
     ++it;
     ASSERT_EQ(end, it);
@@ -1109,9 +1108,9 @@ TEST_F(BsonTest, FileTest36) {
 
     EXPECT_EQ("minkey", it->name());
     ASSERT_EQ(element_type::min_key, it->type());
-    EXPECT_THROW(it->value<std::string>(), invalid_element_size);
-    EXPECT_THROW(it->value<int32_t>(), invalid_element_size);
-    EXPECT_THROW(it->value<bool>(), invalid_element_size);
+    EXPECT_THROW(it->value<std::string>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<int32_t>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<bool>(), incompatible_type_conversion);
 
     ++it;
     ASSERT_EQ(end, it);
@@ -1127,9 +1126,9 @@ TEST_F(BsonTest, FileTest37) {
 
     EXPECT_EQ("maxkey", it->name());
     ASSERT_EQ(element_type::max_key, it->type());
-    EXPECT_THROW(it->value<std::string>(), invalid_element_size);
-    EXPECT_THROW(it->value<int32_t>(), invalid_element_size);
-    EXPECT_THROW(it->value<bool>(), invalid_element_size);
+    EXPECT_THROW(it->value<std::string>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<int32_t>(), incompatible_type_conversion);
+    EXPECT_THROW(it->value<bool>(), incompatible_type_conversion);
 
     ++it;
     ASSERT_EQ(end, it);

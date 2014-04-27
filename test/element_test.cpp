@@ -22,6 +22,8 @@ using namespace jbson;
 
 #include <gtest/gtest.h>
 
+// compile-time tests
+
 static_assert(detail::is_nothrow_swappable<element>::value, "");
 static_assert(!detail::is_nothrow_swappable<boost::container::vector<char>>::value, "");
 
@@ -29,6 +31,15 @@ static_assert(std::is_nothrow_move_assignable<basic_element<std::vector<char>>>:
 static_assert(std::is_nothrow_move_constructible<basic_element<std::vector<char>>>::value, "");
 static_assert(std::is_nothrow_move_assignable<basic_element<std::deque<char>>>::value, "");
 static_assert(std::is_nothrow_move_constructible<basic_element<std::deque<char>>>::value, "");
+
+static_assert(!std::is_constructible<std::string, std::tuple<boost::string_ref, boost::string_ref>>::value,"");
+
+static_assert(detail::is_valid_element_value_type<std::vector<char>, bool>::value, "");
+static_assert(detail::is_valid_element_value_type<std::vector<char>, int32_t>::value, "");
+static_assert(detail::is_valid_element_value_type<std::vector<char>, boost::string_ref>::value, "");
+
+static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::chrono::milliseconds>::value, "");
+static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::set<int>>::value, "");
 
 TEST(ElementTest, ElementParseTest1) {
     auto el1 = element{boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s)};
@@ -40,7 +51,7 @@ TEST(ElementTest, ElementParseTest1) {
 
     EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
     EXPECT_NO_THROW(el1.value<boost::string_ref>());
-    EXPECT_THROW(el1.value<bool>(), invalid_element_size);
+    EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
 
     el1.value(element_type::boolean_element, false);
     EXPECT_FALSE(get<element_type::boolean_element>(el1));
@@ -100,6 +111,28 @@ TEST(ElementTest, ElementParseTest3) {
     ASSERT_THROW(element{bson}, invalid_element_size);
 }
 
+TEST(ElementTest, ElementTypeConversionsTest1) {
+    auto el1 = element{"some name", 123};
+    ASSERT_EQ("some name", el1.name());
+    ASSERT_EQ(element_type::int32_element, el1.type());
+    EXPECT_EQ(123, get<element_type::int32_element>(el1));
+
+    ASSERT_NO_THROW(el1.type(element_type::int64_element));
+
+    EXPECT_THROW(get<element_type::int32_element>(el1), incompatible_element_conversion);
+    EXPECT_THROW(get<element_type::int64_element>(el1), invalid_element_size);
+    EXPECT_EQ(123, el1.value<int32_t>());
+    EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
+
+    ASSERT_NO_THROW(el1.type(element_type::string_element));
+
+    EXPECT_THROW(get<element_type::string_element>(el1), invalid_element_size);
+
+    ASSERT_NO_THROW(el1.type(element_type::document_element));
+
+    EXPECT_THROW(get<element_type::document_element>(el1), invalid_document_size);
+}
+
 TEST(ElementTest, ElementConstructTest1) {
     auto el1 = element{"Pi 6dp", element_type::double_element, 3.141592};
     ASSERT_EQ(element_type::double_element, el1.type());
@@ -113,13 +146,13 @@ TEST(ElementTest, ElementConstructTest1) {
     el1 = element{};
     EXPECT_EQ("", el1.name());
     ASSERT_EQ(element_type::null_element, el1.type());
-    EXPECT_THROW(el1.value<bool>(), invalid_element_size);
+    EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
     EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
 
     EXPECT_NO_THROW(el1.value(true));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_NO_THROW(el1.type(element_type::null_element));
-    EXPECT_NO_THROW(el1.value<bool>());
+    EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
     EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
 
     {
@@ -138,6 +171,10 @@ TEST(ElementTest, ElementConstructTest1) {
         EXPECT_EQ("name", el2.name());
         EXPECT_EQ("value", get<element_type::string_element>(el2));
     }
+
+    ASSERT_NO_THROW((el1 = element{"doc", builder{}}));
+    ASSERT_EQ(element_type::document_element, el1.type());
+    ASSERT_EQ(document(builder{}), get<element_type::document_element>(el1));
 }
 
 TEST(ElementTest, ElementConstructTest2) {

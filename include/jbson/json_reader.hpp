@@ -63,29 +63,29 @@ struct json_reader {
 
     template <typename C1, typename C2>
     operator basic_document<C1, C2>() const& {
-        if(m_data.size() < 5)
-            return basic_document<C1, C2>{};
+//        if(m_data.size() < 5)
+//            return basic_document<C1, C2>{};
         return basic_document<C1, C2>{m_data};
     }
 
     template <typename C1, typename C2>
     operator basic_array<C1, C2>() const& {
-        if(m_data.size() < 5)
-            return basic_array<C1, C2>{};
+//        if(m_data.size() < 5)
+//            return basic_array<C1, C2>{};
         return basic_array<C1, C2>{m_data};
     }
 
     template <typename Vec>
     operator basic_document<container_type, Vec>() && {
-        if(m_data.size() < 5)
-            return basic_document<container_type, Vec>{};
+//        if(m_data.size() < 5)
+//            return basic_document<container_type, Vec>{};
         return basic_document<container_type, Vec>{std::move(m_data)};
     }
 
     template <typename Vec>
     operator basic_array<container_type, Vec>() && {
-        if(m_data.size() < 5)
-            return basic_array<container_type, Vec>{};
+//        if(m_data.size() < 5)
+//            return basic_array<container_type, Vec>{};
         return basic_array<container_type, Vec>{std::move(m_data)};
     }
 

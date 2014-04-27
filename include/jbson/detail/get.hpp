@@ -39,8 +39,6 @@ template <> struct make_string<boost::string_ref> {
     }
 };
 
-} // namespace detail
-
 // number
 template <typename RangeT, typename ArithT>
 void deserialise(const RangeT& data, ArithT& num, std::enable_if_t<std::is_arithmetic<ArithT>::value>* = nullptr) {
@@ -140,6 +138,13 @@ void deserialise(const RangeT& data, std::tuple<StringT, basic_document<DocConta
     deserialise(boost::make_iterator_range(
                     std::next(it, detail::detect_size(element_type::string_element, it, data.end())), data.end()),
                 std::get<1>(tuple));
+}
+
+} // namespace detail
+
+template <typename Container>
+void value_get(const basic_element<Container>& elem, std::string& str) {
+    str = std::string(elem.template value<detail::ElementTypeMap<element_type::string_element, Container>>());
 }
 
 } // namespace jbson

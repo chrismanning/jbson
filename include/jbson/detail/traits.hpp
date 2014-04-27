@@ -24,6 +24,8 @@ JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/mpl/quote.hpp>
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/at.hpp>
+#include <boost/mpl/find_if.hpp>
+#include <boost/mpl/same_as.hpp>
 JBSON_CLANG_POP_WARNINGS
 
 #include "../element_fwd.hpp"
@@ -236,6 +238,34 @@ template <template <typename...> class Fun, typename...> struct quote {
 static_assert(is_range_of_iterator<std::vector<char>,
                                    mpl::bind<quote<std::is_constructible>, std::vector<char>, mpl::_1, mpl::_1>>::value,
               "");
+
+template <typename MapT, typename T>
+using find_second = typename mpl::find_if<MapT,
+mpl::bind<quote<std::is_same>, T, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
+
+static_assert(std::is_same<find_second<TypeMap<std::vector<char>>::map_type, double>,
+                           mpl::begin<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+
+template <typename MapT, typename FunT>
+using find_if_second = typename mpl::find_if<MapT,
+mpl::bind<mpl::protect<FunT>, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
+
+static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
+                            mpl::bind<quote<std::is_same>, double, mpl::_1>>,
+              mpl::begin<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+
+static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
+                            mpl::bind<quote<std::is_same>, int32_t, mpl::_1>>,
+              mpl::advance_c<mpl::begin<TypeMap<std::vector<char>>::map_type>::type, 0x10-1>::type>::value, "");
+
+static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
+                            mpl::bind<quote<std::is_same>, std::chrono::milliseconds, mpl::_1>>,
+              mpl::end<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+
+template <typename Container, typename T>
+using is_valid_element_value_type =
+typename mpl::not_<std::is_same<typename mpl::end<typename TypeMap<Container>::map_type>::type,
+find_if_second<typename TypeMap<Container>::map_type, mpl::bind<quote<std::is_convertible>, mpl::_1, T>>>>::type;
 
 template <typename T> constexpr bool is_nothrow_swappable_impl() {
     using std::swap;

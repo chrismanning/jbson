@@ -182,15 +182,31 @@ template <class Container> struct basic_element {
     /*!
      * \brief Returns the value data in the form of a specific type.
      *
-     * \note A compatible deserialise() free function must be available.
-     *
      * \tparam T The value type to be returned.
      * \returns Value represented by this basic_element in the form of a \p T.
+     * \throws incompatible_type_conversion When \p ReturnT is incompatible with the current element_type.
      */
-    template <typename T> T value() const {
+    template <typename T>
+    std::enable_if_t<detail::is_valid_element_value_type<container_type, T>::value, T> value() const {
         static_assert(!std::is_void<T>::value, "Cannot assign value to void.");
+        static_assert(std::is_default_constructible<T>::value, "Return type must be default constructible.");
+
+        if(!valid_type<T>(type()))
+            BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
+                                  << detail::actual_type(typeid(T))
+                                  << detail::expected_type(detail::visit<detail::typeid_visitor>(type(), *this)));
+
         T ret{};
-        deserialise(m_data, ret);
+        detail::deserialise(m_data, ret);
+        return std::move(ret);
+    }
+
+    template <typename T>
+    std::enable_if_t<!detail::is_valid_element_value_type<container_type, T>::value, T> value() const {
+        static_assert(!std::is_void<T>::value, "Cannot assign value to void.");
+        static_assert(std::is_default_constructible<T>::value, "Return type must be default constructible.");
+        T ret{};
+        value_get(*this, ret);
         return std::move(ret);
     }
 
@@ -259,11 +275,17 @@ template <class Container> struct basic_element {
      * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
      * and the currently set element_type.
      * \warning Strong exception guarantee.
+     * \throws invalid_element_size When detected size differs from size of data.
      * \sa detail::ElementTypeMapSet serialise()
      */
     template <typename T> void value(T&& val) {
         container_type data;
         detail::visit<detail::set_visitor>(m_type, data, data.end(), std::forward<T>(val));
+
+        if(detail::detect_size(m_type, data.begin(), data.end()) != static_cast<ptrdiff_t>(boost::distance(data)))
+            BOOST_THROW_EXCEPTION(invalid_element_size{}
+                                  << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
+                                  << detail::expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
         using std::swap;
         swap(m_data, data);
     }
@@ -424,9 +446,7 @@ template <class Container> struct basic_element {
     template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
     template <element_type EType> using ElementTypeMapSet = detail::ElementTypeMapSet<EType, container_type>;
     template <typename T> static bool valid_type(element_type);
-    template <typename T> bool valid_type() const { return valid_type<T>(type()); }
     template <typename T> static bool valid_set_type(element_type);
-    template <typename T> bool valid_set_type() const { return valid_set_type<T>(type()); }
 
     template <typename> friend struct basic_element;
 };
@@ -737,16 +757,22 @@ struct elem_compare {
 
 template <typename T, typename Container> struct is_valid_func {
     template <element_type EType, typename... Args>
-    struct inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
-                            std::is_constructible<detail::ElementTypeMap<EType, Container>, T>> {
+    struct inner {
         static_assert(sizeof...(Args) == 0, "");
-        constexpr bool operator()() const { return inner::value; }
+
+        using type = inner;
+        static constexpr bool value = mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
+                std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value;
+        constexpr bool operator()() const { return value; }
     };
     template <element_type EType, typename... Args>
-    struct set_inner : mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
-                                std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>> {
+    struct set_inner {
         static_assert(sizeof...(Args) == 0, "");
-        constexpr bool operator()() const { return set_inner::value; }
+
+        using type = set_inner;
+        static constexpr bool value = mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
+                std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>>::value;
+        constexpr bool operator()() const { return value; }
     };
 };
 

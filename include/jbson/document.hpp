@@ -138,29 +138,29 @@ void init_empty(Container& c,
     c = arr;
 }
 
-template <typename Container>
-void init_empty(
-    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-    std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr,
-    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::iterator>::value>* =
-        nullptr,
-    std::enable_if_t<
-        std::is_constructible<Container, std::array<char, 5>::iterator, std::array<char, 5>::iterator>::value>* =
-        nullptr) {
-    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
-    c = Container{(std::array<char, 5>::iterator)arr.begin(), (std::array<char, 5>::iterator)arr.end()};
-}
+//template <typename Container>
+//void init_empty(
+//    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+//    std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr,
+//    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::iterator>::value>* =
+//        nullptr,
+//    std::enable_if_t<
+//        std::is_constructible<Container, std::array<char, 5>::iterator, std::array<char, 5>::iterator>::value>* =
+//        nullptr) {
+//    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
+//    c = Container{(std::array<char, 5>::iterator)arr.begin(), (std::array<char, 5>::iterator)arr.end()};
+//}
 
-template <typename Container>
-void init_empty(
-    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-    std::enable_if_t<
-        !std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* = nullptr,
-    std::enable_if_t<std::is_constructible<typename Container::iterator, std::vector<char>::const_iterator>::value>* =
-        nullptr) {
-    static const std::vector<char> arr{{5, 0, 0, 0, '\0'}};
-    c = Container{arr.begin(), arr.end()};
-}
+//template <typename Container>
+//void init_empty(
+//    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+//    std::enable_if_t<
+//        !std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* = nullptr,
+//    std::enable_if_t<std::is_constructible<typename Container::iterator, std::vector<char>::const_iterator>::value>* =
+//        nullptr) {
+//    static const std::vector<char> arr{{5, 0, 0, 0, '\0'}};
+//    c = Container{arr.begin(), arr.end()};
+//}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -191,11 +191,9 @@ template <class Container, class ElementContainer> class basic_document {
     using value_type = element_type;
 
     /*!
-     * \brief Constructs an empty, but valid document.
-     *
-     * \throws Something When detail::init_empty fails.
+     * \brief Default constructor. Results in an invalid document.
      */
-    basic_document() { detail::init_empty(m_data); }
+    basic_document() = default;
 
     /*!
      * \brief Constructs a document with an existing container of data.
@@ -233,6 +231,15 @@ template <class Container, class ElementContainer> class basic_document {
                    std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
                        nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
+
+    template <typename OtherContainer>
+    basic_document(const basic_document<OtherContainer>& other,
+                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value&&
+                   detail::container_has_push_back<container_type>::value&&
+                   std::is_constructible<container_type,
+                                    typename OtherContainer::const_iterator,
+                                    typename OtherContainer::const_iterator>::value>* = nullptr)
+        : m_data(other.m_data.begin(), other.m_data.end()) {}
 
     //! \brief Disallows construction from arrays of invalid document size.
     template <size_t N> explicit basic_document(std::array<char, N>, std::enable_if_t<(N < 5)>* = nullptr) = delete;
