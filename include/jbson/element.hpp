@@ -168,15 +168,15 @@ template <class Container> struct basic_element {
      *
      * \note No checks are performed if the current value data is compatible with the new type.
      *
-     * \param type Valid BSON element_type.
+     * \param new_type Valid BSON element_type.
      * \throws invalid_element_type When type is invalid.
      *
      * \warning Strong exception guarantee.
      */
-    void type(element_type type) {
-        if(!(bool)type)
+    void type(element_type new_type) {
+        if(!detail::valid_type(new_type))
             BOOST_THROW_EXCEPTION(invalid_element_type{});
-        m_type = type;
+        m_type = new_type;
     }
 
     /*!
@@ -461,7 +461,7 @@ template <class Container>
 template <typename OutContainer>
 void basic_element<Container>::write_to_container(OutContainer& c, typename OutContainer::const_iterator it) const {
     static_assert(std::is_same<typename OutContainer::value_type, char>::value, "");
-    if(!(bool)m_type)
+    if(!detail::valid_type(m_type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
     it = std::next(c.insert(it, static_cast<uint8_t>(m_type)));
@@ -549,7 +549,7 @@ template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
                                                   boost::string_ref name, element_type type, T&& val) {
-    if(!(bool)type)
+    if(!detail::valid_type(type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
     it = std::next(c.insert(it, static_cast<uint8_t>(type)));
@@ -568,7 +568,7 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 template <typename Container>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
                                                   boost::string_ref name, element_type type) {
-    if(!(bool)type)
+    if(!detail::valid_type(type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
     if(type != element_type::undefined_element && type != element_type::null_element && type != element_type::min_key &&

@@ -58,6 +58,12 @@ enum class element_type : uint8_t {
     max_key = 0x7F                              //!< void
 };
 
+namespace detail {
+inline bool valid_type(element_type etype) {
+    return ((uint8_t)etype >= 0x01 && (uint8_t)etype <= 0x12) || (uint8_t)etype == 0xFF || (uint8_t)etype == 0x7F;
+}
+} // namespace detail
+
 /*!
  * \namespace jbson::detail
  * \brief namespace detail contains internal functions and classes
