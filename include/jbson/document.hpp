@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <set>
+#include <codecvt>
 
 #include "detail/config.hpp"
 
@@ -150,6 +151,16 @@ static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail:
 
 struct builder;
 
+struct document_validity {
+    enum validity_level {
+        data_size,
+        bson_size,
+        element_construct,
+        unicode_valid = 0b0100,
+        array_indices = 0b1000
+    };
+};
+
 /*!
  * basic_document represents a range of BSON elements
  * \tparam Container Type of underlying storage container/range. Must be range of `char`.
@@ -186,7 +197,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \tparam SomeType Type which decays to `container_type`.
      * \param c Accepts all forms of `container_type`.
      *
-     * Forwards c to `container_type` initialiser.
+     * Forwards \p c to `container_type` initialiser.
      *
      * \throws invalid_document_size When the size of c is insufficient.
      *                               When the size of c differs from the size specified by c's data.
@@ -195,10 +206,10 @@ template <class Container, class ElementContainer> class basic_document {
     explicit basic_document(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
-        if(static_cast<ptrdiff_t>(boost::distance(m_data)) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
-            BOOST_THROW_EXCEPTION(invalid_document_size{});
-        if(static_cast<ptrdiff_t>(boost::distance(m_data)) !=
-           detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
+        if(!valid(document_validity::data_size))
+            BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::actual_size(boost::distance(m_data))
+                                  << detail::expected_size(sizeof(int32_t)));
+        if(!valid(document_validity::bson_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{}
                                   << detail::expected_size(
                                          detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
@@ -382,6 +393,48 @@ template <class Container, class ElementContainer> class basic_document {
         return std::move(m_data);
     }
 
+    bool valid(const document_validity::validity_level lvl = document_validity::bson_size,
+               const bool recurse = true) const {
+        bool ret{true};
+
+        if(ret && lvl >= document_validity::data_size)
+            ret = boost::distance(m_data) > sizeof(int32_t);
+        if(ret && lvl >= document_validity::bson_size) {
+            ret = static_cast<ptrdiff_t>(boost::distance(m_data)) ==
+                    detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
+        }
+        if(ret && lvl >= document_validity::element_construct) {
+            try {
+                for(auto&& e: *this) {
+                    if(recurse && e.type() == jbson::element_type::document_element)
+                        ret = get<jbson::element_type::document_element>(e).valid(lvl, recurse);
+                    else if(recurse && e.type() == jbson::element_type::array_element)
+                        ret = get<jbson::element_type::array_element>(e).valid(lvl, recurse);
+                    else if(recurse && e.type() == jbson::element_type::scoped_javascript_element) {
+                        decltype(get<jbson::element_type::document_element>(e)) scope;
+                        std::tie(std::ignore, scope) = get<jbson::element_type::scoped_javascript_element>(e);
+                        ret = scope.valid(lvl, recurse);
+                    }
+                    if(!ret)
+                        break;
+
+                    if(lvl & document_validity::unicode_valid && e.type() == jbson::element_type::string_element) {
+                        //TODO: validate utf-8
+                        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u8to32{};
+                        auto str = get<jbson::element_type::string_element>(e);
+                        u8to32.from_bytes(str.data(), str.data() + str.size());
+                    }
+                    if(!ret)
+                        break;
+                }
+            }
+            catch(...) {
+                ret = false;
+            }
+        }
+        return ret;
+    }
+
     template <typename EContainer> explicit operator basic_document_set<EContainer>() const {
         auto set = basic_document_set<EContainer>{};
         for(auto&& e : *this) {
@@ -444,6 +497,26 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
         : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
+
+    bool valid(const document_validity::validity_level lvl = document_validity::bson_size,
+               const bool recurse = true) const {
+        bool ret = base::valid(lvl, recurse);
+        if(ret && lvl & document_validity::array_indices) {
+            try {
+                int32_t count{0};
+                for(auto&& e: *this) {
+                    if(!(ret = (e.name() == std::to_string(count))))
+                        break;
+
+                    ++count;
+                }
+            }
+            catch(...) {
+                ret = false;
+            }
+        }
+        return ret;
+    }
 
     template <typename SequenceContainer,
               typename = std::enable_if_t<detail::container_has_push_back<SequenceContainer>::value>,

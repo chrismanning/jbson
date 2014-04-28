@@ -145,6 +145,12 @@ TEST(DocumentTest, EmptyDocumentTest) {
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_array<boost::iterator_range<const char*>>())));
 }
 
+TEST(DocumentTest, ValidityTest1) {
+    EXPECT_FALSE(basic_document<boost::iterator_range<std::vector<char>::const_iterator>>().valid());
+    EXPECT_TRUE(document().valid(document_validity::bson_size));
+    EXPECT_TRUE(document().valid(document_validity::element_construct));
+}
+
 TEST(DocumentTest, DocumentParseTest1) {
     const auto test_bson = "\x16\x00\x00\x00\x02hello\x00\x06\x00\x00\x00world\x00\x00"s;
     auto doc = document{test_bson};
