@@ -801,24 +801,22 @@ struct elem_compare {
     }
 };
 
+//! Wrapper for type validity checking visitors.
 template <typename T, typename Container> struct is_valid_func {
-    template <element_type EType, typename... Args> struct inner {
+    //! Visitor for checking validity of a type for fetching.
+    template <element_type EType, typename... Args>
+    struct inner : std::integral_constant<
+                       bool, mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
+                                      std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value> {
         static_assert(sizeof...(Args) == 0, "");
-
-        using type = inner;
-        static constexpr bool value =
-            mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
-                     std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value;
-        constexpr bool operator()() const { return value; }
     };
-    template <element_type EType, typename... Args> struct set_inner {
+    //! Visitor for checking validity of a type for setting.
+    template <element_type EType, typename... Args>
+    struct set_inner
+        : std::integral_constant<
+              bool, mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
+                             std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>>::value> {
         static_assert(sizeof...(Args) == 0, "");
-
-        using type = set_inner;
-        static constexpr bool value =
-            mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
-                     std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>>::value;
-        constexpr bool operator()() const { return value; }
     };
 };
 
