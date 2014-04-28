@@ -42,8 +42,8 @@ namespace detail {
  * This is required for iteration as the basic_element's size is not known in advance.
  */
 template <typename Value, typename BaseIterator>
-struct document_iter : boost::iterator_facade<document_iter<Value, BaseIterator>, Value,
-                             boost::forward_traversal_tag, Value&> {
+struct document_iter
+    : boost::iterator_facade<document_iter<Value, BaseIterator>, Value, boost::forward_traversal_tag, Value&> {
     static_assert(detail::is_element<std::remove_const_t<Value>>::value, "");
 
     //! Alias to Value
@@ -152,13 +152,7 @@ static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail:
 struct builder;
 
 struct document_validity {
-    enum validity_level {
-        data_size,
-        bson_size,
-        element_construct,
-        unicode_valid = 0b0100,
-        array_indices = 0b1000
-    };
+    enum validity_level { data_size, bson_size, element_construct, unicode_valid = 0b0100, array_indices = 0b1000 };
 };
 
 /*!
@@ -186,9 +180,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \note When container_type is able to own data, this results in a valid, empty document.
      * \note Otherwise (e.g. is boost::iterator_range<>), results in an invalid document.
      */
-    basic_document() {
-        detail::init_empty(m_data);
-    }
+    basic_document() { detail::init_empty(m_data); }
 
     /*!
      * \brief Constructs a document with an existing container of data.
@@ -208,7 +200,7 @@ template <class Container, class ElementContainer> class basic_document {
         : m_data(std::forward<SomeType>(c)) {
         if(!valid(document_validity::data_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::actual_size(boost::distance(m_data))
-                                  << detail::expected_size(sizeof(int32_t)));
+                                                          << detail::expected_size(sizeof(int32_t)));
         if(!valid(document_validity::bson_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{}
                                   << detail::expected_size(
@@ -229,11 +221,10 @@ template <class Container, class ElementContainer> class basic_document {
 
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
-                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value&&
-                   detail::container_has_push_back<container_type>::value&&
-                   std::is_constructible<container_type,
-                                    typename OtherContainer::const_iterator,
-                                    typename OtherContainer::const_iterator>::value>* = nullptr)
+                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
+                                    detail::container_has_push_back<container_type>::value &&
+                                    std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                                          typename OtherContainer::const_iterator>::value>* = nullptr)
         : m_data(other.m_data.begin(), other.m_data.end()) {}
 
     //! \brief Disallows construction from arrays of invalid document size.
@@ -326,9 +317,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \return const_iterator to item with specified name, or end().
      */
     const_iterator find(boost::string_ref elem_name) const {
-        return std::find_if(begin(), end(), [&elem_name] (auto&& elem) {
-            return elem.name() == elem_name;
-        });
+        return std::find_if(begin(), end(), [&elem_name](auto&& elem) { return elem.name() == elem_name; });
     }
 
     /*!
@@ -401,11 +390,11 @@ template <class Container, class ElementContainer> class basic_document {
             ret = boost::distance(m_data) > sizeof(int32_t);
         if(ret && lvl >= document_validity::bson_size) {
             ret = static_cast<ptrdiff_t>(boost::distance(m_data)) ==
-                    detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
+                  detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
         }
         if(ret && lvl >= document_validity::element_construct) {
             try {
-                for(auto&& e: *this) {
+                for(auto&& e : *this) {
                     if(recurse && e.type() == jbson::element_type::document_element)
                         ret = get<jbson::element_type::document_element>(e).valid(lvl, recurse);
                     else if(recurse && e.type() == jbson::element_type::array_element)
@@ -419,7 +408,7 @@ template <class Container, class ElementContainer> class basic_document {
                         break;
 
                     if(lvl & document_validity::unicode_valid && e.type() == jbson::element_type::string_element) {
-                        //TODO: validate utf-8
+                        // TODO: validate utf-8
                         std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u8to32{};
                         auto str = get<jbson::element_type::string_element>(e);
                         u8to32.from_bytes(str.data(), str.data() + str.size());
@@ -480,20 +469,21 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
-                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
-                       nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+                std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                    nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : base(other.m_data) {}
 
     template <typename Arg>
-    explicit basic_array(Arg&& arg, std::enable_if_t<std::is_constructible<base, Arg&&>::value &&
-                                            !std::is_convertible<Arg&&, base>::value>* = nullptr)
-            noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
+    explicit basic_array(
+        Arg&& arg,
+        std::enable_if_t<std::is_constructible<base, Arg&&>::value && !std::is_convertible<Arg&&, base>::value>* =
+            nullptr) noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
         : base(std::forward<Arg>(arg)) {}
 
     template <typename Arg1, typename Arg2>
     basic_array(Arg1&& arg1, Arg2&& arg2,
-                std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* = nullptr)
-            noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
+                std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* =
+                    nullptr) noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
         : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
@@ -504,7 +494,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
         if(ret && lvl & document_validity::array_indices) {
             try {
                 int32_t count{0};
-                for(auto&& e: *this) {
+                for(auto&& e : *this) {
                     if(!(ret = (e.name() == std::to_string(count))))
                         break;
 

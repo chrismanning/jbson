@@ -67,7 +67,7 @@ template <class Container> struct basic_element {
     /*!
      * \brief Default constructor.
      *
-     * Resultant basic_element represents a valid, empty-named, null BSON element.
+     * Resultant basic_element represents a valid, empty-named, element_type::null_element typed BSON element.
      */
     basic_element() = default;
 
@@ -80,8 +80,7 @@ template <class Container> struct basic_element {
     template <typename OtherContainer>
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr,
-                  std::enable_if_t<std::is_constructible<container_type,
-                                                         typename OtherContainer::const_iterator,
+                  std::enable_if_t<std::is_constructible<container_type, typename OtherContainer::const_iterator,
                                                          typename OtherContainer::const_iterator>::value>* = nullptr);
 
     //! \brief Move constructor.
@@ -147,8 +146,10 @@ template <class Container> struct basic_element {
      *
      * \return boost::string_ref. The basic_element must remain alive at least as long as the returned string.
      */
-    boost::string_ref name() const noexcept(std::is_nothrow_constructible<boost::string_ref, const std::string&>::value)
-    { return m_name; }
+    boost::string_ref name() const
+        noexcept(std::is_nothrow_constructible<boost::string_ref, const std::string&>::value) {
+        return m_name;
+    }
 
     /*!
      * \brief Sets name to n.
@@ -166,7 +167,7 @@ template <class Container> struct basic_element {
     /*!
      * \brief Sets type of this element.
      *
-     * \note No checks are performed if the current value data is compatible with the new type.
+     * \note No checks are performed determining if the current value data is compatible with the new type.
      *
      * \param new_type Valid BSON element_type.
      * \throws invalid_element_type When type is invalid.
@@ -182,9 +183,13 @@ template <class Container> struct basic_element {
     /*!
      * \brief Returns the value data in the form of a specific type.
      *
-     * \tparam T The value type to be returned.
+     * \note This overload only returns types from detail::ElementTypeMap.
+     *
+     * \tparam T The value type to be returned. Must be default constructible.
      * \returns Value represented by this basic_element in the form of a \p T.
      * \throws incompatible_type_conversion When \p ReturnT is incompatible with the current element_type.
+     *
+     * \sa detail::ElementTypeMap
      */
     template <typename T>
     std::enable_if_t<detail::is_valid_element_value_type<container_type, T>::value, T> value() const {
@@ -201,6 +206,17 @@ template <class Container> struct basic_element {
         return std::move(ret);
     }
 
+    /*!
+     * \brief Returns the value data in the form of a specific type.
+     *
+     * \note This overload requires a compatible value_get function overload. It is found via ADL.
+     *
+     * \tparam T The value type to be returned. Must be default constructible.
+     * \returns Value represented by this basic_element in the form of a \p T.
+     * \throws incompatible_type_conversion When \p ReturnT is incompatible with the current element_type.
+     *
+     * \sa value_get
+     */
     template <typename T>
     std::enable_if_t<!detail::is_valid_element_value_type<container_type, T>::value, T> value() const {
         static_assert(!std::is_void<T>::value, "Cannot assign value to void.");
@@ -252,21 +268,25 @@ template <class Container> struct basic_element {
 
     //! \brief Sets value and type to element_type::document_element.
     //! \warning Strong exception guarantee.
-    template <typename C, typename C2>
-    void value(const basic_document<C, C2>& val) { value<element_type::document_element>(val); }
+    template <typename C, typename C2> void value(const basic_document<C, C2>& val) {
+        value<element_type::document_element>(val);
+    }
     //! \brief Sets value and type to element_type::array_element.
     //! \warning Strong exception guarantee.
-    template <typename C, typename C2>
-    void value(const basic_array<C, C2>& val) { value<element_type::array_element>(val); }
+    template <typename C, typename C2> void value(const basic_array<C, C2>& val) {
+        value<element_type::array_element>(val);
+    }
 
     //! \brief Sets value and type to element_type::document_element.
     //! \warning Strong exception guarantee.
-    template <typename C, typename C2>
-    void value(basic_document<C, C2>&& val) { value<element_type::document_element>(std::move(val)); }
+    template <typename C, typename C2> void value(basic_document<C, C2>&& val) {
+        value<element_type::document_element>(std::move(val));
+    }
     //! \brief Sets value and type to element_type::array_element.
     //! \warning Strong exception guarantee.
-    template <typename C, typename C2>
-    void value(basic_array<C, C2>&& val) { value<element_type::array_element>(std::move(val)); }
+    template <typename C, typename C2> void value(basic_array<C, C2>&& val) {
+        value<element_type::array_element>(std::move(val));
+    }
 
     /*!
      * \brief Sets value to an undetermined type.
@@ -366,16 +386,13 @@ template <class Container> struct basic_element {
 
     //! Apply the visitor pattern with a void-return visitor.
     template <typename Visitor>
-    void
-    visit(Visitor&&,
-          std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>* =
-              nullptr) const;
+    void visit(Visitor&&, std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const;
     //! Apply the visitor pattern with a value-returning visitor.
     template <typename Visitor>
-    auto visit(
-        Visitor&&,
-        std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>* =
-            nullptr) const -> decltype(std::declval<Visitor>()("", element_type{}, double {}));
+    auto visit(Visitor&&, std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const
+        -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>()));
 
     //! \brief Constructs a BSON element without data in place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
@@ -388,9 +405,12 @@ template <class Container> struct basic_element {
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
                                    element_type, T&&);
 
-    //! \brief Writes data to BSON.
+    //! \brief Transforms basic_element to BSON data.
     template <typename OutContainer>
     void write_to_container(OutContainer&, typename OutContainer::const_iterator) const;
+
+    //! Explicit conversion to a write_to_container compatible container.
+    //! \sa write_to_container
     template <typename OutContainer> explicit operator OutContainer() const;
 
     //! \brief Checks if this and \p other are equal.
@@ -419,8 +439,8 @@ template <class Container> struct basic_element {
             if(type() == element_type::string_element) {
                 auto a_str = this->value<detail::ElementTypeMap<element_type::string_element, container_type>>();
                 auto b_str = other.value<detail::ElementTypeMap<element_type::string_element, container_type>>();
-                return std::use_facet<std::collate<char>>({}).compare(a_str.data(), a_str.data()+a_str.size(),
-                                                                      b_str.data(), b_str.data()+b_str.size()) < 0;
+                return std::use_facet<std::collate<char>>({}).compare(a_str.data(), a_str.data() + a_str.size(),
+                                                                      b_str.data(), b_str.data() + b_str.size()) < 0;
             }
             return m_data < other.m_data;
         }
@@ -457,6 +477,13 @@ void swap(basic_element<Container>& a, basic_element<Container>& b) noexcept(noe
     a.swap(b);
 }
 
+/*!
+ * \param c Container to write to.
+ * \param it Position in \p c to insert data.
+ *
+ * \throws invalid_element_type When type of this basic_element is invalid.
+ * \throws invalid_element_size When the detected size of the data differs from the actual size.
+ */
 template <class Container>
 template <typename OutContainer>
 void basic_element<Container>::write_to_container(OutContainer& c, typename OutContainer::const_iterator it) const {
@@ -507,18 +534,22 @@ inline element_type deduce_type(builder&&) noexcept { return element_type::docum
 inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
 
 //! Helper to deduce element_type::document_element.
-template <typename C, typename C2>
-inline element_type deduce_type(const basic_document<C, C2>&) noexcept { return element_type::document_element; }
+template <typename C, typename C2> inline element_type deduce_type(const basic_document<C, C2>&) noexcept {
+    return element_type::document_element;
+}
 //! Helper to deduce element_type::array_element.
-template <typename C, typename C2>
-inline element_type deduce_type(const basic_array<C, C2>&) noexcept { return element_type::array_element; }
+template <typename C, typename C2> inline element_type deduce_type(const basic_array<C, C2>&) noexcept {
+    return element_type::array_element;
+}
 
 //! Helper to deduce element_type::document_element.
-template <typename C, typename C2>
-inline element_type deduce_type(basic_document<C, C2>&&) noexcept { return element_type::document_element; }
+template <typename C, typename C2> inline element_type deduce_type(basic_document<C, C2>&&) noexcept {
+    return element_type::document_element;
+}
 //! Helper to deduce element_type::array_element.
-template <typename C, typename C2>
-inline element_type deduce_type(basic_array<C, C2>&&) noexcept { return element_type::array_element; }
+template <typename C, typename C2> inline element_type deduce_type(basic_array<C, C2>&&) noexcept {
+    return element_type::array_element;
+}
 
 //! Helper to deduce an invalid element_type.
 template <typename T> inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
@@ -528,6 +559,11 @@ template <typename T> inline element_type deduce_type(T&&) noexcept { return sta
 /*!
  * Performs basic type deduction for JSON types only.
  * Any other type results in an invalid element_type being passed to typed overload.
+ *
+ * \param c Container to write to.
+ * \param it Position in \p c to insert data.
+ * \param name Name of element.
+ * \param val Value of element. element_type deduction is attempted with this.
  *
  * \warning Basic exception guarantee.
  * \throws invalid_element_type When deduced type is invalid
@@ -541,6 +577,12 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 }
 
 /*!
+ * \param c Container to write to.
+ * \param it Position in \p c to insert data.
+ * \param name Name of element.
+ * \param type Type of element.
+ * \param val Value of element.
+ *
  * \warning Basic exception guarantee.
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is void, i.e. should not contain data.
@@ -561,6 +603,11 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 }
 
 /*!
+ * \param c Container to write to.
+ * \param it Position in \p c to insert data.
+ * \param name Name of element.
+ * \param type Type of element.
+ *
  * \warning Basic exception guarantee.
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is non-void, i.e. should contain data.
@@ -609,9 +656,8 @@ template <typename OtherContainer>
 basic_element<Container>::basic_element(
     const basic_element<OtherContainer>& elem,
     std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*,
-            std::enable_if_t<std::is_constructible<container_type,
-                                                   typename OtherContainer::const_iterator,
-                                                   typename OtherContainer::const_iterator>::value>*)
+    std::enable_if_t<std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                           typename OtherContainer::const_iterator>::value>*)
     : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data.begin(), elem.m_data.end()) {}
 
 /*!
@@ -697,9 +743,9 @@ namespace detail {
 template <element_type EType, typename Visitor, typename Element> struct element_visitor {
     //! Functor call operator.
     auto operator()(Visitor&& visitor, Element&& elem) const {
-        return visitor(elem.name(), EType,
-                       elem.template value<detail::ElementTypeMap<EType,
-                       typename std::decay_t<Element>::container_type>>());
+        return visitor(
+            elem.name(), EType,
+            elem.template value<detail::ElementTypeMap<EType, typename std::decay_t<Element>::container_type>>());
     }
 };
 
@@ -756,22 +802,22 @@ struct elem_compare {
 };
 
 template <typename T, typename Container> struct is_valid_func {
-    template <element_type EType, typename... Args>
-    struct inner {
+    template <element_type EType, typename... Args> struct inner {
         static_assert(sizeof...(Args) == 0, "");
 
         using type = inner;
-        static constexpr bool value = mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
-                std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value;
+        static constexpr bool value =
+            mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
+                     std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value;
         constexpr bool operator()() const { return value; }
     };
-    template <element_type EType, typename... Args>
-    struct set_inner {
+    template <element_type EType, typename... Args> struct set_inner {
         static_assert(sizeof...(Args) == 0, "");
 
         using type = set_inner;
-        static constexpr bool value = mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
-                std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>>::value;
+        static constexpr bool value =
+            mpl::or_<std::is_convertible<T, detail::ElementTypeMapSet<EType, Container>>,
+                     std::is_constructible<detail::ElementTypeMapSet<EType, Container>, T>>::value;
         constexpr bool operator()() const { return value; }
     };
 };
@@ -905,9 +951,9 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
  */
 template <class Container>
 template <typename Visitor>
-void basic_element<Container>::visit(
-    Visitor&& visitor,
-    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>*) const {
+void basic_element<Container>::visit(Visitor&& visitor,
+                                     std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const {
     detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
     return;
 }
@@ -929,10 +975,10 @@ void basic_element<Container>::visit(
  */
 template <class Container>
 template <typename Visitor>
-auto basic_element<Container>::visit(
-    Visitor&& visitor,
-    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()("", element_type{}, double {}))>::value>*) const
-    -> decltype(std::declval<Visitor>()("", element_type{}, double {})) {
+auto basic_element<Container>::visit(Visitor&& visitor,
+                                     std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const
+    -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>())) {
     return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
 }
 
