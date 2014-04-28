@@ -138,29 +138,9 @@ void init_empty(Container& c,
     c = arr;
 }
 
-//template <typename Container>
-//void init_empty(
-//    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-//    std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr,
-//    std::enable_if_t<std::is_constructible<typename Container::iterator, std::array<char, 5>::iterator>::value>* =
-//        nullptr,
-//    std::enable_if_t<
-//        std::is_constructible<Container, std::array<char, 5>::iterator, std::array<char, 5>::iterator>::value>* =
-//        nullptr) {
-//    static constexpr std::array<char, 5> arr{{5, 0, 0, 0, '\0'}};
-//    c = Container{(std::array<char, 5>::iterator)arr.begin(), (std::array<char, 5>::iterator)arr.end()};
-//}
-
-//template <typename Container>
-//void init_empty(
-//    Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-//    std::enable_if_t<
-//        !std::is_constructible<typename Container::iterator, std::array<char, 5>::const_iterator>::value>* = nullptr,
-//    std::enable_if_t<std::is_constructible<typename Container::iterator, std::vector<char>::const_iterator>::value>* =
-//        nullptr) {
-//    static const std::vector<char> arr{{5, 0, 0, 0, '\0'}};
-//    c = Container{arr.begin(), arr.end()};
-//}
+template <typename Container>
+void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+                std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -191,9 +171,13 @@ template <class Container, class ElementContainer> class basic_document {
     using value_type = element_type;
 
     /*!
-     * \brief Default constructor. Results in an invalid document.
+     * \brief Default constructor.
+     * \note When container_type is able to own data, this results in a valid, empty document.
+     * \note Otherwise (e.g. is boost::iterator_range<>), results in an invalid document.
      */
-    basic_document() = default;
+    basic_document() {
+        detail::init_empty(m_data);
+    }
 
     /*!
      * \brief Constructs a document with an existing container of data.
