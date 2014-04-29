@@ -74,7 +74,7 @@ TEST(BuilderTest, BuildTest3) {
 
 TEST(BuilderTest, ArrayBuildTest1) {
     static_assert(std::is_same<decltype(array_builder(123)(321)), array_builder&&>::value, "");
-    auto arrb = array_builder(15)("str")(4.6);
+    auto arrb = array_builder(15)("str")(4.6)(0x1000000000);
     static_assert(std::is_same<decltype(arrb), array_builder>::value, "");
     array arr;
     EXPECT_NO_THROW(arr = array(arrb));
@@ -93,6 +93,10 @@ TEST(BuilderTest, ArrayBuildTest1) {
     EXPECT_EQ("2", it->name());
     EXPECT_EQ(element_type::double_element, it->type());
     EXPECT_DOUBLE_EQ(4.6, get<element_type::double_element>(*it));
+    it++;
+    EXPECT_EQ("3", it->name());
+    EXPECT_EQ(element_type::int64_element, it->type());
+    EXPECT_DOUBLE_EQ(0x1000000000, get<element_type::int64_element>(*it));
     it++;
     ASSERT_EQ(it, end);
 }

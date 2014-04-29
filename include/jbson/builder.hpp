@@ -180,8 +180,6 @@ struct builder {
   private:
     mutable std::vector<char> m_elements{{0, 0, 0, 0}};
 };
-static_assert(std::is_convertible<builder, document>::value, "");
-static_assert(std::is_convertible<builder, basic_document<std::vector<char>, std::vector<char>>>::value, "");
 
 /*!
  * \brief array_builder provides a simple interface for array construction
@@ -261,17 +259,15 @@ struct array_builder {
     mutable std::vector<char> m_elements{{0, 0, 0, 0}};
     uint32_t m_count{0u};
 };
-static_assert(std::is_convertible<array_builder, array>::value, "");
-static_assert(std::is_convertible<array_builder, basic_array<std::vector<char>, std::vector<char>>>::value, "");
 
 // builder
-template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, builder val) {
-    serialise(c, it, document(std::move(val)));
+template <typename Container> void value_set(basic_element<Container>& c, builder val) {
+    c.value(document(std::move(val)));
 }
 
 // array_builder
-template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, array_builder val) {
-    serialise(c, it, array(std::move(val)));
+template <typename Container, typename IteratorT> void value_set(basic_element<Container>& c, array_builder val) {
+    c.value(array(std::move(val)));
 }
 
 } // namespace jbson

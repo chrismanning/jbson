@@ -147,8 +147,6 @@ void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Containe
 
 } // namespace detail
 
-static_assert(detail::is_range_of_value<document_set, boost::mpl::quote1<detail::is_element>>::value, "");
-
 struct builder;
 
 struct document_validity {
@@ -545,9 +543,9 @@ void swap(basic_array<Container, EContainer>& a, basic_array<Container, EContain
 }
 
 // document_set
-template <typename Container, typename IteratorT, typename SetContainer>
-void serialise(Container& c, IteratorT& it, const basic_document_set<SetContainer>& val) {
-    serialise(c, it, document(val));
+template <typename Container, typename SetContainer>
+void value_set(basic_element<Container>& c, const basic_document_set<SetContainer>& val) {
+    c.value(document(val));
 }
 
 } // namespace jbson

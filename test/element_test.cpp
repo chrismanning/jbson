@@ -122,7 +122,15 @@ TEST(ElementTest, ElementTypeConversionsTest1) {
     EXPECT_THROW(get<element_type::int32_element>(el1), incompatible_element_conversion);
     EXPECT_THROW(get<element_type::int64_element>(el1), invalid_element_size);
     EXPECT_EQ(123, el1.value<int32_t>());
+    EXPECT_EQ(123, el1.value<int>());
     EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
+
+    try {
+    EXPECT_EQ(123, el1.value<short>());
+    }
+    catch(...) {
+        FAIL() << boost::current_exception_diagnostic_information();
+    }
 
     ASSERT_NO_THROW(el1.type(element_type::string_element));
 

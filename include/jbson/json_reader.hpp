@@ -528,9 +528,9 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
         using DateT = detail::ElementTypeMap<element_type::date_element, element::container_type>;
         if(doc.begin()->type() == element_type::int32_element)
-            serialise(m_data, out, static_cast<DateT>(get<element_type::int32_element>(*doc.begin())));
+            detail::serialise(m_data, out, static_cast<DateT>(get<element_type::int32_element>(*doc.begin())));
         else if(doc.begin()->type() == element_type::int64_element)
-            serialise(m_data, out, static_cast<DateT>(get<element_type::int64_element>(*doc.begin())));
+            detail::serialise(m_data, out, static_cast<DateT>(get<element_type::int64_element>(*doc.begin())));
         else
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "date element"));
         type = element_type::date_element;
@@ -552,7 +552,7 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
         auto options = get<element_type::string_element>(*it);
 
         type = element_type::regex_element;
-        serialise(m_data, out, std::make_tuple(re, options));
+        detail::serialise(m_data, out, std::make_tuple(re, options));
     } else if(name == "$oid") {
         if(doc.size() != 40 || doc.begin()->type() != element_type::string_element)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "oid element"));
@@ -564,7 +564,7 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
             oid[i / 2] = static_cast<char>(std::stoi(boost::lexical_cast<std::string>(str.substr(i, 2)), nullptr, 16));
 
         type = element_type::oid_element;
-        serialise(m_data, out, oid);
+        detail::serialise(m_data, out, oid);
     } else if(name == "$ref" || name == "$id") {
         if(doc.size() != 2)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "ref element"));
@@ -584,7 +584,7 @@ json_reader::parse_extended_value(const basic_document<range_type>& doc, OutputI
         auto coll = get<element_type::string_element>(*it);
 
         type = element_type::db_pointer_element;
-        serialise(m_data, out, std::make_tuple(coll, oid));
+        detail::serialise(m_data, out, std::make_tuple(coll, oid));
     } else if(name == "$undefined") {
         if(doc.size() != 1)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, "undefined element"));
@@ -853,7 +853,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         std::advance(first_, buf_len);
 
         assert(out >= m_data.begin() && out <= m_data.end());
-        serialise(m_data, out, val);
+        detail::serialise(m_data, out, val);
         type = element_type::double_element;
         return std::make_tuple(out, type);
     }
@@ -862,11 +862,11 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 
     if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
         assert(out >= m_data.begin() && out <= m_data.end());
-        serialise(m_data, out, static_cast<int32_t>(val));
+        detail::serialise(m_data, out, static_cast<int32_t>(val));
         type = element_type::int32_element;
     } else {
         assert(out >= m_data.begin() && out <= m_data.end());
-        serialise(m_data, out, val);
+        detail::serialise(m_data, out, val);
         type = element_type::int64_element;
     }
 

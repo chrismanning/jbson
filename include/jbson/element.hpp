@@ -8,8 +8,6 @@
 
 #include <string>
 #include <vector>
-#include <chrono>
-#include <array>
 
 #include "detail/config.hpp"
 
@@ -34,12 +32,25 @@ namespace jbson {
 namespace detail {
 
 //! Visitor for obtaining std::type_index of a mapped element_type.
-template <element_type EType, typename Element> struct typeid_visitor {
+template <element_type EType, typename Element, typename Enable = void> struct typeid_visitor;
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+template <element_type EType, typename Element>
+struct typeid_visitor<EType, Element, std::enable_if_t<is_element<std::decay_t<Element>>::value>> {
     //! Functor call operator
     template <typename... Args> std::type_index operator()(Args&&...) const {
         return typeid(ElementTypeMap<EType, typename std::decay_t<Element>::container_type>);
     }
 };
+
+template <element_type EType, typename Element>
+struct typeid_visitor<EType, Element, std::enable_if_t<!is_element<std::decay_t<Element>>::value>> {
+    //! Functor call operator
+    template <typename... Args> std::type_index operator()(Args&&...) const {
+        return typeid(ElementTypeMap<EType, std::decay_t<Element>>);
+    }
+};
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 } // namespace detail
 
@@ -296,9 +307,10 @@ template <class Container> struct basic_element {
      * and the currently set element_type.
      * \warning Strong exception guarantee.
      * \throws invalid_element_size When detected size differs from size of data.
-     * \sa detail::ElementTypeMapSet serialise()
+     * \sa detail::ElementTypeMapSet detail::serialise()
      */
-    template <typename T> void value(T&& val) {
+    template <typename T>
+    void value(T&& val, std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
         container_type data;
         detail::visit<detail::set_visitor>(m_type, data, data.end(), std::forward<T>(val));
 
@@ -310,6 +322,11 @@ template <class Container> struct basic_element {
         swap(m_data, data);
     }
 
+    template <typename T>
+    void value(T&& val, std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
+        value_set(*this, std::forward<T>(val));
+    }
+
     /*!
      * \brief Sets element_type and value.
      *
@@ -319,7 +336,7 @@ template <class Container> struct basic_element {
      * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
      * and the currently set element_type.
      * \warning Strong exception guarantee.
-     * \sa serialise() value(T&&val)
+     * \sa detail::serialise() value(T&&val)
      */
     template <typename T> void value(element_type new_type, T&& val) {
         const auto old_type = m_type;
@@ -339,7 +356,7 @@ template <class Container> struct basic_element {
      * \tparam EType element_type to set and check against.
      * \param val Value to set.
      * \warning Strong exception guarantee.
-     * \sa detail::ElementTypeMapSet serialise()
+     * \sa detail::ElementTypeMapSet detail::serialise()
      */
     template <element_type EType, typename T>
     void
@@ -352,7 +369,7 @@ template <class Container> struct basic_element {
 
         container_type data;
         auto it = data.end();
-        serialise(data, it, std::forward<T>(val));
+        detail::serialise(data, it, std::forward<T>(val));
         using std::swap;
         swap(m_data, data);
         type(EType);
@@ -365,7 +382,7 @@ template <class Container> struct basic_element {
      * \tparam EType element_type to set and check against.
      * \param val Value to set.
      * \warning Strong exception guarantee.
-     * \sa detail::ElementTypeMapSet serialise()
+     * \sa detail::ElementTypeMapSet detail::serialise()
      */
     template <element_type EType, typename T>
     void
@@ -378,7 +395,7 @@ template <class Container> struct basic_element {
 
         container_type data;
         auto it = data.end();
-        serialise(data, it, static_cast<T2>(std::forward<T>(val)));
+        detail::serialise(data, it, static_cast<T2>(std::forward<T>(val)));
         using std::swap;
         swap(m_data, data);
         type(EType);
@@ -402,8 +419,14 @@ template <class Container> struct basic_element {
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, T&&);
     //! \brief Constructs a BSON element in place into a container.
     template <typename T>
-    static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
-                                   element_type, T&&);
+    static void
+    write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, element_type, T&&,
+                       std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr);
+
+    template <typename T>
+    static void
+    write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, element_type, T&&,
+                       std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr);
 
     //! \brief Transforms basic_element to BSON data.
     template <typename OutContainer>
@@ -573,6 +596,7 @@ template <typename T>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
                                                   boost::string_ref name, T&& val) {
     static_assert(!std::is_same<element_type, T>::value, "");
+    static_assert(detail::is_valid_element_set_type<container_type, T>::value, "T must be compatible for deduction");
     write_to_container(c, it, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
 }
 
@@ -589,10 +613,16 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
  */
 template <typename Container>
 template <typename T>
-void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
-                                                  boost::string_ref name, element_type type, T&& val) {
+void basic_element<Container>::write_to_container(
+    container_type& c, typename container_type::const_iterator it, boost::string_ref name, element_type type, T&& val,
+    std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>*) {
     if(!detail::valid_type(type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
+
+    if(!valid_set_type<T>(type))
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{}
+                              << detail::actual_type(typeid(T))
+                              << detail::expected_type(detail::visit<detail::typeid_visitor>(type, Container{})));
 
     it = std::next(c.insert(it, static_cast<uint8_t>(type)));
     it = c.insert(it, name.begin(), name.end());
@@ -600,6 +630,15 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
     it = std::next(c.insert(it, '\0'));
 
     detail::visit<detail::set_visitor>(type, c, it, std::forward<T>(val));
+}
+
+template <typename Container>
+template <typename T>
+void basic_element<Container>::write_to_container(
+    container_type& c, typename container_type::const_iterator it, boost::string_ref name, element_type type, T&& val,
+    std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>*) {
+    auto e = basic_element{name.to_string(), type, std::forward<T>(val)};
+    e.write_to_container(c, it);
 }
 
 /*!

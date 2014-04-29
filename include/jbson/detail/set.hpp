@@ -11,6 +11,10 @@
 
 namespace jbson {
 
+template <typename Container> void value_set(basic_element<Container>&, ...);
+
+namespace detail {
+
 // setters
 
 // arithmetic
@@ -97,8 +101,6 @@ void serialise(Container&, IteratorT&, const std::tuple<StringT, basic_document<
     BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
 }
 
-namespace detail {
-
 // set visitor
 template <element_type EType, typename C, typename It, typename A, typename Enable = void> struct set_visitor;
 
@@ -131,8 +133,10 @@ struct set_visitor<EType, Container, IteratorT, A,
     }
 
     template <typename T>
-    void operator()(container_type& data, typename container_type::const_iterator it, T&& val,
-                    std::enable_if_t<std::is_constructible<set_type, T>::value>* = nullptr) const {
+    void
+    operator()(container_type& data, typename container_type::const_iterator it, T&& val,
+               std::enable_if_t<std::is_constructible<set_type, T>::value || std::is_convertible<T, set_type>::value>* =
+                   nullptr) const {
         serialise(data, it, set_type(std::forward<T>(val)));
     }
 
@@ -140,7 +144,8 @@ struct set_visitor<EType, Container, IteratorT, A,
     void operator()(container_type& data, typename container_type::const_iterator it, T&& val,
                     std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
                     std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
-        serialise(data, it, std::forward<T>(val));
+        BOOST_THROW_EXCEPTION(incompatible_type_conversion{} << expected_type(typeid(set_type))
+                                                             << actual_type(typeid(T)));
     }
 };
 

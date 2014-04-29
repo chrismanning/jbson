@@ -1,3 +1,4 @@
+cxx_test(traits)
 cxx_test(element_test)
 cxx_test(document_test)
 cxx_test(builder_test)

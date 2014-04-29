@@ -40,7 +40,7 @@ namespace mpl = boost::mpl;
 /*!
  * \brief Turns an element_type into a boost::mpl constant.
  */
-template <element_type EType> using element_type_c = mpl::integral_c<element_type, EType>;
+template <element_type EType> using element_type_c = std::integral_constant<element_type, EType>;
 
 /*!
  * \brief Trait to determine if an iterator is a pointer, or pointer in disguise.
@@ -94,13 +94,14 @@ template <typename Container, bool set = false> class TypeMap {
         std::conditional_t<set, Container, boost::iterator_range<typename Container::const_iterator>>;
     using string_type = std::conditional_t < !set && is_iterator_pointer<typename container_type::iterator>::value,
           boost::string_ref, std::string > ;
-public:
-    /*!
-     * \brief boost::mpl map.
-     */
+
+  public:
+/*!
+ * \brief boost::mpl map.
+ */
 #ifdef DOXYGEN_SHOULD_SKIP_THIS
     typedef boost::mpl::map<...> map_type;
-#else // DOXYGEN_SHOULD_SKIP_THIS
+#else  // DOXYGEN_SHOULD_SKIP_THIS
     typedef typename mpl::map<
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, string_type>,
@@ -181,12 +182,6 @@ using container_has_push_back =
     typename mpl::eval_if<has_iterator<std::decay_t<Container>>, container_has_push_back_impl<std::decay_t<Container>>,
                           std::false_type>::type;
 
-static_assert(container_has_push_back<std::vector<char>>::value, "");
-static_assert(container_has_push_back<std::string>::value, "");
-static_assert(!container_has_push_back<std::set<char>>::value, "");
-static_assert(!container_has_push_back<char>::value, "");
-static_assert(!container_has_push_back<double>::value, "");
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 template <typename RangeT>
 using is_range = typename mpl::and_<has_iterator<std::decay_t<RangeT>>, has_const_iterator<std::decay_t<RangeT>>>::type;
@@ -199,8 +194,8 @@ using is_range = typename mpl::and_<has_iterator<std::decay_t<RangeT>>, has_cons
 template <typename RangeT, typename ElementTrait, typename RangeTrait>
 using is_range_of = typename mpl::apply<
     typename mpl::eval_if<is_range<RangeT>, mpl::identity<ElementTrait>, mpl::identity<mpl::always<mpl::false_>>>::type,
-    typename mpl::eval_if<is_range<RangeT>,
-                          mpl::apply<RangeTrait, std::decay_t<RangeT>>, mpl::identity<void>>::type>::type;
+    typename mpl::eval_if<is_range<RangeT>, mpl::apply<RangeTrait, std::decay_t<RangeT>>,
+                          mpl::identity<void>>::type>::type;
 
 /*!
  * \brief Type trait to apply a unary metafunction trait to the value_type of a Range.
@@ -215,10 +210,6 @@ using is_range_of_value = is_range_of<RangeT, ElementTrait, mpl::quote1<boost::r
  */
 template <typename RangeT, typename ElementT>
 using is_range_of_same_value = is_range_of_value<RangeT, mpl::bind2<mpl::quote2<std::is_same>, ElementT, mpl::_1>>;
-
-static_assert(is_range_of_same_value<std::vector<char>, char>::value, "");
-static_assert(!is_range_of_same_value<char, char>::value, "");
-static_assert(!is_range_of_same_value<double, char>::value, "");
 
 /*!
  * \brief Type trait to apply a unary metafunction trait to the iterator type of a Range.
@@ -235,37 +226,39 @@ template <template <typename...> class Fun, typename...> struct quote {
     template <typename... Args> using apply = typename Fun<Args...>::type;
 };
 
-static_assert(is_range_of_iterator<std::vector<char>,
-                                   mpl::bind<quote<std::is_constructible>, std::vector<char>, mpl::_1, mpl::_1>>::value,
-              "");
-
 template <typename MapT, typename T>
-using find_second = typename mpl::find_if<MapT,
-mpl::bind<quote<std::is_same>, T, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
-
-static_assert(std::is_same<find_second<TypeMap<std::vector<char>>::map_type, double>,
-                           mpl::begin<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+using find_second =
+    typename mpl::find_if<MapT, mpl::bind<quote<std::is_same>, T, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
 
 template <typename MapT, typename FunT>
-using find_if_second = typename mpl::find_if<MapT,
-mpl::bind<mpl::protect<FunT>, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
+using find_if_second =
+    typename mpl::find_if<MapT, mpl::bind<mpl::protect<FunT>, mpl::bind<mpl::quote1<mpl::second>, mpl::_1>>>::type;
 
-static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
-                            mpl::bind<quote<std::is_same>, double, mpl::_1>>,
-              mpl::begin<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+template <typename A, typename B, typename Enable = void> struct is_convertible : std::is_convertible<A, B> {};
 
-static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
-                            mpl::bind<quote<std::is_same>, int32_t, mpl::_1>>,
-              mpl::advance_c<mpl::begin<TypeMap<std::vector<char>>::map_type>::type, 0x10-1>::type>::value, "");
+template <typename A, typename B>
+struct is_convertible<A, B, std::enable_if_t<std::is_integral<A>::value&& std::is_floating_point<B>::value>>
+    : std::false_type {};
 
-static_assert(std::is_same<find_if_second<TypeMap<std::vector<char>>::map_type,
-                            mpl::bind<quote<std::is_same>, std::chrono::milliseconds, mpl::_1>>,
-              mpl::end<TypeMap<std::vector<char>>::map_type>::type>::value, "");
+template <typename A, typename B>
+struct is_convertible<A, B, std::enable_if_t<std::is_integral<B>::value&& std::is_floating_point<A>::value>>
+    : std::false_type {};
+
+template <typename A, typename B>
+struct is_convertible<A, B, std::enable_if_t<std::is_integral<A>::value&& std::is_integral<B>::value>>
+    : std::integral_constant<bool, (sizeof(A) < sizeof(int32_t) && sizeof(A) < sizeof(B)) || (sizeof(A) == sizeof(B))> {
+};
 
 template <typename Container, typename T>
-using is_valid_element_value_type =
-typename mpl::not_<std::is_same<typename mpl::end<typename TypeMap<Container>::map_type>::type,
-find_if_second<typename TypeMap<Container>::map_type, mpl::bind<quote<std::is_convertible>, mpl::_1, T>>>>::type;
+using is_valid_element_value_type = typename mpl::not_<std::is_same<
+    typename mpl::end<typename TypeMap<Container>::map_type>::type,
+    find_if_second<typename TypeMap<Container>::map_type, mpl::bind<quote<is_convertible>, T, mpl::_1>>>>::type;
+
+template <typename Container, typename T>
+using is_valid_element_set_type =
+    typename mpl::not_<std::is_same<typename mpl::end<typename TypeMap<Container, true>::map_type>::type,
+                                    find_if_second<typename TypeMap<Container, true>::map_type,
+                                                   mpl::bind<quote<std::is_constructible>, mpl::_1, T>>>>::type;
 
 template <typename T> constexpr bool is_nothrow_swappable_impl() {
     using std::swap;

@@ -101,10 +101,9 @@ void value_get(const basic_element<Container>& elem, std::chrono::duration<RepT,
           <std::chrono::duration<RepT, RatioT>>(std::chrono::duration<RepT, std::milli>{elem.template value<RepT>()});
 }
 
-template <typename Container, typename IteratorT, typename RepT, typename RatioT>
-void serialise(Container& data, IteratorT& it, const std::chrono::duration<RepT, RatioT>& dur) {
-    using jbson::serialise;
-    serialise(data, it, dur.count());
+template <typename Container, typename RepT, typename RatioT>
+void value_set(basic_element<Container>& elem, const std::chrono::duration<RepT, RatioT>& dur) {
+    elem.value(dur.count());
 }
 }
 
@@ -122,12 +121,17 @@ TEST_F(BsonTest, FileTest4) {
     EXPECT_EQ(1319285594123, it->value<int64_t>());
     EXPECT_EQ(1319285594123ms, it->value<std::chrono::milliseconds>());
     try {
-    auto b = builder("date", element_type::date_element, 1319285594123ms);
-    auto e = element("date", element_type::date_element, 1319285594123ms);
+        auto b = builder("date", element_type::date_element, 1319285594123ms);
+
+        auto e = element("date", element_type::date_element, 1319285594123ms);
+        EXPECT_EQ("date", e.name());
+        ASSERT_EQ(element_type::date_element, e.type());
+        EXPECT_EQ(1319285594123, e.value<int64_t>());
+
+        ASSERT_EQ(e, *document(b).begin());
     }
     catch(...) {
-        std::clog << boost::current_exception_diagnostic_information();
-        FAIL();
+        FAIL() << boost::current_exception_diagnostic_information();
     }
 
     ++it;
