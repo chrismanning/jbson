@@ -103,14 +103,16 @@ template <typename Container, bool set = false> class TypeMap {
     typedef boost::mpl::map<...> map_type;
 #else  // DOXYGEN_SHOULD_SKIP_THIS
     typedef typename mpl::map<
-        mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::string_element>, string_type>,
+        mpl::pair<element_type_c<element_type::boolean_element>, bool>,
+        mpl::pair<element_type_c<element_type::int32_element>, int32_t>,
+        mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
+        mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::document_element>, basic_document<container_type, container_type>>,
         mpl::pair<element_type_c<element_type::array_element>, basic_array<container_type, container_type>>,
         mpl::pair<element_type_c<element_type::binary_element>, container_type>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
-        mpl::pair<element_type_c<element_type::boolean_element>, bool>,
         mpl::pair<element_type_c<element_type::date_element>, int64_t>,
         mpl::pair<element_type_c<element_type::null_element>, void>,
         mpl::pair<element_type_c<element_type::regex_element>, std::tuple<string_type, string_type>>,
@@ -119,9 +121,7 @@ template <typename Container, bool set = false> class TypeMap {
         mpl::pair<element_type_c<element_type::symbol_element>, string_type>,
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
                   std::tuple<string_type, basic_document<container_type, container_type>>>,
-        mpl::pair<element_type_c<element_type::int32_element>, int32_t>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
-        mpl::pair<element_type_c<element_type::int64_element>, int64_t>,
         mpl::pair<element_type_c<element_type::min_key>, void>,
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
 #endif // DOXYGEN_SHOULD_SKIP_THIS
@@ -237,17 +237,27 @@ using find_if_second =
 template <typename A, typename B, typename Enable = void> struct is_convertible : std::is_convertible<A, B> {};
 
 template <typename A, typename B>
-struct is_convertible<A, B, std::enable_if_t<std::is_integral<A>::value&& std::is_floating_point<B>::value>>
+struct is_convertible<
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value&& std::is_floating_point<std::decay_t<B>>::value>>
     : std::false_type {};
 
 template <typename A, typename B>
-struct is_convertible<A, B, std::enable_if_t<std::is_integral<B>::value&& std::is_floating_point<A>::value>>
+struct is_convertible<
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<B>>::value&& std::is_floating_point<std::decay_t<A>>::value>>
     : std::false_type {};
 
 template <typename A, typename B>
-struct is_convertible<A, B, std::enable_if_t<std::is_integral<A>::value&& std::is_integral<B>::value>>
+struct is_convertible<
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value&& std::is_integral<std::decay_t<B>>::value>>
     : std::integral_constant<bool, (sizeof(A) < sizeof(int32_t) && sizeof(A) < sizeof(B)) || (sizeof(A) == sizeof(B))> {
 };
+
+template <typename A, typename B, typename Enable = void> struct is_constructible : std::is_constructible<A, B> {};
+
+template <typename A, typename B>
+struct is_constructible<
+    A, B, std::enable_if_t<std::is_arithmetic<std::decay_t<A>>::value || std::is_arithmetic<std::decay_t<B>>::value>>
+    : is_convertible<B, A> {};
 
 template <typename Container, typename T>
 using is_valid_element_value_type = typename mpl::not_<std::is_same<
@@ -255,10 +265,9 @@ using is_valid_element_value_type = typename mpl::not_<std::is_same<
     find_if_second<typename TypeMap<Container>::map_type, mpl::bind<quote<is_convertible>, T, mpl::_1>>>>::type;
 
 template <typename Container, typename T>
-using is_valid_element_set_type =
-    typename mpl::not_<std::is_same<typename mpl::end<typename TypeMap<Container, true>::map_type>::type,
-                                    find_if_second<typename TypeMap<Container, true>::map_type,
-                                                   mpl::bind<quote<std::is_constructible>, mpl::_1, T>>>>::type;
+using is_valid_element_set_type = typename mpl::not_<std::is_same<
+    typename mpl::end<typename TypeMap<Container, true>::map_type>::type,
+    find_if_second<typename TypeMap<Container, true>::map_type, mpl::bind<quote<is_constructible>, mpl::_1, T>>>>::type;
 
 template <typename T> constexpr bool is_nothrow_swappable_impl() {
     using std::swap;

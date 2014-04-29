@@ -45,44 +45,50 @@ TEST(ElementTest, ElementParseTest1) {
     auto el1 = element{boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s)};
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
-    EXPECT_EQ("world", get<element_type::string_element>(el1));
+    EXPECT_NO_THROW(EXPECT_EQ("world", get<element_type::string_element>(el1)));
     el1.value("test");
-    EXPECT_EQ("test", get<element_type::string_element>(el1));
+    EXPECT_NO_THROW(EXPECT_EQ("test", get<element_type::string_element>(el1)));
 
     EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
     EXPECT_NO_THROW(el1.value<boost::string_ref>());
     EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
 
-    el1.value(element_type::boolean_element, false);
-    EXPECT_FALSE(get<element_type::boolean_element>(el1));
-    el1.value(true);
+    EXPECT_NO_THROW(el1.value(element_type::boolean_element, false));
+    EXPECT_NO_THROW(EXPECT_FALSE(get<element_type::boolean_element>(el1)));
+
+    EXPECT_NO_THROW(el1.value(true));
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_TRUE(get<element_type::boolean_element>(el1));
+    EXPECT_NO_THROW(EXPECT_TRUE(get<element_type::boolean_element>(el1)));
     EXPECT_EQ(8, el1.size());
-    el1.value(element_type::boolean_element, 432);
+    EXPECT_NO_THROW(el1.value(element_type::boolean_element, 432));
+
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_TRUE(get<element_type::boolean_element>(el1));
+    EXPECT_NO_THROW(EXPECT_TRUE(get<element_type::boolean_element>(el1)));
     EXPECT_EQ(8, el1.size());
-    el1.value(static_cast<bool>(432));
+
+    EXPECT_NO_THROW(el1.value(static_cast<bool>(432)));
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_TRUE(get<element_type::boolean_element>(el1));
+    EXPECT_NO_THROW(EXPECT_TRUE(get<element_type::boolean_element>(el1)));
     EXPECT_EQ(8, el1.size());
-    el1.value(static_cast<bool>(0));
+
+    EXPECT_NO_THROW(el1.value(static_cast<bool>(0)));
     ASSERT_EQ(element_type::boolean_element, el1.type());
-    EXPECT_FALSE(get<element_type::boolean_element>(el1));
+    EXPECT_NO_THROW(EXPECT_FALSE(get<element_type::boolean_element>(el1)));
     EXPECT_EQ(8, el1.size());
 
     EXPECT_NO_THROW(el1.value<bool>());
     EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
+
     EXPECT_NO_THROW(el1.value<element_type::int64_element>(24));
     EXPECT_THROW(el1.value<int32_t>(), invalid_element_size);
     ASSERT_EQ(element_type::int64_element, el1.type());
-    EXPECT_EQ(24, get<element_type::int64_element>(el1));
+    EXPECT_NO_THROW(EXPECT_EQ(24, get<element_type::int64_element>(el1)));
     EXPECT_EQ(15, el1.size());
+
     EXPECT_NO_THROW(el1.value((int8_t)24));
-    ASSERT_EQ(element_type::int64_element, el1.type());
-    EXPECT_EQ(24, get<element_type::int64_element>(el1));
-    EXPECT_EQ(15, el1.size());
+    EXPECT_EQ(element_type::boolean_element, el1.type());
+    EXPECT_NO_THROW(EXPECT_EQ(true, get<element_type::boolean_element>(el1)));
+    EXPECT_EQ(8, el1.size());
 }
 
 TEST(ElementTest, ElementParseTest2) {
@@ -155,13 +161,15 @@ TEST(ElementTest, ElementConstructTest1) {
     EXPECT_EQ("", el1.name());
     ASSERT_EQ(element_type::null_element, el1.type());
     EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
-    EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
+    EXPECT_NO_THROW(el1.value<bool>(true));
+    ASSERT_EQ(element_type::boolean_element, el1.type());
 
     EXPECT_NO_THROW(el1.value(true));
     ASSERT_EQ(element_type::boolean_element, el1.type());
     EXPECT_NO_THROW(el1.type(element_type::null_element));
     EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
-    EXPECT_THROW(el1.value<bool>(true), incompatible_type_conversion);
+    EXPECT_NO_THROW(el1.value<bool>(true));
+    ASSERT_EQ(element_type::boolean_element, el1.type());
 
     {
         decltype(auto) a = "name";

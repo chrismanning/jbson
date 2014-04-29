@@ -212,9 +212,13 @@ template <class Container> struct basic_element {
                                   << detail::actual_type(typeid(T))
                                   << detail::expected_type(detail::visit<detail::typeid_visitor>(type(), *this)));
 
-        T ret{};
+        namespace mpl = boost::mpl;
+        using element_pair = typename mpl::deref<
+            detail::find_if_second<typename detail::TypeMap<container_type>::map_type,
+                                   mpl::bind<detail::quote<detail::is_convertible>, T, mpl::_1>>>::type;
+        typename mpl::second<element_pair>::type ret{};
         detail::deserialise(m_data, ret);
-        return std::move(ret);
+        return T(std::move(ret));
     }
 
     /*!
@@ -237,68 +241,6 @@ template <class Container> struct basic_element {
         return std::move(ret);
     }
 
-    //! \brief Sets value and type to element_type::string_element.
-    //! \warning Strong exception guarantee.
-    void value(boost::string_ref val) { value<element_type::string_element>(val); }
-    //! \brief Sets value and type to element_type::string_element.
-    //! \warning Strong exception guarantee.
-    void value(std::string val) { value(boost::string_ref(val)); }
-    //! \brief Sets value and type to element_type::string_element.
-    //! \warning Strong exception guarantee.
-    void value(const char* val) { value(boost::string_ref(val)); }
-
-    //! \brief Sets value and type to element_type::boolean_element.
-    //! \warning Strong exception guarantee.
-    void value(bool val) { value<element_type::boolean_element>(val); }
-    //! \brief Sets value and type to element_type::double_element.
-    //! \warning Strong exception guarantee.
-    void value(float val) { value<element_type::double_element>(val); }
-    //! \brief Sets value and type to element_type::double_element.
-    //! \warning Strong exception guarantee.
-    void value(double val) { value<element_type::double_element>(val); }
-    //! \brief Sets value and type to element_type::int64_element.
-    //! \warning Strong exception guarantee.
-    void value(int64_t val) { value<element_type::int64_element>(val); }
-    //! \brief Sets value and type to element_type::int32_element.
-    //! \warning Strong exception guarantee.
-    void value(int32_t val) { value<element_type::int32_element>(val); }
-
-    //! \brief Sets value and type to element_type::document_element.
-    //! \warning Strong exception guarantee.
-    void value(const builder& val) { value<element_type::document_element>(val); }
-    //! \brief Sets value and type to element_type::array_element.
-    //! \warning Strong exception guarantee.
-    void value(const array_builder& val) { value<element_type::array_element>(val); }
-
-    //! \brief Sets value and type to element_type::document_element.
-    //! \warning Strong exception guarantee.
-    void value(builder&& val) { value<element_type::document_element>(std::move(val)); }
-    //! \brief Sets value and type to element_type::array_element.
-    //! \warning Strong exception guarantee.
-    void value(array_builder&& val) { value<element_type::array_element>(std::move(val)); }
-
-    //! \brief Sets value and type to element_type::document_element.
-    //! \warning Strong exception guarantee.
-    template <typename C, typename C2> void value(const basic_document<C, C2>& val) {
-        value<element_type::document_element>(val);
-    }
-    //! \brief Sets value and type to element_type::array_element.
-    //! \warning Strong exception guarantee.
-    template <typename C, typename C2> void value(const basic_array<C, C2>& val) {
-        value<element_type::array_element>(val);
-    }
-
-    //! \brief Sets value and type to element_type::document_element.
-    //! \warning Strong exception guarantee.
-    template <typename C, typename C2> void value(basic_document<C, C2>&& val) {
-        value<element_type::document_element>(std::move(val));
-    }
-    //! \brief Sets value and type to element_type::array_element.
-    //! \warning Strong exception guarantee.
-    template <typename C, typename C2> void value(basic_array<C, C2>&& val) {
-        value<element_type::array_element>(std::move(val));
-    }
-
     /*!
      * \brief Sets value to an undetermined type.
      *
@@ -311,15 +253,12 @@ template <class Container> struct basic_element {
      */
     template <typename T>
     void value(T&& val, std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
-        container_type data;
-        detail::visit<detail::set_visitor>(m_type, data, data.end(), std::forward<T>(val));
+        namespace mpl = boost::mpl;
+        using element_pair = typename mpl::deref<
+            detail::find_if_second<typename detail::TypeMap<container_type, true>::map_type,
+                                   mpl::bind<detail::quote<detail::is_constructible>, mpl::_1, T>>>::type;
 
-        if(detail::detect_size(m_type, data.begin(), data.end()) != static_cast<ptrdiff_t>(boost::distance(data)))
-            BOOST_THROW_EXCEPTION(invalid_element_size{}
-                                  << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
-                                  << detail::expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
-        using std::swap;
-        swap(m_data, data);
+        value<mpl::first<element_pair>::type::value>(std::forward<T>(val));
     }
 
     template <typename T>
@@ -338,15 +277,41 @@ template <class Container> struct basic_element {
      * \warning Strong exception guarantee.
      * \sa detail::serialise() value(T&&val)
      */
-    template <typename T> void value(element_type new_type, T&& val) {
-        const auto old_type = m_type;
+    template <typename T>
+    void value(element_type new_type, T&& val,
+               std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
+        container_type data;
+        detail::visit<detail::set_visitor>(new_type, data, data.end(), std::forward<T>(val));
+
+        if(detail::detect_size(new_type, data.begin(), data.end()) != static_cast<ptrdiff_t>(boost::distance(data)))
+            BOOST_THROW_EXCEPTION(invalid_element_size{}
+                                  << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(data)))
+                                  << detail::expected_size(detail::detect_size(new_type, data.begin(), data.end())));
         type(new_type);
+        using std::swap;
+        swap(m_data, data);
+    }
+
+    template <typename T>
+    void value(element_type new_type, T&& val,
+               std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
+        container_type data;
+        using std::swap;
+        swap(m_data, data);
+
         try {
-            value<T>(std::forward<T>(val));
-            assert(m_type == new_type);
+            value_set(*this, std::forward<T>(val));
+
+            if(detail::detect_size(new_type, m_data.begin(), m_data.end()) !=
+               static_cast<ptrdiff_t>(boost::distance(m_data)))
+                BOOST_THROW_EXCEPTION(
+                    invalid_element_size{}
+                    << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
+                    << detail::expected_size(detail::detect_size(new_type, m_data.begin(), m_data.end())));
+            type(new_type);
         }
         catch(...) {
-            m_type = old_type;
+            swap(m_data, data);
             throw;
         }
     }
@@ -370,9 +335,17 @@ template <class Container> struct basic_element {
         container_type data;
         auto it = data.end();
         detail::serialise(data, it, std::forward<T>(val));
+
+        if(detail::size_func<EType, decltype(data.begin())> {}(data.begin(), data.end()) !=
+           static_cast<ptrdiff_t>(boost::distance(data)))
+            BOOST_THROW_EXCEPTION(invalid_element_size{}
+                                  << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(data)))
+                                  << detail::expected_size(detail::size_func<EType, decltype(data.begin())> {}(
+                                         data.begin(), data.end())));
+
+        type(EType);
         using std::swap;
         swap(m_data, data);
-        type(EType);
     }
 
     /*!
@@ -393,12 +366,7 @@ template <class Container> struct basic_element {
         using T2 = ElementTypeMapSet<EType>;
         static_assert(std::is_constructible<T2, T>::value || std::is_convertible<std::decay_t<T>, T2>::value, "");
 
-        container_type data;
-        auto it = data.end();
-        detail::serialise(data, it, static_cast<T2>(std::forward<T>(val)));
-        using std::swap;
-        swap(m_data, data);
-        type(EType);
+        value<EType>(static_cast<T2>(std::forward<T>(val)));
     }
 
     //! Apply the visitor pattern with a void-return visitor.
@@ -858,9 +826,6 @@ template <typename T, typename Container> struct is_valid_func {
         static_assert(sizeof...(Args) == 0, "");
     };
 };
-
-using expected_element_type = boost::error_info<struct expected_element_type_, element_type>;
-using actual_element_type = boost::error_info<struct actual_element_type_, element_type>;
 
 } // namespace detail
 
