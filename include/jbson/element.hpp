@@ -494,59 +494,6 @@ void basic_element<Container>::write_to_container(OutContainer& c, typename OutC
     c.insert(it, m_data.begin(), m_data.end());
 }
 
-namespace detail {
-
-//! Helper to deduce element_type::string_element.
-inline element_type deduce_type(const boost::string_ref&) noexcept { return element_type::string_element; }
-//! Helper to deduce element_type::string_element.
-inline element_type deduce_type(const std::string&) noexcept { return element_type::string_element; }
-//! Helper to deduce element_type::string_element.
-inline element_type deduce_type(const char*) noexcept { return element_type::string_element; }
-
-//! Helper to deduce element_type::boolean_element.
-inline element_type deduce_type(bool) noexcept { return element_type::boolean_element; }
-//! Helper to deduce element_type::double_element.
-inline element_type deduce_type(float) noexcept { return element_type::double_element; }
-//! Helper to deduce element_type::double_element.
-inline element_type deduce_type(double) noexcept { return element_type::double_element; }
-//! Helper to deduce element_type::int64_element.
-inline element_type deduce_type(int64_t) noexcept { return element_type::int64_element; }
-//! Helper to deduce element_type::int32_element.
-inline element_type deduce_type(int32_t) noexcept { return element_type::int32_element; }
-
-//! Helper to deduce element_type::document_element.
-inline element_type deduce_type(const builder&) noexcept { return element_type::document_element; }
-//! Helper to deduce element_type::array_element.
-inline element_type deduce_type(const array_builder&) noexcept { return element_type::array_element; }
-
-//! Helper to deduce element_type::document_element.
-inline element_type deduce_type(builder&&) noexcept { return element_type::document_element; }
-//! Helper to deduce element_type::array_element.
-inline element_type deduce_type(array_builder&&) noexcept { return element_type::array_element; }
-
-//! Helper to deduce element_type::document_element.
-template <typename C, typename C2> inline element_type deduce_type(const basic_document<C, C2>&) noexcept {
-    return element_type::document_element;
-}
-//! Helper to deduce element_type::array_element.
-template <typename C, typename C2> inline element_type deduce_type(const basic_array<C, C2>&) noexcept {
-    return element_type::array_element;
-}
-
-//! Helper to deduce element_type::document_element.
-template <typename C, typename C2> inline element_type deduce_type(basic_document<C, C2>&&) noexcept {
-    return element_type::document_element;
-}
-//! Helper to deduce element_type::array_element.
-template <typename C, typename C2> inline element_type deduce_type(basic_array<C, C2>&&) noexcept {
-    return element_type::array_element;
-}
-
-//! Helper to deduce an invalid element_type.
-template <typename T> inline element_type deduce_type(T&&) noexcept { return static_cast<element_type>(0); }
-
-} // namespace detail
-
 /*!
  * Performs basic type deduction for JSON types only.
  * Any other type results in an invalid element_type being passed to typed overload.
@@ -565,7 +512,18 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
                                                   boost::string_ref name, T&& val) {
     static_assert(!std::is_same<element_type, T>::value, "");
     static_assert(detail::is_valid_element_set_type<container_type, T>::value, "T must be compatible for deduction");
-    write_to_container(c, it, name.to_string(), detail::deduce_type(std::forward<T>(val)), std::forward<T>(val));
+
+    namespace mpl = boost::mpl;
+    using element_pair = typename mpl::deref<
+        detail::find_if_second<typename detail::TypeMap<container_type, true>::map_type,
+                               mpl::bind<detail::quote<detail::is_constructible>, mpl::_1, T>>>::type;
+
+    it = std::next(c.insert(it, static_cast<uint8_t>(mpl::first<element_pair>::type::value)));
+    it = c.insert(it, name.begin(), name.end());
+    std::advance(it, name.size());
+    it = std::next(c.insert(it, '\0'));
+
+    detail::serialise(c, it, static_cast<typename mpl::second<element_pair>::type>(std::forward<T>(val)));
 }
 
 /*!
