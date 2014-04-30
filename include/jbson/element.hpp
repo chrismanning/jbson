@@ -423,18 +423,19 @@ template <class Container> struct basic_element {
                               "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const
         -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>()));
 
-    //! \brief Constructs a BSON element without data in place into a container.
+    //! \brief Constructs a BSON element without data, in-place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
                                    element_type);
-    //! \brief Constructs a type-deduced BSON element in place into a container.
+    //! \brief Constructs a type-deduced BSON element in-place into a container.
     template <typename T>
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, T&&);
-    //! \brief Constructs a BSON element in place into a container.
+    //! \brief Constructs a BSON element in-place, from compatible data, into a container.
     template <typename T>
     static void
     write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, element_type, T&&,
                        std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr);
 
+    //! \brief Constructs a BSON element in-place, from incompatible data, into a container.
     template <typename T>
     static void
     write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref, element_type, T&&,
@@ -513,11 +514,13 @@ void swap(basic_element<Container>& a, basic_element<Container>& b) noexcept(noe
 }
 
 /*!
- * \param c Container to write to.
+ * \param[out] c Container to write to.
  * \param it Position in \p c to insert data.
  *
  * \throws invalid_element_type When type of this basic_element is invalid.
  * \throws invalid_element_size When the detected size of the data differs from the actual size.
+ *
+ * \warning Basic exception guarantee.
  */
 template <class Container>
 template <typename OutContainer>
@@ -526,29 +529,28 @@ void basic_element<Container>::write_to_container(OutContainer& c, typename OutC
     if(!detail::valid_type(m_type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
+    if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
+        BOOST_THROW_EXCEPTION(invalid_element_size{}
+                              << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
+                              << detail::expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
+
     it = std::next(c.insert(it, static_cast<uint8_t>(m_type)));
     it = c.insert(it, m_name.begin(), m_name.end());
     std::advance(it, m_name.size());
     it = std::next(c.insert(it, '\0'));
 
-    if(detail::detect_size(m_type, m_data.begin(), m_data.end()) != static_cast<ptrdiff_t>(boost::distance(m_data)))
-        BOOST_THROW_EXCEPTION(invalid_element_size{}
-                              << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
-                              << detail::expected_size(detail::detect_size(m_type, m_data.begin(), m_data.end())));
     c.insert(it, m_data.begin(), m_data.end());
 }
 
 /*!
- * Performs basic type deduction for JSON types only.
- * Any other type results in an invalid element_type being passed to typed overload.
+ * Accepts and performs type deduction only for types compatible with detail::TypeMap.
  *
  * \param c Container to write to.
  * \param it Position in \p c to insert data.
  * \param name Name of element.
- * \param val Value of element. element_type deduction is attempted with this.
+ * \param val Value of element.
  *
  * \warning Basic exception guarantee.
- * \throws invalid_element_type When deduced type is invalid
  */
 template <typename Container>
 template <typename T>
@@ -578,6 +580,7 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
  * \param val Value of element.
  *
  * \warning Basic exception guarantee.
+ *
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is void, i.e. should not contain data.
  */
@@ -602,6 +605,21 @@ void basic_element<Container>::write_to_container(
     detail::visit<detail::set_visitor>(type, c, it, std::forward<T>(val));
 }
 
+/*!
+ * \param c Container to write to.
+ * \param it Position in \p c to insert data.
+ * \param name Name of element.
+ * \param type Type of element.
+ * \param val Value of element.
+ *
+ * Constructs a basic_element to allow usage of value_set, and calls e.write_to_container(\p c, \p it).
+ *
+ * \warning Basic exception guarantee.
+ *
+ * \throws invalid_element_type When \p type is invalid.
+ * \throws incompatible_type_conversion When type is void, i.e. should not contain data.
+ * \throws invalid_element_size When the size of the data differs from that detected.
+ */
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(
@@ -618,6 +636,7 @@ void basic_element<Container>::write_to_container(
  * \param type Type of element.
  *
  * \warning Basic exception guarantee.
+ *
  * \throws invalid_element_type When type is invalid
  * \throws incompatible_type_conversion When type is non-void, i.e. should contain data.
  */
