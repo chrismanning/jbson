@@ -242,14 +242,14 @@ template <class Container> struct basic_element {
     }
 
     /*!
-     * \brief Sets value to an undetermined type.
+     * \brief Sets value from a detail::TypeMap compatible type.
      *
-     * \param val Value of undeducable type.
-     * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
-     * and the currently set element_type.
+     * Statically deduces element_type to closest match from detail::TypeMap.
+     * Forwards to value<element_type>(val).
+     *
+     * \param val Value to set.
      * \warning Strong exception guarantee.
      * \throws invalid_element_size When detected size differs from size of data.
-     * \sa detail::ElementTypeMapSet detail::serialise()
      */
     template <typename T>
     void value(T&& val, std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
@@ -261,21 +261,44 @@ template <class Container> struct basic_element {
         value<mpl::first<element_pair>::type::value>(std::forward<T>(val));
     }
 
+    /*!
+     * \brief Sets value from a user-defined type.
+     *
+     * Forwards to a user-supplied value_set function found by argument-dependent lookup (ADL).
+     *
+     * \param val Value to set.
+     * \warning Strong exception guarantee.
+     * \sa value_set
+     */
     template <typename T>
     void value(T&& val, std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
-        value_set(*this, std::forward<T>(val));
+        container_type old_data;
+        auto old_type = m_type;
+        using std::swap;
+        swap(m_data, old_data);
+
+        try {
+            value_set(*this, std::forward<T>(val));
+        }
+        catch(...) {
+            m_type = old_type;
+            swap(m_data, old_data);
+            throw;
+        }
     }
 
     /*!
-     * \brief Sets element_type and value.
+     * \brief Sets element_type, and value from a detail::TypeMap compatible type.
      *
      * \param new_type element_type of supplied value.
-     * \param val Value of undetermined type.
+     * \param val Value to set.
+     *
      * \note Does not perform type deduction. Assumes \p new_type is correct type for \p val.
-     * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet
-     * and the currently set element_type.
+     * \note Attempts to convert \p val to the type as determined by detail::ElementTypeMapSet and \p new_type.
+     *
      * \warning Strong exception guarantee.
-     * \sa detail::serialise() value(T&&val)
+     * \throws invalid_element_size When the size of the data differs from that detected.
+     * \throws incompatible_type_conversion When val's type is incompatible with \p new_type.
      */
     template <typename T>
     void value(element_type new_type, T&& val,
@@ -292,12 +315,24 @@ template <class Container> struct basic_element {
         swap(m_data, data);
     }
 
+    /*!
+     * \brief Sets element_type, and value from a user-defined type.
+     *
+     * Forwards to a user-supplied value_set function found by argument-dependent lookup (ADL).
+     *
+     * \param new_type element_type of supplied value.
+     * \param val Value to set.
+     *
+     * \warning Strong exception guarantee.
+     * \throws invalid_element_size When the size of the data differs from that detected.
+     */
     template <typename T>
     void value(element_type new_type, T&& val,
                std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
-        container_type data;
+        container_type old_data;
+        auto old_type = m_type;
         using std::swap;
-        swap(m_data, data);
+        swap(m_data, old_data);
 
         try {
             value_set(*this, std::forward<T>(val));
@@ -311,16 +346,22 @@ template <class Container> struct basic_element {
             type(new_type);
         }
         catch(...) {
-            swap(m_data, data);
+            m_type = old_type;
+            swap(m_data, old_data);
             throw;
         }
     }
 
     /*!
      * \brief Sets value. Statically ensures type compatibility.
+     *
+     * Does not explicitly perform any type conversions.
+     *
      * \tparam EType element_type to set and check against.
      * \param val Value to set.
+     *
      * \warning Strong exception guarantee.
+     * \throws invalid_element_size When the size of the data differs from that detected.
      * \sa detail::ElementTypeMapSet detail::serialise()
      */
     template <element_type EType, typename T>
@@ -352,9 +393,12 @@ template <class Container> struct basic_element {
      * \brief Sets value. Statically ensures type compatibility.
      *
      * Performs conversion to type mapped from detail::ElementTypeMapSet.
+     *
      * \tparam EType element_type to set and check against.
      * \param val Value to set.
+     *
      * \warning Strong exception guarantee.
+     * \throws invalid_element_size When the size of the data differs from that detected.
      * \sa detail::ElementTypeMapSet detail::serialise()
      */
     template <element_type EType, typename T>
