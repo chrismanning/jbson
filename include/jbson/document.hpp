@@ -149,9 +149,39 @@ void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Containe
 
 struct builder;
 
-struct document_validity {
-    enum validity_level { data_size, bson_size, element_construct, unicode_valid = 0b0100, array_indices = 0b1000 };
+//! Level of validity to test for with basic_document::valid.
+enum class validity_level : uint8_t {
+    //! Basic test for the size of the data.
+    data_size = 0,
+    //! Basic test for the equality of the data size with that reported by the data. Includes above.
+    bson_size = 0b0001,
+    //! Tests that each element can be constructed without error. Includes above.
+    element_construct = 0b0010,
+    //! Tests for valid unicode in elements with type element_type::string_element. Includes above.
+    unicode_valid = 0b0100,
+    //! Tests that array elements are integers named consecutively from 0 (zero). Includes above except unicode_valid.
+    array_indices = 0b1000
 };
+
+//! Allow less than (<) comparison for validity_level.
+inline bool operator<(validity_level a, validity_level b) {
+    return (std::underlying_type_t<validity_level>)a < (std::underlying_type_t<validity_level>)b;
+}
+
+//! Allow more than (>) comparison for validity_level.
+inline bool operator>(validity_level a, validity_level b) { return b < a; }
+
+//! Allow bitwise-and (&) for validity_level.
+inline validity_level operator&(validity_level a, validity_level b) {
+    return static_cast<validity_level>((std::underlying_type_t<validity_level>)a &
+                                       (std::underlying_type_t<validity_level>)b);
+}
+
+//! Allow bitwise-or (|) for validity_level.
+inline validity_level operator|(validity_level a, validity_level b) {
+    return static_cast<validity_level>((std::underlying_type_t<validity_level>)a |
+                                       (std::underlying_type_t<validity_level>)b);
+}
 
 /*!
  * basic_document represents a range of BSON elements
@@ -196,10 +226,10 @@ template <class Container, class ElementContainer> class basic_document {
     explicit basic_document(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
-        if(!valid(document_validity::data_size))
+        if(!valid(validity_level::data_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::actual_size(boost::distance(m_data))
                                                           << detail::expected_size(sizeof(int32_t)));
-        if(!valid(document_validity::bson_size))
+        if(!valid(validity_level::bson_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{}
                                   << detail::expected_size(
                                          detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end()))
@@ -217,6 +247,11 @@ template <class Container, class ElementContainer> class basic_document {
                        nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
 
+    /*!
+     * \brief Copy constructor from a basic_document with a different `container_type`.
+     *
+     * \tparam OtherContainer basic_document container from whose iterator_type `container_type` can be constructed.
+     */
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
                    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
@@ -321,11 +356,10 @@ template <class Container, class ElementContainer> class basic_document {
     /*!
      * \brief Removes the element at it.
      *
-     * Invalidates iterators and references at or after the point of the erase, including the end() iterator.
+     * General advice to follow: All iterators and referenced basic_elements are invalidated.
+     * Actaul behaviour depends on container_type::erase(elem_data.begin(), elem_data.end()).
      *
-     * The iterator pos must be valid and dereferenceable.
-     * Thus the end() iterator (which is valid, but is not dereferencable) cannot be used as a value for pos.
-     * \param it iterator to the element to remove.
+     * \param it Iterator to the element to remove. Cannot be end().
      * \return const_iterator following the last removed element.
      * \internal Asserts in debug mode that it != end()
      */
@@ -341,6 +375,19 @@ template <class Container, class ElementContainer> class basic_document {
         return {pos, std::prev(m_data.end())};
     }
 
+    /*!
+     * \brief Inserts an element directly before another.
+     *
+     * General advice to follow: All iterators and referenced basic_elements are invalidated.
+     * Actaul behaviour depends on container_type::insert(pos, elem_data.begin(), elem_data.end()).
+     *
+     * \param it Iterator to the location before which the element will be inserted. Can be end().
+     * \param el Element to be inserted.
+     *
+     * \warning Strong exception guarantee.
+     *
+     * \return const_iterator to the inserted element.
+     */
     template <typename EContainer>
     const_iterator insert(const const_iterator& it, const basic_element<EContainer>& el) {
         container_type data;
@@ -356,6 +403,19 @@ template <class Container, class ElementContainer> class basic_document {
         return {pos, std::prev(m_data.end())};
     }
 
+    /*!
+     * \brief Inserts an element in-place directly before another.
+     *
+     * General advice to follow: All iterators and referenced basic_elements are invalidated.
+     * Actaul behaviour depends on container_type::insert(pos, elem_data.begin(), elem_data.end()).
+     *
+     * \param it Iterator to the location before which the element will be inserted. Can be end().
+     * \param args Arguments to construct an element in-place.
+     *
+     * \warning Strong exception guarantee.
+     *
+     * \return const_iterator to the inserted element.
+     */
     template <typename... Args> const_iterator emplace(const const_iterator& it, Args&&... args) {
         container_type data;
         basic_element<container_type>::write_to_container(data, data.end(), std::forward<Args>(args)...);
@@ -370,27 +430,50 @@ template <class Container, class ElementContainer> class basic_document {
         return {pos, std::prev(m_data.end())};
     }
 
+    /*!
+     * \brief Returns data's size in bytes.
+     *
+     * \note To determine the number of elements contained, use either of:
+     * \code
+        boost::distance(doc);
+        std::distance(doc.begin(), doc.end());
+       \endcode
+     */
     int32_t size() const noexcept { return boost::distance(m_data); }
 
+    //! Returns reference to BSON data.
+    //! \note const lvalue overload
     const container_type& data() const& noexcept { return m_data; }
 
+    //! Returns copy of BSON data.
+    //! \note const rvalue overload
     container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) { return m_data; }
 
+    //! Returns rvalue reference to BSON data.
+    //! \note rvalue overload
     container_type&& data() && noexcept(std::is_nothrow_move_constructible<container_type>::value) {
         return std::move(m_data);
     }
 
-    bool valid(const document_validity::validity_level lvl = document_validity::bson_size,
-               const bool recurse = true) const {
+    /*!
+     * \brief Validates document/array according to a validity_level.
+     *
+     * \param lvl Level of validity to check for. Defaults to validity_level::bson_size.
+     * \param recurse boolean controlling whether or not to recurse to child documents/arrays. Defaults to `true`.
+     * \return boolean indicating validity
+     *
+     * \sa validity_level
+     */
+    bool valid(const validity_level lvl = validity_level::bson_size, const bool recurse = true) const {
         bool ret{true};
 
-        if(ret && lvl >= document_validity::data_size)
+        if(ret && lvl >= validity_level::data_size)
             ret = boost::distance(m_data) > sizeof(int32_t);
-        if(ret && lvl >= document_validity::bson_size) {
+        if(ret && lvl >= validity_level::bson_size) {
             ret = static_cast<ptrdiff_t>(boost::distance(m_data)) ==
                   detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());
         }
-        if(ret && lvl >= document_validity::element_construct) {
+        if(ret && lvl >= validity_level::element_construct) {
             try {
                 for(auto&& e : *this) {
                     if(recurse && e.type() == jbson::element_type::document_element)
@@ -405,8 +488,8 @@ template <class Container, class ElementContainer> class basic_document {
                     if(!ret)
                         break;
 
-                    if(lvl & document_validity::unicode_valid && e.type() == jbson::element_type::string_element) {
-                        // TODO: validate utf-8
+                    if((lvl & validity_level::unicode_valid) == validity_level::unicode_valid &&
+                       e.type() == jbson::element_type::string_element) {
                         std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u8to32{};
                         auto str = get<jbson::element_type::string_element>(e);
                         u8to32.from_bytes(str.data(), str.data() + str.size());
@@ -422,6 +505,7 @@ template <class Container, class ElementContainer> class basic_document {
         return ret;
     }
 
+    //! basic_document_set conversion. Allows explicit conversion to document_set and other instantiations.
     template <typename EContainer> explicit operator basic_document_set<EContainer>() const {
         auto set = basic_document_set<EContainer>{};
         for(auto&& e : *this) {
@@ -430,10 +514,12 @@ template <class Container, class ElementContainer> class basic_document {
         return std::move(set);
     }
 
+    //! Determines equality with another basic_document.
     template <typename C, typename EC> bool operator==(const basic_document<C, EC>& other) const {
         return boost::equal(m_data, other.m_data);
     }
 
+    //! Swaps contents with another basic_document.
     void swap(basic_document& other) noexcept {
         using std::swap;
         swap(m_data, other.m_data);
@@ -486,10 +572,9 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
     const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
 
-    bool valid(const document_validity::validity_level lvl = document_validity::bson_size,
-               const bool recurse = true) const {
+    bool valid(const validity_level lvl = validity_level::bson_size, const bool recurse = true) const {
         bool ret = base::valid(lvl, recurse);
-        if(ret && lvl & document_validity::array_indices) {
+        if(ret && (lvl & validity_level::array_indices) == validity_level::array_indices) {
             try {
                 int32_t count{0};
                 for(auto&& e : *this) {
@@ -529,6 +614,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     }
 };
 
+//! Non-member swap for basic_document. Calls basic_document::swap.
 template <typename Container, typename EContainer>
 void swap(basic_document<Container, EContainer>& a,
           basic_document<Container, EContainer>& b) noexcept(noexcept(a.swap(b))) {
@@ -536,6 +622,7 @@ void swap(basic_document<Container, EContainer>& a,
     a.swap(b);
 }
 
+//! Non-member swap for basic_document. Calls basic_document::swap.
 template <typename Container, typename EContainer>
 void swap(basic_array<Container, EContainer>& a, basic_array<Container, EContainer>& b) noexcept(noexcept(a.swap(b))) {
     std::abort();

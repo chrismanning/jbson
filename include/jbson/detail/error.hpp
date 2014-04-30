@@ -21,6 +21,7 @@ namespace jbson {
  * \brief Exception type. Base class of all exceptions thrown directly by jbson.
  */
 struct jbson_error : virtual std::exception, virtual boost::exception {
+    //! Returns name of exception.
     const char* what() const noexcept override { return "jbson_error"; }
 };
 
@@ -28,6 +29,7 @@ struct jbson_error : virtual std::exception, virtual boost::exception {
  * \brief Exception type thrown when an element has a type value not represented by element_type.
  */
 struct invalid_element_type : jbson_error {
+    //! \copybrief jbson_error::what
     const char* what() const noexcept override { return "invalid_element_type"; }
 };
 
@@ -35,6 +37,7 @@ struct invalid_element_type : jbson_error {
  * \brief Exception type thrown when a call to get<element_type>() has an incorrect type parameter.
  */
 struct incompatible_element_conversion : jbson_error {
+    //! \copybrief jbson_error::what
     const char* what() const noexcept override { return "incompatible_element_conversion"; }
 };
 
@@ -42,6 +45,7 @@ struct incompatible_element_conversion : jbson_error {
  * \brief Exception thrown when an element has a value not convertible to that requested.
  */
 struct incompatible_type_conversion : jbson_error {
+    //! \copybrief jbson_error::what
     const char* what() const noexcept override { return "incompatible_type_conversion"; }
 };
 
@@ -49,6 +53,7 @@ struct incompatible_type_conversion : jbson_error {
  * \brief Exception thrown when an element's data size differs from that reported.
  */
 struct invalid_element_size : jbson_error {
+    //! \copybrief jbson_error::what
     const char* what() const noexcept override { return "invalid_element_size"; }
 };
 

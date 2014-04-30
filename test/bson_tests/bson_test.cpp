@@ -45,7 +45,7 @@ protected:
 
 TEST_F(BsonTest, FileTest1) {
     init_bson("test1.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -62,7 +62,7 @@ TEST_F(BsonTest, FileTest1) {
 
 TEST_F(BsonTest, FileTest2) {
     init_bson("test2.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -79,7 +79,7 @@ TEST_F(BsonTest, FileTest2) {
 
 TEST_F(BsonTest, FileTest3) {
     init_bson("test3.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -109,7 +109,7 @@ void value_set(basic_element<Container>& elem, const std::chrono::duration<RepT,
 
 TEST_F(BsonTest, FileTest4) {
     init_bson("test4.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -152,7 +152,7 @@ TEST_F(BsonTest, FileTest4) {
 
 TEST_F(BsonTest, FileTest5) {
     init_bson("test5.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -169,7 +169,7 @@ TEST_F(BsonTest, FileTest5) {
 
 TEST_F(BsonTest, FileTest6) {
     init_bson("test6.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -235,7 +235,7 @@ TEST_F(BsonTest, FileTest6) {
 
 TEST_F(BsonTest, FileTest7) {
     init_bson("test7.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -273,7 +273,7 @@ TEST_F(BsonTest, FileTest7) {
 
 TEST_F(BsonTest, FileTest8) {
     init_bson("test8.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -306,7 +306,7 @@ TEST_F(BsonTest, FileTest8) {
 
 TEST_F(BsonTest, FileTest9) {
     init_bson("test9.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -325,7 +325,7 @@ TEST_F(BsonTest, FileTest9) {
 
 TEST_F(BsonTest, FileTest10) {
     init_bson("test10.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -342,7 +342,7 @@ TEST_F(BsonTest, FileTest10) {
 
 TEST_F(BsonTest, FileTest11) {
     init_bson("test11.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -359,7 +359,7 @@ TEST_F(BsonTest, FileTest11) {
 
 TEST_F(BsonTest, FileTest12) {
     init_bson("test12.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -404,7 +404,7 @@ TEST_F(BsonTest, FileTest12) {
 
 TEST_F(BsonTest, FileTest13) {
     init_bson("test13.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -449,7 +449,7 @@ TEST_F(BsonTest, FileTest13) {
 
 TEST_F(BsonTest, FileTest14) {
     init_bson("test14.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -487,7 +487,7 @@ TEST_F(BsonTest, FileTest14) {
 
 TEST_F(BsonTest, FileTest15) {
     init_bson("test15.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -525,7 +525,7 @@ TEST_F(BsonTest, FileTest15) {
 
 TEST_F(BsonTest, FileTest16) {
     init_bson("test16.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -567,7 +567,7 @@ TEST_F(BsonTest, FileTest16) {
 
 TEST_F(BsonTest, FileTest17) {
     init_bson("test17.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(4, boost::distance(doc));
 
     auto it = doc.begin();
@@ -720,7 +720,7 @@ TEST_F(BsonTest, FileTest17) {
 
 TEST_F(BsonTest, FileTest18) {
     init_bson("test18.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -739,7 +739,7 @@ TEST_F(BsonTest, FileTest18) {
 
 TEST_F(BsonTest, FileTest19) {
     init_bson("test19.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -756,7 +756,7 @@ TEST_F(BsonTest, FileTest19) {
 
 TEST_F(BsonTest, FileTest20) {
     init_bson("test20.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -773,7 +773,7 @@ TEST_F(BsonTest, FileTest20) {
 
 TEST_F(BsonTest, FileTest21) {
     init_bson("test21.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -798,7 +798,7 @@ TEST_F(BsonTest, FileTest21) {
 
 TEST_F(BsonTest, FileTest22) {
     init_bson("test22.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -818,7 +818,7 @@ TEST_F(BsonTest, FileTest22) {
 
 TEST_F(BsonTest, FileTest23) {
     init_bson("test23.bson");
-    ASSERT_TRUE(doc.valid(document_validity::array_indices));
+    ASSERT_TRUE(doc.valid(validity_level::array_indices));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -863,7 +863,7 @@ TEST_F(BsonTest, DISABLED_FileTest24) {
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TEST_F(BsonTest, FileTest25) {
     init_bson("test25.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -883,7 +883,7 @@ JBSON_POP_WARNINGS
 
 TEST_F(BsonTest, FileTest26) {
     init_bson("test26.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -901,7 +901,7 @@ TEST_F(BsonTest, FileTest26) {
 
 TEST_F(BsonTest, FileTest27) {
     init_bson("test27.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -922,7 +922,7 @@ TEST_F(BsonTest, FileTest27) {
 
 TEST_F(BsonTest, FileTest27b) {
     init_bson("test27.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -944,7 +944,7 @@ TEST_F(BsonTest, FileTest27b) {
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TEST_F(BsonTest, FileTest28) {
     init_bson("test28.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -968,7 +968,7 @@ TEST_F(BsonTest, FileTest28) {
 
 TEST_F(BsonTest, FileTest28b) {
     init_bson("test28.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -993,7 +993,7 @@ JBSON_POP_WARNINGS
 
 TEST_F(BsonTest, FileTest29) {
     init_bson("test29.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1010,7 +1010,7 @@ TEST_F(BsonTest, FileTest29) {
 
 TEST_F(BsonTest, FileTest30) {
     init_bson("test30.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1027,7 +1027,7 @@ TEST_F(BsonTest, FileTest30) {
 
 TEST_F(BsonTest, FileTest31) {
     init_bson("test31.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1070,7 +1070,7 @@ TEST_F(BsonTest, FileTest31) {
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TEST_F(BsonTest, FileTest32) {
     init_bson("test32.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1088,7 +1088,7 @@ JBSON_POP_WARNINGS
 
 TEST_F(BsonTest, FileTest33) {
     init_bson("test33.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1119,7 +1119,7 @@ TEST_F(BsonTest, FileTest33) {
 
 TEST_F(BsonTest, FileTest34) {
     init_bson("test34.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1136,7 +1136,7 @@ TEST_F(BsonTest, FileTest34) {
 
 TEST_F(BsonTest, FileTest35) {
     init_bson("test35.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1152,7 +1152,7 @@ TEST_F(BsonTest, FileTest35) {
 
 TEST_F(BsonTest, FileTest36) {
     init_bson("test36.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1171,7 +1171,7 @@ TEST_F(BsonTest, FileTest36) {
 
 TEST_F(BsonTest, FileTest37) {
     init_bson("test37.bson");
-    ASSERT_TRUE(doc.valid(document_validity::unicode_valid));
+    ASSERT_TRUE(doc.valid(validity_level::unicode_valid));
     ASSERT_EQ(1, boost::distance(doc));
 
     auto it = doc.begin();
@@ -1226,90 +1226,90 @@ TEST_F(BsonTest, DISABLED_FileTest39) {
 
 TEST_F(BsonTest, FileTest40) {
     init_bson("test40.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest41) {
     init_bson("test41.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest42) {
     init_bson("test42.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest43) {
     init_bson("test43.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest44) {
     init_bson("test44.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest45) {
     init_bson("test45.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest46) {
     init_bson("test46.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest47) {
     init_bson("test47.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest48) {
     init_bson("test48.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest49) {
     init_bson("test49.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest50) {
     init_bson("test50.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest51) {
     init_bson("test51.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest52) {
     init_bson("test52.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest53) {
     init_bson("test53.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest54) {
     init_bson("test54.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest55) {
     init_bson("test55.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }
 
 TEST_F(BsonTest, FileTest56) {
     init_bson("test56.bson");
-    ASSERT_FALSE(doc.valid(document_validity::unicode_valid));
+    ASSERT_FALSE(doc.valid(validity_level::unicode_valid));
 }
 
 TEST_F(BsonTest, FileTest57) {
     init_bson("test57.bson");
-    ASSERT_FALSE(doc.valid(document_validity::element_construct));
+    ASSERT_FALSE(doc.valid(validity_level::element_construct));
 }

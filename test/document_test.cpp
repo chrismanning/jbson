@@ -147,8 +147,8 @@ TEST(DocumentTest, EmptyDocumentTest) {
 
 TEST(DocumentTest, ValidityTest1) {
     EXPECT_FALSE(basic_document<boost::iterator_range<std::vector<char>::const_iterator>>().valid());
-    EXPECT_TRUE(document().valid(document_validity::bson_size));
-    EXPECT_TRUE(document().valid(document_validity::element_construct));
+    EXPECT_TRUE(document().valid(validity_level::bson_size));
+    EXPECT_TRUE(document().valid(validity_level::element_construct));
 }
 
 TEST(DocumentTest, DocumentParseTest1) {
