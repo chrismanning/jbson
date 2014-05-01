@@ -445,3 +445,73 @@ REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementRe
 using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>,
                                         boost::container::stable_vector<char>>;
 INSTANTIATE_TYPED_TEST_CASE_P(ParameterizedOIDTest, ParameterizedContainerTest, ContainerTypes);
+
+namespace std {
+
+template <typename Container, typename RepT, typename RatioT>
+void value_set(basic_element<Container>&, std::chrono::duration<RepT, RatioT>) {
+    throw 0;
+}
+
+} // namespace std
+
+TEST(ExceptionSafetyTest, ElementExceptionSafetyTest1) {
+    auto e = element{};
+
+    // name(new_name)
+    // not technically thrown in name() but might as well be.
+    ASSERT_THROW(e.name({"abc"s, 4}), std::out_of_range);
+    ASSERT_NO_THROW(EXPECT_EQ("", e.name()));
+
+    // type(new_type)
+    ASSERT_EQ(element_type::null_element, e.type());
+    ASSERT_THROW(e.type((element_type)0), invalid_element_type);
+    EXPECT_EQ(element_type::null_element, e.type());
+
+    // type(new_type)
+    ASSERT_NO_THROW(e.type(element_type::int32_element));
+    ASSERT_EQ(element_type::int32_element, e.type());
+    ASSERT_THROW(e.type((element_type)42), invalid_element_type);
+    EXPECT_EQ(element_type::int32_element, e.type());
+
+    // value(new_type, new_value) - new_value incompatible with new_type
+    ASSERT_EQ(2, e.size());
+    ASSERT_THROW(e.value(element_type::double_element, "not a number"), incompatible_type_conversion);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    // value(new_type, new_value) - new_type invalid
+    ASSERT_EQ(2, e.size());
+    ASSERT_THROW(e.value((element_type) 0, "not a number"), invalid_element_type);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    const auto invalid_doc = basic_document<boost::iterator_range<char*>>{};
+
+    // value(new_type, new_value) - new_value incompatible with new_type
+    ASSERT_EQ(2, e.size());
+    ASSERT_THROW(e.value(element_type::double_element, invalid_doc), incompatible_type_conversion);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    // value(new_type, new_value) - new_value is an invalid document
+    ASSERT_EQ(2, e.size());
+    ASSERT_THROW(e.value(element_type::document_element, invalid_doc), invalid_element_size);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    // value(new_value) - new_value forms an invalid element
+    ASSERT_THROW(e.value(invalid_doc), invalid_element_size);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    // value(new_value) - new_value is a user-defined type - value_set throws
+    ASSERT_THROW(e.value(123ms), int);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+
+    // value(new_type, new_value) - new_value is a user-defined type - value_set throws
+    ASSERT_THROW(e.value(element_type::date_element, 123ms), int);
+    EXPECT_EQ(element_type::int32_element, e.type());
+    EXPECT_EQ(2, e.size());
+}

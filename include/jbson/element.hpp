@@ -299,6 +299,7 @@ template <class Container> struct basic_element {
      * \warning Strong exception guarantee.
      * \throws invalid_element_size When the size of the data differs from that detected.
      * \throws incompatible_type_conversion When val's type is incompatible with \p new_type.
+     * \throws invalid_element_type When type is invalid.
      */
     template <typename T>
     void value(element_type new_type, T&& val,
@@ -325,10 +326,14 @@ template <class Container> struct basic_element {
      *
      * \warning Strong exception guarantee.
      * \throws invalid_element_size When the size of the data differs from that detected.
+     * \throws invalid_element_type When \p new_type is invalid.
      */
     template <typename T>
     void value(element_type new_type, T&& val,
                std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr) {
+        if(!detail::valid_type(new_type))
+            BOOST_THROW_EXCEPTION(invalid_element_type{});
+
         container_type old_data;
         auto old_type = m_type;
         using std::swap;
