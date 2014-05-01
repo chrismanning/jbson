@@ -1,0 +1,2 @@
+<map id="jbson::detail::is_convertible&lt; A, B, std::enable_if_t&lt; std::is_integral&lt; std::decay_t&lt; B &gt; &gt;::value &amp;&amp;std::is_floating_point&lt; std::decay_t&lt; A &gt; &gt;::value &gt; &gt;" name="jbson::detail::is_convertible&lt; A, B, std::enable_if_t&lt; std::is_integral&lt; std::decay_t&lt; B &gt; &gt;::value &amp;&amp;std::is_floating_point&lt; std::decay_t&lt; A &gt; &gt;::value &gt; &gt;">
+</map>

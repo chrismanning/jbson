@@ -1,0 +1,4 @@
+<map id="jbson::detail::is_constructible&lt; A, B, std::enable_if_t&lt; std::is_arithmetic&lt; std::decay_t&lt; A &gt; &gt;::value||std::is_arithmetic&lt; std::decay_t&lt; B &gt; &gt;::value &gt; &gt;" name="jbson::detail::is_constructible&lt; A, B, std::enable_if_t&lt; std::is_arithmetic&lt; std::decay_t&lt; A &gt; &gt;::value||std::is_arithmetic&lt; std::decay_t&lt; B &gt; &gt;::value &gt; &gt;">
+<area shape="rect" id="node2" href="$structjbson_1_1detail_1_1is__convertible.html" title="jbson::detail::is_convertible\l\&lt; B, A \&gt;" alt="" coords="34,206,219,247"/>
+<area shape="rect" id="node6" href="$structjbson_1_1detail_1_1is__convertible.html" title="jbson::detail::is_convertible\l\&lt; A, B, Enable \&gt;" alt="" coords="161,99,345,141"/>
+</map>

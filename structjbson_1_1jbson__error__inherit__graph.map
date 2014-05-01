@@ -1,0 +1,8 @@
+<map id="jbson::jbson_error" name="jbson::jbson_error">
+<area shape="rect" id="node7" href="$structjbson_1_1incompatible__element__conversion.html" title="Exception type thrown when a call to get&lt;element_type&gt;() has an incorrect type parameter. " alt="" coords="379,5,530,46"/>
+<area shape="rect" id="node9" href="$structjbson_1_1incompatible__type__conversion.html" title="Exception thrown when an element has a value not convertible to that requested. " alt="" coords="386,70,523,111"/>
+<area shape="rect" id="node11" href="$structjbson_1_1invalid__document__size.html" title="Exception thrown when an document&#39;s data size differs from that reported. " alt="" coords="355,136,554,163"/>
+<area shape="rect" id="node13" href="$structjbson_1_1invalid__element__size.html" title="Exception thrown when an element&#39;s data size differs from that reported. " alt="" coords="361,187,549,213"/>
+<area shape="rect" id="node15" href="$structjbson_1_1invalid__element__type.html" title="Exception type thrown when an element has a type value not represented by element_type. " alt="" coords="361,237,549,264"/>
+<area shape="rect" id="node2" title="STL class. " alt="" coords="13,111,120,137"/>
+</map>
