@@ -22,6 +22,13 @@ JBSON_CLANG_POP_WARNINGS
 #include "detect_size.hpp"
 
 namespace jbson {
+
+template <typename Container>
+void value_get(const basic_element<Container>&, ...) {
+    static_assert(std::is_void<Container>::value,
+                  "A valid overload of value_get must be supplied for user-defined types.");
+}
+
 namespace detail {
 
 template <typename StringT> struct make_string {

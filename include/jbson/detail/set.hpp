@@ -11,7 +11,10 @@
 
 namespace jbson {
 
-template <typename Container> void value_set(basic_element<Container>&, ...);
+template <typename Container> void value_set(basic_element<Container>&, ...) {
+    static_assert(std::is_void<Container>::value,
+                  "A valid overload of value_set must be supplied for user-defined types.");
+}
 
 namespace detail {
 
