@@ -140,7 +140,7 @@ void init_empty(Container& c,
 }
 
 template <typename Container>
-void init_empty(Container& c, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
+void init_empty(Container&, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
                 std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
@@ -468,7 +468,7 @@ template <class Container, class ElementContainer> class basic_document {
         bool ret{true};
 
         if(ret && lvl >= validity_level::data_size)
-            ret = boost::distance(m_data) > sizeof(int32_t);
+            ret = static_cast<ptrdiff_t>(boost::distance(m_data)) > static_cast<ptrdiff_t>(sizeof(int32_t));
         if(ret && lvl >= validity_level::bson_size) {
             ret = static_cast<ptrdiff_t>(boost::distance(m_data)) ==
                   detail::little_endian_to_native<int32_t>(m_data.begin(), m_data.end());

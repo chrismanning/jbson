@@ -230,34 +230,34 @@ struct json_element_visitor<element_type::regex_element, Element, OutputIterator
 // scoped code
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::scoped_javascript_element, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const { return out; }
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const { return out; }
 };
 
 // voids
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::null_element, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
 
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::undefined_element, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
 
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::max_key, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };
 
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::min_key, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&& e, std::decay_t<OutputIterator> out) const {
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const {
         return boost::range::copy(boost::as_literal("null"), out);
     }
 };

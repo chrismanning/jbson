@@ -144,7 +144,7 @@ struct set_visitor<EType, Container, IteratorT, A,
     }
 
     template <typename T>
-    void operator()(container_type& data, typename container_type::const_iterator it, T&& val,
+    void operator()(container_type&, typename container_type::const_iterator const&, T&&,
                     std::enable_if_t<!std::is_constructible<set_type, T>::value>* = nullptr,
                     std::enable_if_t<!std::is_convertible<std::decay_t<T>, set_type>::value>* = nullptr) const {
         BOOST_THROW_EXCEPTION(incompatible_type_conversion{} << expected_type(typeid(set_type))

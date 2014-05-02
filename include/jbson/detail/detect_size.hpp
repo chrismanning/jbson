@@ -17,33 +17,33 @@ namespace jbson {
 namespace detail {
 
 template <element_type EType, typename ForwardIterator, typename = ForwardIterator> struct size_func {
-    size_t operator()(ForwardIterator, ForwardIterator) const {
+    ptrdiff_t operator()(ForwardIterator, ForwardIterator) const {
         return sizeof(detail::ElementTypeMap<EType, std::string>);
     }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::null_element, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::min_key, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::max_key, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::undefined_element, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr size_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
 };
 
 template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
                                                          << detail::expected_size(sizeof(int32_t)));
@@ -71,13 +71,13 @@ struct size_func<element_type::symbol_element, ForwardIterator>
 template <typename ForwardIterator>
 struct size_func<element_type::binary_element, ForwardIterator>
     : private size_func<element_type::string_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         return size_func<element_type::string_element, ForwardIterator>::operator()(first, last) + 1;
     }
 };
 
 template <typename ForwardIterator> struct size_func<element_type::document_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
                                                          << detail::expected_size(sizeof(int32_t)));
@@ -103,7 +103,7 @@ template <typename ForwardIterator>
 struct size_func<element_type::scoped_javascript_element, ForwardIterator>
     : private size_func<element_type::string_element, ForwardIterator>,
       private size_func<element_type::document_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         if(static_cast<ptrdiff_t>(sizeof(int32_t)) > std::distance(first, last))
             BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
                                                          << detail::expected_size(sizeof(int32_t)));
@@ -130,7 +130,7 @@ template <typename ForwardIterator>
 struct size_func<element_type::db_pointer_element, ForwardIterator>
     : private size_func<element_type::oid_element, ForwardIterator>,
       private size_func<element_type::string_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         const auto size = size_func<element_type::string_element, ForwardIterator>::operator()(first, last);
         std::advance(first, size);
         return size + size_func<element_type::oid_element, ForwardIterator>::operator()(first, last);
@@ -138,7 +138,7 @@ struct size_func<element_type::db_pointer_element, ForwardIterator>
 };
 
 template <typename ForwardIterator> struct size_func<element_type::regex_element, ForwardIterator> {
-    size_t operator()(ForwardIterator first, ForwardIterator last) const {
+    ptrdiff_t operator()(ForwardIterator first, ForwardIterator last) const {
         auto it = std::next(std::find(first, last, '\0'));
         it = std::next(std::find(it, last, '\0'));
         return std::distance(first, it);

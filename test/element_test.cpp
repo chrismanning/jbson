@@ -351,7 +351,7 @@ template <typename ElemType> struct VoidVisitor {
 
     explicit VoidVisitor(ElemType v) : m_v(v) {}
 
-    void operator()(boost::string_ref name, element_type e, ElemType v) {
+    void operator()(boost::string_ref /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(element_type::double_element, e);
         EXPECT_EQ(m_v, v);
     }
@@ -377,7 +377,7 @@ template <typename ElemType> struct BoolVisitor {
 
     explicit BoolVisitor(ElemType v) : m_v(v) {}
 
-    bool operator()(boost::string_ref name, element_type e, ElemType v) {
+    bool operator()(boost::string_ref /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(m_v, v);
         return element_type::double_element == e;
     }
