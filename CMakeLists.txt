@@ -100,4 +100,4 @@ add_custom_target(doc
 )
 endif(DOXYGEN_FOUND)
 
-install(DIRECTORY include/jbson DESTINATION include/jsbon)
+install(DIRECTORY include/jbson DESTINATION include/jbson)
