@@ -1,7 +1,7 @@
 project(jbson CXX)
 cmake_minimum_required(VERSION 2.8)
 
-option(JBSON_ENABLE_TESTING "Enables testing of jbson" ON)
+option(JBSON_ENABLE_TESTING "Enables testing of jbson" OFF)
 option(JBSON_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
 option(JBSON_LEAK_CHECKER "Enable memory leak checking where available" OFF)
 
@@ -37,7 +37,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 if(${JBSON_ENABLE_TESTING})
 enable_testing()
-endif()
 
 get_cmake_property(CACHE_VARS CACHE_VARIABLES)
 foreach(CACHE_VAR ${CACHE_VARS})
@@ -88,6 +87,8 @@ function(cxx_test test_name)
 endfunction()
 
 add_subdirectory(test)
+
+endif(${JBSON_ENABLE_TESTING})
 
 find_package(Doxygen)
 
