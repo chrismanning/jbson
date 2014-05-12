@@ -1,9 +1,41 @@
+body, table, div, p, dl {
+  font: 13px/1.2 "Droid Sans",arial,sans-serif;
+}
+
+table.directory {
+  font: inherit;
+  line-height: 1.2;
+}
+
+.tabs {
+  font-family: "Droid Sans",arial,sans-serif;
+  font-size: 0.95em;
+}
+
+.icon {
+  font-family: inherit;
+}
+
+div.toc li {
+  font-family: "Droid Sans",arial,sans-serif;
+}
+
 div.fragment {
-padding: 4px;
+  padding: 4px;
+  border-radius: 4px;
 }
 
 div.line {
-line-height: 1.3;
+font: 1em/1.2em monospace;
+}
+
+#projectname {
+  font: 3em "Droid Sans",arial,sans-serif;
+}
+
+#projectbrief {
+  font: 1.2em "Droid Sans",arial,sans-serif;
+  line-height: 1.3;
 }
 
 #forkme_banner {

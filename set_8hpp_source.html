@@ -201,7 +201,7 @@
 <div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;    }</div>
 <div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;</div>
 <div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;</div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;    <span class="keywordtype">void</span> operator()(container_type&amp; data, <span class="keyword">typename</span> container_type::const_iterator it, T&amp;&amp; val,</div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;    <span class="keywordtype">void</span> operator()(container_type&amp;, <span class="keyword">typename</span> container_type::const_iterator <span class="keyword">const</span>&amp;, T&amp;&amp;,</div>
 <div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;                    std::enable_if_t&lt;!std::is_constructible&lt;set_type, T&gt;::value&gt;* = <span class="keyword">nullptr</span>,</div>
 <div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;                    std::enable_if_t&lt;!std::is_convertible&lt;std::decay_t&lt;T&gt;, set_type&gt;::value&gt;* = <span class="keyword">nullptr</span>)<span class="keyword"> const </span>{</div>
 <div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;        BOOST_THROW_EXCEPTION(incompatible_type_conversion{} &lt;&lt; expected_type(<span class="keyword">typeid</span>(set_type))</div>

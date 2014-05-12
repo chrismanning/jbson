@@ -103,6 +103,10 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1jbson__error.html">jbson_error</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exception type. Base class of all exceptions thrown directly by jbson.  <a href="structjbson_1_1jbson__error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1json__parse__error.html">json_parse_error</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1json__reader.html">json_reader</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -115,6 +119,9 @@ template&lt;typename Container &gt; </td></tr>
 <tr class="memitem:a959493857db48cf08853068ff252d880"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson.html#a959493857db48cf08853068ff252d880">basic_document_set</a> = std::multiset&lt; <a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt;, <a class="el" href="structjbson_1_1detail_1_1elem__compare.html">detail::elem_compare</a> &gt;</td></tr>
 <tr class="memdesc:a959493857db48cf08853068ff252d880"><td class="mdescLeft">&#160;</td><td class="mdescRight">BSON document in the form of a std::set for ease of manipulation. <br /></td></tr>
 <tr class="separator:a959493857db48cf08853068ff252d880"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a46539f1b148c8d63e67f6a196fee4e7a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a46539f1b148c8d63e67f6a196fee4e7a"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>current_line_string</b> = boost::error_info&lt; struct line_, std::string &gt;</td></tr>
+<tr class="separator:a46539f1b148c8d63e67f6a196fee4e7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d7259346f8833a88b98d9767d4a4bd1"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3d7259346f8833a88b98d9767d4a4bd1"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejbson.html#a3d7259346f8833a88b98d9767d4a4bd1">document</a> = <a class="el" href="classjbson_1_1basic__document.html">basic_document</a>&lt; std::vector&lt; char &gt;&gt;</td></tr>
 <tr class="memdesc:a3d7259346f8833a88b98d9767d4a4bd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default <a class="el" href="classjbson_1_1basic__document.html" title="BSON document. ">basic_document</a> type alias for owned BSON data. <br /></td></tr>
@@ -127,6 +134,18 @@ using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="nam
 using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejbson.html#ae2757fc80c35ebcc42429dc79dd1ad7a">element</a> = <a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; std::vector&lt; char &gt;&gt;</td></tr>
 <tr class="memdesc:ae2757fc80c35ebcc42429dc79dd1ad7a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default <a class="el" href="structjbson_1_1basic__element.html" title="BSON element. ">basic_element</a> type alias for owned BSON data. <br /></td></tr>
 <tr class="separator:ae2757fc80c35ebcc42429dc79dd1ad7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d6a7d101428bc216bc14adbfe6c6d14"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6d6a7d101428bc216bc14adbfe6c6d14"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>expected_token</b> = boost::error_info&lt; struct token_, std::string &gt;</td></tr>
+<tr class="separator:a6d6a7d101428bc216bc14adbfe6c6d14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4187497d49455eaecf7afd5e14f94c35"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4187497d49455eaecf7afd5e14f94c35"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>line_number</b> = boost::error_info&lt; struct line_num_, size_t &gt;</td></tr>
+<tr class="separator:a4187497d49455eaecf7afd5e14f94c35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8590cdc392cfa73eef247a683c86962a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8590cdc392cfa73eef247a683c86962a"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>line_position</b> = boost::error_info&lt; struct line_pos_, size_t &gt;</td></tr>
+<tr class="separator:a8590cdc392cfa73eef247a683c86962a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53c87c85f6bac35919f47cef970a5077"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a53c87c85f6bac35919f47cef970a5077"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>parse_error</b> = boost::error_info&lt; struct err_val_, json_error_num &gt;</td></tr>
+<tr class="separator:a53c87c85f6bac35919f47cef970a5077"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -159,6 +178,11 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:ad190198b7531d1c57e870c064b9f88f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The element_type enum represents a BSON data type.  <a href="namespacejbson.html#ad190198b7531d1c57e870c064b9f88f7">More...</a><br /></td></tr>
 <tr class="separator:ad190198b7531d1c57e870c064b9f88f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a497b2f1a45cf1d370fd50aa17d5335ce"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a497b2f1a45cf1d370fd50aa17d5335ce"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>json_error_num</b> { <b>invalid_root_element</b>, 
+<b>unexpected_end_of_range</b>, 
+<b>unexpected_token</b>
+ }</td></tr>
+<tr class="separator:a497b2f1a45cf1d370fd50aa17d5335ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aad96784038e0c7898356b553138c3d04"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a> : uint8_t { <br />
 &#160;&#160;<a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04a28d8f4601cd20a7ecff4600692bc185a">validity_level::data_size</a> = 0, 
 <a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04ac72ee5fb12c82c5390176d495ac02443">validity_level::bson_size</a> = 0b0001, 
@@ -173,6 +197,9 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a51fea4ba90a6693355bfe983bbfc593b"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a51fea4ba90a6693355bfe983bbfc593b"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>error_message</b> (<a class="el" href="structjbson_1_1json__parse__error.html">json_parse_error</a> &amp;err)</td></tr>
+<tr class="separator:a51fea4ba90a6693355bfe983bbfc593b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a810e5cdb5903f8282f1213b94f25cc29"><td class="memTemplParams" colspan="2">template&lt;element_type EType, typename Container &gt; </td></tr>
 <tr class="memitem:a810e5cdb5903f8282f1213b94f25cc29"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson.html#a810e5cdb5903f8282f1213b94f25cc29">get</a> (const <a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt; &amp;elem) -&gt; <a class="el" href="namespacejbson_1_1detail.html#a44faf9fbb1cb4a16db909040b15a05f2">detail::ElementTypeMap</a>&lt; EType, Container &gt;</td></tr>
 <tr class="memdesc:a810e5cdb5903f8282f1213b94f25cc29"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access element value of specific element_type.  <a href="#a810e5cdb5903f8282f1213b94f25cc29">More...</a><br /></td></tr>
@@ -189,6 +216,11 @@ Functions</h2></td></tr>
 bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejbson.html#abf55ac133c7e78ff3cdcced4c319dc97">operator&lt;</a> (<a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a> a, <a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a> b)</td></tr>
 <tr class="memdesc:abf55ac133c7e78ff3cdcced4c319dc97"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allow less than (&lt;) comparison for validity_level. <br /></td></tr>
 <tr class="separator:abf55ac133c7e78ff3cdcced4c319dc97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa17f3a4a9c01e6c793e6faa34df06eeb"><td class="memTemplParams" colspan="2"><a class="anchor" id="aa17f3a4a9c01e6c793e6faa34df06eeb"></a>
+template&lt;typename CharT , typename TraitsT &gt; </td></tr>
+<tr class="memitem:aa17f3a4a9c01e6c793e6faa34df06eeb"><td class="memTemplItemLeft" align="right" valign="top">std::basic_ostream&lt; CharT, <br class="typebreak" />
+TraitsT &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator&lt;&lt;</b> (std::basic_ostream&lt; CharT, TraitsT &gt; &amp;os, json_error_num err)</td></tr>
+<tr class="separator:aa17f3a4a9c01e6c793e6faa34df06eeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6b68f9bcc2309511c8256de29e766ae"><td class="memTemplParams" colspan="2"><a class="anchor" id="aa6b68f9bcc2309511c8256de29e766ae"></a>
 template&lt;typename CharT , typename TraitsT &gt; </td></tr>
 <tr class="memitem:aa6b68f9bcc2309511c8256de29e766ae"><td class="memTemplItemLeft" align="right" valign="top">std::basic_ostream&lt; CharT, <br class="typebreak" />
@@ -203,6 +235,18 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="name
 <a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejbson.html#adfecff103e0c7064664823c6cbbb6fa1">operator|</a> (<a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a> a, <a class="el" href="namespacejbson.html#aad96784038e0c7898356b553138c3d04">validity_level</a> b)</td></tr>
 <tr class="memdesc:adfecff103e0c7064664823c6cbbb6fa1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allow bitwise-or (|) for validity_level. <br /></td></tr>
 <tr class="separator:adfecff103e0c7064664823c6cbbb6fa1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadaada753631614bb4671cc44948af1c"><td class="memTemplParams" colspan="2"><a class="anchor" id="aadaada753631614bb4671cc44948af1c"></a>
+template&lt;typename Container , typename EContainer , typename StrRngT &gt; </td></tr>
+<tr class="memitem:aadaada753631614bb4671cc44948af1c"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>path_select</b> (<a class="el" href="classjbson_1_1basic__document.html">basic_document</a>&lt; Container, EContainer &gt; &amp;&amp;doc, StrRngT &amp;&amp;path_rng)</td></tr>
+<tr class="separator:aadaada753631614bb4671cc44948af1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50315473de3989d439dd26ddc44f4289"><td class="memTemplParams" colspan="2"><a class="anchor" id="a50315473de3989d439dd26ddc44f4289"></a>
+template&lt;typename ElemRangeT , typename StrRngT &gt; </td></tr>
+<tr class="memitem:a50315473de3989d439dd26ddc44f4289"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>path_select</b> (ElemRangeT &amp;&amp;doc, StrRngT &amp;&amp;path_rng, std::enable_if_t&lt; <a class="el" href="namespacejbson_1_1detail.html#ae69e70904ca6d48e0df89bf40ef5a6d4">detail::is_range_of_value</a>&lt; ElemRangeT, boost::mpl::quote1&lt; <a class="el" href="structjbson_1_1detail_1_1is__element.html">detail::is_element</a> &gt;&gt;::value &gt; *=nullptr)</td></tr>
+<tr class="separator:a50315473de3989d439dd26ddc44f4289"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a416e7d6df06eb84412b58385a02f4d7b"><td class="memTemplParams" colspan="2"><a class="anchor" id="a416e7d6df06eb84412b58385a02f4d7b"></a>
+template&lt;typename DocRangeT , typename StrRngT &gt; </td></tr>
+<tr class="memitem:a416e7d6df06eb84412b58385a02f4d7b"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>path_select</b> (DocRangeT &amp;&amp;docs, StrRngT &amp;&amp;path_rng, std::enable_if_t&lt; <a class="el" href="namespacejbson_1_1detail.html#ae69e70904ca6d48e0df89bf40ef5a6d4">detail::is_range_of_value</a>&lt; DocRangeT, boost::mpl::bind&lt; boost::mpl::quote2&lt; <a class="el" href="namespacejbson_1_1detail.html#ae69e70904ca6d48e0df89bf40ef5a6d4">detail::is_range_of_value</a> &gt;, boost::mpl::arg&lt; 1 &gt;, boost::mpl::quote1&lt; <a class="el" href="structjbson_1_1detail_1_1is__element.html">detail::is_element</a> &gt;&gt;&gt;::value &gt; *=nullptr)</td></tr>
+<tr class="separator:a416e7d6df06eb84412b58385a02f4d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8f8ac4b46439e145c255c15c95595599"><td class="memTemplParams" colspan="2"><a class="anchor" id="a8f8ac4b46439e145c255c15c95595599"></a>
 template&lt;typename Container &gt; </td></tr>
 <tr class="memitem:a8f8ac4b46439e145c255c15c95595599"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson.html#a8f8ac4b46439e145c255c15c95595599">swap</a> (<a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt; &amp;a, <a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt; &amp;b) noexcept(noexcept(a.swap(b)))</td></tr>
@@ -218,6 +262,9 @@ template&lt;typename Container , typename EContainer &gt; </td></tr>
 <tr class="memitem:aa49292d7920cca026704f3308618519f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson.html#aa49292d7920cca026704f3308618519f">swap</a> (<a class="el" href="classjbson_1_1basic__array.html">basic_array</a>&lt; Container, EContainer &gt; &amp;a, <a class="el" href="classjbson_1_1basic__array.html">basic_array</a>&lt; Container, EContainer &gt; &amp;b) noexcept(noexcept(a.swap(b)))</td></tr>
 <tr class="memdesc:aa49292d7920cca026704f3308618519f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Non-member swap for <a class="el" href="classjbson_1_1basic__document.html" title="BSON document. ">basic_document</a>. Calls <a class="el" href="classjbson_1_1basic__document.html#a9c97f095ad6fd7202c44e9467d8c9741" title="Swaps contents with another basic_document. ">basic_document::swap</a>. <br /></td></tr>
 <tr class="separator:aa49292d7920cca026704f3308618519f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad07d5e686a59d595730b04b018e922d7"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ad07d5e686a59d595730b04b018e922d7"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (const <a class="el" href="structjbson_1_1json__parse__error.html">json_parse_error</a> &amp;)</td></tr>
+<tr class="separator:ad07d5e686a59d595730b04b018e922d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a700ecde03bc1fb1950d26ddbd84f0172"><td class="memTemplParams" colspan="2"><a class="anchor" id="a700ecde03bc1fb1950d26ddbd84f0172"></a>
 template&lt;typename Container &gt; </td></tr>
 <tr class="memitem:a700ecde03bc1fb1950d26ddbd84f0172"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>value_get</b> (const <a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt; &amp;,...)</td></tr>
@@ -242,6 +289,14 @@ template&lt;typename Container , typename IteratorT &gt; </td></tr>
 template&lt;typename Container , typename SetContainer &gt; </td></tr>
 <tr class="memitem:a9700992253d41fee5a027b0dbf4d5c1e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>value_set</b> (<a class="el" href="structjbson_1_1basic__element.html">basic_element</a>&lt; Container &gt; &amp;c, const <a class="el" href="namespacejbson.html#a959493857db48cf08853068ff252d880">basic_document_set</a>&lt; SetContainer &gt; &amp;val)</td></tr>
 <tr class="separator:a9700992253d41fee5a027b0dbf4d5c1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a696714ad316c5ead3ff531cbeea9305c"><td class="memTemplParams" colspan="2"><a class="anchor" id="a696714ad316c5ead3ff531cbeea9305c"></a>
+template&lt;typename OutputIterator , typename Container &gt; </td></tr>
+<tr class="memitem:a696714ad316c5ead3ff531cbeea9305c"><td class="memTemplItemLeft" align="right" valign="top">std::decay_t&lt; OutputIterator &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>write_json</b> (const <a class="el" href="classjbson_1_1basic__array.html">basic_array</a>&lt; Container &gt; &amp;, OutputIterator)</td></tr>
+<tr class="separator:a696714ad316c5ead3ff531cbeea9305c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a527318580880c276b75f67188386a009"><td class="memTemplParams" colspan="2"><a class="anchor" id="a527318580880c276b75f67188386a009"></a>
+template&lt;typename OutputIterator , typename Container &gt; </td></tr>
+<tr class="memitem:a527318580880c276b75f67188386a009"><td class="memTemplItemLeft" align="right" valign="top">std::decay_t&lt; OutputIterator &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>write_json</b> (const <a class="el" href="classjbson_1_1basic__document.html">basic_document</a>&lt; Container &gt; &amp;, OutputIterator)</td></tr>
+<tr class="separator:a527318580880c276b75f67188386a009"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The jbson namespace contains the main classes and functions for viewing, creating and manipulating BSON data. </p>

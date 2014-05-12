@@ -203,7 +203,7 @@ Document Set</h2>
 </div><!-- fragment --><h2><a class="anchor" id="json"></a>
 JSON Parsing</h2>
 <p>JSON documents can be parse with the <code>json_reader</code> class, which parses directly to BSON data and can be implicitly converted to any valid <code>basic_document</code>, <code>basic_array</code> or <code>basic_document_set</code>. It can also be move-converted to a <code>document</code> or <code>array</code> for efficient conversion.</p>
-<div class="fragment"><div class="line">jbson::json_reader reader{};</div>
+<div class="fragment"><div class="line"><a class="code" href="structjbson_1_1json__reader.html">jbson::json_reader</a> reader{};</div>
 <div class="line">reader.parse(<span class="stringliteral">&quot;{\&quot;some json\&quot;: 123 }&quot;</span>);</div>
 <div class="line">reader.parse(R<span class="stringliteral">&quot;({&quot;some json&quot;: 123 })&quot;); </span><span class="comment">// C++11 raw string</span></div>
 <div class="line"><span class="keyword">auto</span> doc = <a class="code" href="namespacejbson.html#a3d7259346f8833a88b98d9767d4a4bd1">jbson::document</a>(std::move(reader));</div>

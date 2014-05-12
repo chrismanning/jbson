@@ -4,5 +4,6 @@
 <area shape="rect" id="node11" href="$structjbson_1_1invalid__document__size.html" title="Exception thrown when an document&#39;s data size differs from that reported. " alt="" coords="355,136,554,163"/>
 <area shape="rect" id="node13" href="$structjbson_1_1invalid__element__size.html" title="Exception thrown when an element&#39;s data size differs from that reported. " alt="" coords="361,187,549,213"/>
 <area shape="rect" id="node15" href="$structjbson_1_1invalid__element__type.html" title="Exception type thrown when an element has a type value not represented by element_type. " alt="" coords="361,237,549,264"/>
-<area shape="rect" id="node2" title="STL class. " alt="" coords="13,111,120,137"/>
+<area shape="rect" id="node17" href="$structjbson_1_1json__parse__error.html" title="jbson::json_parse_error" alt="" coords="373,288,536,315"/>
+<area shape="rect" id="node2" title="STL class. " alt="" coords="13,136,120,163"/>
 </map>

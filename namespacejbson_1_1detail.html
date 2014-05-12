@@ -66,6 +66,12 @@
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1codecvt.html">codecvt</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1codecvt_3_01char_01_4.html">codecvt&lt; char &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1codecvt_3_01char16__t_01_4.html">codecvt&lt; char16_t &gt;</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><b>container_has_push_back_impl</b></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1document__iter.html">document_iter</a></td></tr>
@@ -107,6 +113,8 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1is__valid__func.html">is_valid_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper for type validity checking visitors.  <a href="structjbson_1_1detail_1_1is__valid__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1json__element__visitor.html">json_element_visitor</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1make__string.html">make_string</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structjbson_1_1detail_1_1make__string_3_01boost_1_1string__ref_01_4.html">make_string&lt; boost::string_ref &gt;</a></td></tr>
@@ -134,6 +142,10 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>actual_size</b> = bo
 <tr class="memitem:a69f958a9e450918c7ae5ce9f4805fa35"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a69f958a9e450918c7ae5ce9f4805fa35"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>actual_type</b> = boost::error_info&lt; struct actual_type_, std::type_index &gt;</td></tr>
 <tr class="separator:a69f958a9e450918c7ae5ce9f4805fa35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adbd6a151211099e9d93d85caf4183e88"><td class="memTemplParams" colspan="2"><a class="anchor" id="adbd6a151211099e9d93d85caf4183e88"></a>
+template&lt;typename CharT &gt; </td></tr>
+<tr class="memitem:adbd6a151211099e9d93d85caf4183e88"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>codecvt_t</b> = typename <a class="el" href="structjbson_1_1detail_1_1codecvt.html">codecvt</a>&lt; CharT &gt;::type</td></tr>
+<tr class="separator:adbd6a151211099e9d93d85caf4183e88"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac267f03c904d80404e89585e9485d0ba"><td class="memTemplParams" colspan="2">template&lt;typename Container &gt; </td></tr>
 <tr class="memitem:ac267f03c904d80404e89585e9485d0ba"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson_1_1detail.html#ac267f03c904d80404e89585e9485d0ba">container_has_push_back</a> = typename mpl::eval_if&lt; has_iterator&lt; std::decay_t&lt; Container &gt;&gt;, container_has_push_back_impl&lt; std::decay_t&lt; Container &gt;&gt;, std::false_type &gt;::type</td></tr>
 <tr class="memdesc:ac267f03c904d80404e89585e9485d0ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type trait to determine if type is a container with a push_back() function.  <a href="#ac267f03c904d80404e89585e9485d0ba">More...</a><br /></td></tr>
@@ -240,6 +252,22 @@ template&lt;typename Container &gt; </td></tr>
 <tr class="memitem:a4b4a54e48d382e245e7a1ccaae785e4e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacejbson_1_1detail.html#a4b4a54e48d382e245e7a1ccaae785e4e">init_empty</a> (Container &amp;c)</td></tr>
 <tr class="memdesc:a4b4a54e48d382e245e7a1ccaae785e4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialises a container or range for a valid empty <a class="el" href="classjbson_1_1basic__document.html" title="BSON document. ">basic_document</a> or <a class="el" href="classjbson_1_1basic__array.html" title="BSON array. ">basic_array</a>. <br /></td></tr>
 <tr class="separator:a4b4a54e48d382e245e7a1ccaae785e4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff3edd75d9ef75122716477cee6674bd"><td class="memTemplParams" colspan="2"><a class="anchor" id="aff3edd75d9ef75122716477cee6674bd"></a>
+template&lt;typename CharT &gt; </td></tr>
+<tr class="memitem:aff3edd75d9ef75122716477cee6674bd"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>iscntrl</b> (CharT c)</td></tr>
+<tr class="separator:aff3edd75d9ef75122716477cee6674bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a985ab3beaef9d94ee7e194f039f07d03"><td class="memTemplParams" colspan="2"><a class="anchor" id="a985ab3beaef9d94ee7e194f039f07d03"></a>
+template&lt;typename CharT &gt; </td></tr>
+<tr class="memitem:a985ab3beaef9d94ee7e194f039f07d03"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>isdigit</b> (CharT c)</td></tr>
+<tr class="separator:a985ab3beaef9d94ee7e194f039f07d03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70c9f00750f78d036494fa8b3b325d50"><td class="memTemplParams" colspan="2"><a class="anchor" id="a70c9f00750f78d036494fa8b3b325d50"></a>
+template&lt;typename CharT &gt; </td></tr>
+<tr class="memitem:a70c9f00750f78d036494fa8b3b325d50"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>isspace</b> (CharT c)</td></tr>
+<tr class="separator:a70c9f00750f78d036494fa8b3b325d50"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84dfdcfdec16f11eb5593180e560f324"><td class="memTemplParams" colspan="2"><a class="anchor" id="a84dfdcfdec16f11eb5593180e560f324"></a>
+template&lt;typename CharT &gt; </td></tr>
+<tr class="memitem:a84dfdcfdec16f11eb5593180e560f324"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>isxdigit</b> (CharT c)</td></tr>
+<tr class="separator:a84dfdcfdec16f11eb5593180e560f324"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab0c7e6896834d8c1073b7542f4f745e7"><td class="memTemplParams" colspan="2"><a class="anchor" id="ab0c7e6896834d8c1073b7542f4f745e7"></a>
 template&lt;typename T , typename ForwardIterator &gt; </td></tr>
 <tr class="memitem:ab0c7e6896834d8c1073b7542f4f745e7"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>little_endian_to_native</b> (ForwardIterator first, ForwardIterator last)</td></tr>
@@ -248,6 +276,22 @@ template&lt;typename T , typename ForwardIterator &gt; </td></tr>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a71e791366dee0590ab1e049d2b001a58"><td class="memTemplItemLeft" align="right" valign="top">std::array&lt; char, sizeof(T)&gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>native_to_little_endian</b> (T val)</td></tr>
 <tr class="separator:a71e791366dee0590ab1e049d2b001a58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f6b1e772a6957be9cce5bca710a86c4"><td class="memTemplParams" colspan="2"><a class="anchor" id="a9f6b1e772a6957be9cce5bca710a86c4"></a>
+template&lt;typename ElemRangeT , typename StrRngT , typename OutIterator &gt; </td></tr>
+<tr class="memitem:a9f6b1e772a6957be9cce5bca710a86c4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>select</b> (ElemRangeT &amp;&amp;doc, StrRngT path, OutIterator out)</td></tr>
+<tr class="separator:a9f6b1e772a6957be9cce5bca710a86c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5216ac34d45a1467e24471817ef60d3"><td class="memTemplParams" colspan="2"><a class="anchor" id="aa5216ac34d45a1467e24471817ef60d3"></a>
+template&lt;typename ElemRangeT , typename StrRngT , typename OutIterator &gt; </td></tr>
+<tr class="memitem:aa5216ac34d45a1467e24471817ef60d3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>select_expr</b> (ElemRangeT &amp;&amp;doc, StrRngT path, StrRngT expr, OutIterator out)</td></tr>
+<tr class="separator:aa5216ac34d45a1467e24471817ef60d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a440298a3dacc100230f605644f7db483"><td class="memTemplParams" colspan="2"><a class="anchor" id="a440298a3dacc100230f605644f7db483"></a>
+template&lt;typename ElemRangeT , typename StrRngT , typename OutIterator &gt; </td></tr>
+<tr class="memitem:a440298a3dacc100230f605644f7db483"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>select_name</b> (ElemRangeT &amp;&amp;doc, StrRngT path, StrRngT name, OutIterator out)</td></tr>
+<tr class="separator:a440298a3dacc100230f605644f7db483"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ee807eca75cdd5458beb7c8c6f07f0e"><td class="memTemplParams" colspan="2"><a class="anchor" id="a7ee807eca75cdd5458beb7c8c6f07f0e"></a>
+template&lt;typename ElemRangeT , typename StrRngT , typename OutIterator &gt; </td></tr>
+<tr class="memitem:a7ee807eca75cdd5458beb7c8c6f07f0e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>select_sub</b> (ElemRangeT &amp;&amp;doc, StrRngT path, StrRngT subscript, OutIterator out)</td></tr>
+<tr class="separator:a7ee807eca75cdd5458beb7c8c6f07f0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af99620465ee04ec36955e03cdbfa40d7"><td class="memTemplParams" colspan="2"><a class="anchor" id="af99620465ee04ec36955e03cdbfa40d7"></a>
 template&lt;typename Container , typename IteratorT , typename T &gt; </td></tr>
 <tr class="memitem:af99620465ee04ec36955e03cdbfa40d7"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>serialise</b> (Container &amp;c, IteratorT &amp;it, T val, std::enable_if_t&lt; std::is_arithmetic&lt; T &gt;::value &gt; *=nullptr)</td></tr>
