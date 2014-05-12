@@ -5,7 +5,7 @@ option(JBSON_ENABLE_TESTING "Enables testing of jbson" ON)
 option(JBSON_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
 option(JBSON_LEAK_CHECKER "Enable memory leak checking where available" OFF)
 
-set(JBSON_DOC_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/doc/" CACHE FILEPATH
+set(JBSON_DOC_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/doc/" CACHE PATH
 "Directory to output generated documentation")
 
 if(${JBSON_SANITIZE_ADDRESS})
