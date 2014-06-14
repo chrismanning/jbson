@@ -211,12 +211,17 @@ using is_range_of_value = is_range_of<RangeT, ElementTrait, mpl::quote1<boost::r
 template <typename RangeT, typename ElementT>
 using is_range_of_same_value = is_range_of_value<RangeT, mpl::bind2<mpl::quote2<std::is_same>, ElementT, mpl::_1>>;
 
+namespace {
+template <typename T>
+using range_mutable_iterator = boost::range_mutable_iterator<T>;
+}
+
 /*!
  * \brief Type trait to apply a unary metafunction trait to the iterator type of a Range.
  * \sa is_range_of_same_value is_range_of
  */
 template <typename RangeT, typename ElementTrait>
-using is_range_of_iterator = is_range_of<RangeT, ElementTrait, mpl::quote1<boost::range_mutable_iterator>>;
+using is_range_of_iterator = is_range_of<RangeT, ElementTrait, mpl::quote1<range_mutable_iterator>>;
 
 /*!
  * \brief Variadic version of boost::mpl::quoteN.

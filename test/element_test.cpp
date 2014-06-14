@@ -442,8 +442,8 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
 }
 
 REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementRegexTest);
-using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>,
-                                        boost::container::stable_vector<char>>;
+using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>/*,
+                                        boost::container::stable_vector<char>*/>;
 INSTANTIATE_TYPED_TEST_CASE_P(ParameterizedOIDTest, ParameterizedContainerTest, ContainerTypes);
 
 namespace std {
