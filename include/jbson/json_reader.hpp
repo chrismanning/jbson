@@ -57,36 +57,31 @@ struct json_reader {
         parse(line_it{std::begin(range)}, line_it{std::end(range)});
     }
 
-    template <typename C>
-    operator basic_document_set<C>() const& {
+    template <typename C> operator basic_document_set<C>() const & {
         if(m_data.size() < 5)
             return basic_document_set<C>{};
         return basic_document_set<C>(basic_document<C>(*this));
     }
 
-    template <typename C1, typename C2>
-    operator basic_document<C1, C2>() const& {
+    template <typename C1, typename C2> operator basic_document<C1, C2>() const & {
         if(m_data.size() < 5)
             return basic_document<C1, C2>{};
         return basic_document<C1, C2>{m_data};
     }
 
-    template <typename C1, typename C2>
-    operator basic_array<C1, C2>() const& {
+    template <typename C1, typename C2> operator basic_array<C1, C2>() const & {
         if(m_data.size() < 5)
             return basic_array<C1, C2>{};
         return basic_array<C1, C2>{m_data};
     }
 
-    template <typename Vec>
-    operator basic_document<container_type, Vec>() && {
+    template <typename Vec> operator basic_document<container_type, Vec>() && {
         if(m_data.size() < 5)
             return basic_document<container_type, Vec>{};
         return basic_document<container_type, Vec>{std::move(m_data)};
     }
 
-    template <typename Vec>
-    operator basic_array<container_type, Vec>() && {
+    template <typename Vec> operator basic_array<container_type, Vec>() && {
         if(m_data.size() < 5)
             return basic_array<container_type, Vec>{};
         return basic_array<container_type, Vec>{std::move(m_data)};
@@ -138,7 +133,11 @@ struct json_reader {
     container_type m_data;
 };
 
-enum class json_error_num { invalid_root_element, unexpected_end_of_range, unexpected_token, };
+enum class json_error_num {
+    invalid_root_element,
+    unexpected_end_of_range,
+    unexpected_token,
+};
 
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, json_error_num err) {
@@ -195,8 +194,7 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
             try {
                 thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
                 e << current_line_string(cvt.to_bytes(str));
-            }
-            catch(...)
+            } catch(...)
 #endif // BOOST_NO_CXX11_HDR_CODECVT
             {
                 auto c = str[boost::spirit::get_line(current)];
@@ -641,14 +639,10 @@ template <typename CharT> constexpr bool isspace(CharT c) {
     return c == 0x20 || (std::make_unsigned_t<CharT>)(c - '\t') < 5;
 }
 
-template <typename CharT> struct codecvt : std::codecvt<CharT, char, std::mbstate_t> {
-    using type = codecvt<CharT>;
-};
+template <typename CharT> struct codecvt : std::codecvt<CharT, char, std::mbstate_t> { using type = codecvt<CharT>; };
 
 #ifndef BOOST_NO_CXX11_HDR_CODECVT
-template <> struct codecvt<wchar_t> {
-    using type = std::codecvt_utf8<wchar_t>;
-};
+template <> struct codecvt<wchar_t> { using type = std::codecvt_utf8<wchar_t>; };
 #endif // BOOST_NO_CXX11_HDR_CODECVT
 
 template <typename CharT> using codecvt_t = typename codecvt<CharT>::type;

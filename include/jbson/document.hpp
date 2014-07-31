@@ -69,8 +69,8 @@ struct document_iter
      */
     template <class OtherValue, typename OtherIt>
     document_iter(const document_iter<OtherValue, OtherIt>& other,
-                  std::enable_if_t<std::is_convertible<OtherValue, element_type>::value&&
-                                       std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
+                  std::enable_if_t<std::is_convertible<OtherValue, element_type>::value &&
+                                   std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
         : m_start(other.m_start), m_end(other.m_end) {
         if(m_start == m_end)
             return;
@@ -140,7 +140,7 @@ void init_empty(Container& c,
 
 template <typename Container>
 void init_empty(Container&, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-                std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr) {}
+                std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value> * = nullptr) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -191,7 +191,8 @@ template <class Container, class ElementContainer> class basic_document {
   public:
     //! Type of underlying storage container/range.
     using container_type = std::decay_t<Container>;
-    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
+    //    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept
+    //    swap()");
 
     //! Type of constituent elements.
     using element_type = basic_element<ElementContainer>;
@@ -275,11 +276,11 @@ template <class Container, class ElementContainer> class basic_document {
                                detail::is_range_of_iterator<
                                    ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>,
                                                                   typename container_type::iterator, boost::mpl::_1>>,
-                               std::true_type>::value>* = nullptr,
+                               std::true_type>::value> * = nullptr,
         std::enable_if_t<!std::is_same<container_type, std::decay_t<ForwardRange>>::value &&
                          detail::is_range_of_iterator<
                              ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
-                                                            boost::mpl::_1, boost::mpl::_1>>::value>* = nullptr)
+                                                            boost::mpl::_1, boost::mpl::_1>>::value> * = nullptr)
         : basic_document(container_type(std::begin(rng), std::end(rng))) {}
 
     /*!
@@ -506,8 +507,7 @@ template <class Container, class ElementContainer> class basic_document {
                     if(!ret)
                         break;
                 }
-            }
-            catch(...) {
+            } catch(...) {
                 ret = false;
             }
         }
@@ -592,8 +592,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
                     ++count;
                 }
-            }
-            catch(...) {
+            } catch(...) {
                 ret = false;
             }
         }
