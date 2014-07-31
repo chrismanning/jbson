@@ -54,7 +54,7 @@ struct json_reader {
         using ForwardRange = decltype(range);
         BOOST_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
         using line_it = line_pos_iterator<typename boost::range_const_iterator<std::decay_t<ForwardRange>>::type>;
-        parse(line_it{std::cbegin(range)}, line_it{std::cend(range)});
+        parse(line_it{std::begin(range)}, line_it{std::end(range)});
     }
 
     template <typename C>
