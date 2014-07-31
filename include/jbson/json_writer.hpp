@@ -14,7 +14,6 @@
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/utility/string_ref.hpp>
 #include <boost/range/as_literal.hpp>
-#include <boost/concept_check.hpp>
 JBSON_CLANG_POP_WARNINGS
 
 #include "element.hpp"
@@ -144,29 +143,8 @@ std::decay_t<OutputIterator> stringify(const basic_array<C, EC>& arr, OutputIter
 
 } // namespace
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-namespace concepts {
-#include <boost/concept/detail/concept_def.hpp>
-BOOST_concept(OutputIterator, (TT)(ValueT)) {
-    BOOST_CONCEPT_USAGE(OutputIterator) {
-        ++i;      // require preincrement operator
-        i++;      // require postincrement operator
-        *i++ = t; // require postincrement and assignment
-    }
-
-  private:
-    TT i{std::declval<TT>()}, j{std::declval<TT>()};
-    ValueT t = ValueT();
-};
-#include <boost/concept/detail/concept_undef.hpp>
-} // namespace concepts
-
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-
 template <element_type EType, typename Element, typename OutputIteratorT> struct json_element_visitor {
     static_assert(detail::is_element<std::decay_t<Element>>::value, "");
-    BOOST_CONCEPT_ASSERT((concepts::OutputIteratorConcept<OutputIteratorT, char>));
 
     json_element_visitor() = default;
 
