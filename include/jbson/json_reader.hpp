@@ -13,10 +13,6 @@
 
 #include "detail/config.hpp"
 
-#ifndef BOOST_NO_CXX11_HDR_CODECVT
-#include <codecvt>
-#endif
-
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/as_literal.hpp>
 #include <boost/range/algorithm.hpp>
@@ -29,6 +25,7 @@ JBSON_CLANG_POP_WARNINGS
 
 #include "document.hpp"
 #include "detail/traits.hpp"
+#include "detail/codecvt.hpp"
 
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 
@@ -639,14 +636,6 @@ template <typename CharT> constexpr bool isspace(CharT c) {
     return c == 0x20 || (std::make_unsigned_t<CharT>)(c - '\t') < 5;
 }
 
-template <typename CharT> struct codecvt : std::codecvt<CharT, char, std::mbstate_t> { using type = codecvt<CharT>; };
-
-#ifndef BOOST_NO_CXX11_HDR_CODECVT
-template <> struct codecvt<wchar_t> { using type = std::codecvt_utf8<wchar_t>; };
-#endif // BOOST_NO_CXX11_HDR_CODECVT
-
-template <typename CharT> using codecvt_t = typename codecvt<CharT>::type;
-
 } // namespace detail
 
 template <typename ForwardIterator, typename OutputIterator>
@@ -662,7 +651,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
     std::advance(first, 1);
 
     detail::codecvt_t<char_type> cvt;
-    std::mbstate_t state{};
+    auto state = detail::create_state<char_type>();
     std::array<char_type, 2> buf;
 
     while(true) {
@@ -703,7 +692,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
             char* to_next;
             auto res = cvt.out(state, buf.data(), buf.data() + (buf[1] ? 2 : 1), frm_next, to.data(),
                                to.data() + to.size(), to_next);
-            if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
+            if(!detail::state_test(&state) || res != std::codecvt_base::ok)
                 BOOST_THROW_EXCEPTION(
                     make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
             auto len = std::strlen(to.data());
@@ -793,13 +782,13 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
         }
 
         detail::codecvt<char16_t> cvt16;
-        std::mbstate_t state{};
+        auto state = detail::create_state<char16_t>();
         buf.fill(0);
         const char16_t* frm_next;
         char* to_next;
         auto res = cvt16.out(state, codepoints.data(), codepoints.data() + codepoints.size(), frm_next, buf.data(),
                              buf.data() + buf.size(), to_next);
-        if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
+        if(!detail::state_test(&state) || res != std::codecvt_base::ok)
             BOOST_THROW_EXCEPTION(
                 make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
         std::advance(first, 4);

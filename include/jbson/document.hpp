@@ -22,6 +22,7 @@ JBSON_CLANG_POP_WARNINGS
 #include "element_fwd.hpp"
 #include "detail/traits.hpp"
 #include "element.hpp"
+#include "detail/codecvt.hpp"
 
 namespace jbson {
 
@@ -492,9 +493,8 @@ template <class Container, class ElementContainer> class basic_document {
                        e.type() == jbson::element_type::string_element) {
                         auto from = get<jbson::element_type::string_element>(e);
 
-                        struct : std::codecvt<char32_t, char, std::mbstate_t> {}
-                        u8to32;
-                        std::mbstate_t state{};
+                        detail::codecvt<char32_t> u8to32;
+                        auto state = detail::create_state<char32_t>();
                         std::u32string to(from.size(), '\0');
 
                         auto from_next = from.data();
