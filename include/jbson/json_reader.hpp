@@ -186,16 +186,19 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
                                                                             boost::as_literal("\n\r"));
         using cvt_char_type =
             std::conditional_t<std::is_same<char_type, container_type::value_type>::value, char32_t, char_type>;
-        thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
 
         std::basic_string<cvt_char_type> str{range.begin(), range.end()};
         if(std::is_same<char_type, container_type::value_type>::value)
             e << current_line_string(boost::lexical_cast<std::string>(range));
         else {
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
             try {
+                thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
                 e << current_line_string(cvt.to_bytes(str));
             }
-            catch(...) {
+            catch(...)
+#endif // BOOST_NO_CXX11_HDR_CODECVT
+            {
                 auto c = str[boost::spirit::get_line(current)];
                 e << current_line_string(std::to_string((int)c));
             }
@@ -638,17 +641,15 @@ template <typename CharT> constexpr bool isspace(CharT c) {
     return c == 0x20 || (std::make_unsigned_t<CharT>)(c - '\t') < 5;
 }
 
-template <typename CharT> struct codecvt {
-    using type = std::codecvt_utf8<CharT>;
+template <typename CharT> struct codecvt : std::codecvt<CharT, char, std::mbstate_t> {
+    using type = codecvt<CharT>;
 };
 
-template <> struct codecvt<char> : std::codecvt<char, char, std::mbstate_t> {
-    using type = codecvt<char>;
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
+template <> struct codecvt<wchar_t> {
+    using type = std::codecvt_utf8<wchar_t>;
 };
-
-template <> struct codecvt<char16_t> {
-    using type = std::codecvt_utf8_utf16<char16_t>;
-};
+#endif // BOOST_NO_CXX11_HDR_CODECVT
 
 template <typename CharT> using codecvt_t = typename codecvt<CharT>::type;
 
@@ -797,7 +798,7 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
                                                            "valid hex characters (0-9;a-f/A-F)"));
         }
 
-        std::codecvt_utf8_utf16<char16_t> cvt16;
+        detail::codecvt<char16_t> cvt16;
         std::mbstate_t state{};
         buf.fill(0);
         const char16_t* frm_next;
