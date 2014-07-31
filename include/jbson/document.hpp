@@ -489,9 +489,19 @@ template <class Container, class ElementContainer> class basic_document {
 
                     if((lvl & validity_level::unicode_valid) == validity_level::unicode_valid &&
                        e.type() == jbson::element_type::string_element) {
-                        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u8to32{};
-                        auto str = get<jbson::element_type::string_element>(e);
-                        u8to32.from_bytes(str.data(), str.data() + str.size());
+                        auto from = get<jbson::element_type::string_element>(e);
+
+                        struct : std::codecvt<char32_t, char, std::mbstate_t> {}
+                        u8to32;
+                        std::mbstate_t state{};
+                        std::u32string to(from.size(), '\0');
+
+                        auto from_next = from.data();
+                        auto to_next = const_cast<char32_t*>(to.data());
+                        auto res = u8to32.in(state, from_next, from_next + from.size(), from_next, to_next,
+                                             to_next + to.size(), to_next);
+                        to.resize(to_next - to.data());
+                        ret = res != std::codecvt_base::error;
                     }
                     if(!ret)
                         break;
