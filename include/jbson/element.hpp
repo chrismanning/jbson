@@ -489,9 +489,9 @@ template <class Container> struct basic_element {
 
     //! Swaps contents with \p other.
     void swap(basic_element& other) noexcept {
-        static_assert(detail::is_nothrow_swappable<decltype(m_name)>::value, "");
+        //        static_assert(detail::is_nothrow_swappable<decltype(m_name)>::value, "");
         //        static_assert(detail::is_nothrow_swappable<container_type>::value, "");
-        static_assert(detail::is_nothrow_swappable<element_type>::value, "");
+        //        static_assert(detail::is_nothrow_swappable<element_type>::value, "");
         using std::swap;
         swap(m_name, other.m_name);
         swap(m_type, other.m_type);
