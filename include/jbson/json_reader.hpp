@@ -9,10 +9,13 @@
 #include <type_traits>
 #include <iterator>
 #include <memory>
-#include <codecvt>
 #include <vector>
 
 #include "detail/config.hpp"
+
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
+#include <codecvt>
+#endif
 
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/as_literal.hpp>

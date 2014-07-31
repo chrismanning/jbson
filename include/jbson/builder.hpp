@@ -7,6 +7,7 @@
 #define JBSON_BUILDER_HPP
 
 #include <vector>
+#include <system_error>
 
 #include <jbson/element.hpp>
 #include <jbson/document.hpp>

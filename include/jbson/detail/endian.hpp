@@ -8,6 +8,10 @@
 
 #include <type_traits>
 
+#if BOOST_ENDIAN_BIG_BYTE
+#include <algorithm>
+#endif // BOOST_ENDIAN_BIG_BYTE
+
 #include "./config.hpp"
 
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING

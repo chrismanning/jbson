@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include <set>
-#include <codecvt>
 
 #include "detail/config.hpp"
 
