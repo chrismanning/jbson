@@ -69,6 +69,7 @@ TEST_F(PerfTest, ParseTest) {
     }
 }
 
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
 TEST_F(PerfTest, Utf16ParseTest) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt{};
     json_u16 = cvt.from_bytes(json_.data(), json_.data()+json_.size());
@@ -88,6 +89,7 @@ TEST_F(PerfTest, Utf32ParseTest) {
         ASSERT_NO_THROW(reader.parse(json_u32));
     }
 }
+#endif // BOOST_NO_CXX11_HDR_CODECVT
 
 TEST_F(PerfTest, WhitespaceTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
