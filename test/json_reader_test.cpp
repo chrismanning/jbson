@@ -430,7 +430,7 @@ TEST(JsonReaderTest, JsonParseSurrogateUnicode3) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail1) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail1.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail1.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -443,7 +443,7 @@ TEST(JsonReaderTest, JsonCheckerFail1) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail2) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail2.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail2.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -456,7 +456,7 @@ TEST(JsonReaderTest, JsonCheckerFail2) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail3) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail3.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail3.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -469,7 +469,7 @@ TEST(JsonReaderTest, JsonCheckerFail3) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail4) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail4.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail4.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -482,7 +482,7 @@ TEST(JsonReaderTest, JsonCheckerFail4) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail5) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail5.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail5.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -495,7 +495,7 @@ TEST(JsonReaderTest, JsonCheckerFail5) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail6) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail6.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail6.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -508,7 +508,7 @@ TEST(JsonReaderTest, JsonCheckerFail6) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail7) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail7.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail7.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -521,7 +521,7 @@ TEST(JsonReaderTest, JsonCheckerFail7) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail8) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail8.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail8.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -534,7 +534,7 @@ TEST(JsonReaderTest, JsonCheckerFail8) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail9) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail9.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail9.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -547,7 +547,7 @@ TEST(JsonReaderTest, JsonCheckerFail9) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail10) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail10.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail10.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -560,7 +560,7 @@ TEST(JsonReaderTest, JsonCheckerFail10) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail11) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail11.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail11.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -573,7 +573,7 @@ TEST(JsonReaderTest, JsonCheckerFail11) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail12) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail12.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail12.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -586,7 +586,7 @@ TEST(JsonReaderTest, JsonCheckerFail12) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail13) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail13.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail13.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -599,7 +599,7 @@ TEST(JsonReaderTest, JsonCheckerFail13) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail14) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail14.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail14.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -612,7 +612,7 @@ TEST(JsonReaderTest, JsonCheckerFail14) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail15) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail15.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail15.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -625,7 +625,7 @@ TEST(JsonReaderTest, JsonCheckerFail15) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail16) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail16.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail16.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -638,7 +638,7 @@ TEST(JsonReaderTest, JsonCheckerFail16) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail17) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail17.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail17.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -652,7 +652,7 @@ TEST(JsonReaderTest, JsonCheckerFail17) {
 
 // this test assumes some maximum nesting depth
 //TEST(JsonReaderTest, JsonCheckerFail18) {
-//    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail18.json", std::ios::in};
+//    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail18.json", std::ios::in};
 //    auto json = std::vector<char>{};
 //    ifs.seekg(0, std::ios::end);
 //    auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -665,7 +665,7 @@ TEST(JsonReaderTest, JsonCheckerFail17) {
 //}
 
 TEST(JsonReaderTest, JsonCheckerFail19) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail19.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail19.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -678,7 +678,7 @@ TEST(JsonReaderTest, JsonCheckerFail19) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail20) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail20.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail20.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -691,7 +691,7 @@ TEST(JsonReaderTest, JsonCheckerFail20) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail21) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail21.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail21.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -704,7 +704,7 @@ TEST(JsonReaderTest, JsonCheckerFail21) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail22) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail22.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail22.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -717,7 +717,7 @@ TEST(JsonReaderTest, JsonCheckerFail22) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail23) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail23.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail23.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -730,7 +730,7 @@ TEST(JsonReaderTest, JsonCheckerFail23) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail24) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail24.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail24.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -743,7 +743,7 @@ TEST(JsonReaderTest, JsonCheckerFail24) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail25) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail25.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail25.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -756,7 +756,7 @@ TEST(JsonReaderTest, JsonCheckerFail25) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail26) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail26.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail26.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -769,7 +769,7 @@ TEST(JsonReaderTest, JsonCheckerFail26) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail27) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail27.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail27.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -782,7 +782,7 @@ TEST(JsonReaderTest, JsonCheckerFail27) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail28) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail28.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail28.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -795,7 +795,7 @@ TEST(JsonReaderTest, JsonCheckerFail28) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail29) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail29.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail29.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -808,7 +808,7 @@ TEST(JsonReaderTest, JsonCheckerFail29) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail30) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail30.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail30.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -821,7 +821,7 @@ TEST(JsonReaderTest, JsonCheckerFail30) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail31) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail31.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail31.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -834,7 +834,7 @@ TEST(JsonReaderTest, JsonCheckerFail31) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail32) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail32.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail32.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -847,7 +847,7 @@ TEST(JsonReaderTest, JsonCheckerFail32) {
 }
 
 TEST(JsonReaderTest, JsonCheckerFail33) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/fail33.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/fail33.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -860,7 +860,7 @@ TEST(JsonReaderTest, JsonCheckerFail33) {
 }
 
 TEST(JsonReaderTest, JsonCheckerPass1) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/pass1.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/pass1.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -873,7 +873,7 @@ TEST(JsonReaderTest, JsonCheckerPass1) {
 }
 
 TEST(JsonReaderTest, JsonCheckerPass2) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/pass2.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/pass2.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -886,7 +886,7 @@ TEST(JsonReaderTest, JsonCheckerPass2) {
 }
 
 TEST(JsonReaderTest, JsonCheckerPass3) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/pass3.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/pass3.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
