@@ -697,7 +697,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
             assert(out >= m_data.begin() && out <= m_data.end());
             out = std::next(m_data.insert(out, buf[0]));
         } else {
-            std::array<char, std::max(sizeof(buf), 2 * sizeof(char16_t)) + 1> to;
+            std::array<char, ((sizeof(buf) < 2 * sizeof(char16_t)) ? (2 * sizeof(char16_t)) : sizeof(buf)) + 1> to;
             to.fill(0);
             const char_type* frm_next;
             char* to_next;
