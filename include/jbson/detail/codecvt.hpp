@@ -19,7 +19,18 @@
 namespace jbson {
 namespace detail {
 
-#ifdef BOOST_GNU_STDLIB
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
+using state_t = std::mbstate_t;
+
+inline state_t create_state() {
+    return state_t{};
+}
+
+inline bool state_test(const state_t* (ps)) {
+    assert(ps);
+    return std::mbsinit(ps);
+}
+#elif defined(BOOST_GNU_STDLIB)
 using state_t = std::encoding_state;
 
 template <typename CharT>
@@ -42,16 +53,7 @@ inline bool state_test(const state_t* ps) {
     return ps->good();
 }
 #else
-using state_t = std::mbstate_t;
-
-inline state_t create_state() {
-    return state_t{};
-}
-
-inline bool state_test(const state_t* (ps)) {
-    assert(ps);
-    return std::mbsinit(ps);
-}
+#error "unknown codecvt configuration"
 #endif
 
 template <typename CharT> struct codecvt : std::codecvt<CharT, char, state_t> { using type = codecvt<CharT>; };
