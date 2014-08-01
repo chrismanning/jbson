@@ -21,9 +21,7 @@ find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 FILE(GLOB_RECURSE jbson_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/jbson/*.hpp)
-
-add_library(jbson_headers_lib STATIC ${jbson_headers})
-set_target_properties(jbson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
+add_custom_target(jbson_headers_lib ALL SOURCES ${jbson_headers})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
