@@ -155,7 +155,7 @@ struct builder {
         static_assert(!detail::is_iterator_range<Container>::value, "");
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_elements.begin());
         auto doc = basic_document<Container, EContainer>(m_elements);
@@ -172,7 +172,7 @@ struct builder {
         static_assert(!detail::is_iterator_range<Container>::value, "");
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_elements.begin());
         return basic_document<Container, EContainer>(std::move(m_elements));
@@ -239,7 +239,7 @@ struct array_builder {
     template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const& {
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_elements.begin());
         auto doc = basic_array<Container, EContainer>(m_elements);
@@ -250,7 +250,7 @@ struct array_builder {
     template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() && {
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_elements.begin());
         return basic_array<Container, EContainer>(std::move(m_elements));

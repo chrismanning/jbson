@@ -308,7 +308,7 @@ template <class Container, class ElementContainer> class basic_document {
         }
         m_data.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
     }
@@ -369,7 +369,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.erase(it.m_start, std::next(it.m_start, it.m_cur->size()));
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
@@ -397,7 +397,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.insert(it.m_start, data.begin(), data.end());
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
@@ -424,7 +424,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.insert(it.m_start, data.begin(), data.end());
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
