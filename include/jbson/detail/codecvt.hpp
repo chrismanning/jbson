@@ -22,6 +22,7 @@ namespace detail {
 #ifndef BOOST_NO_CXX11_HDR_CODECVT
 using state_t = std::mbstate_t;
 
+template <typename /*CharT*/>
 inline state_t create_state() {
     return state_t{};
 }
