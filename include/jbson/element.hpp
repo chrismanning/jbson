@@ -217,7 +217,7 @@ template <class Container> struct basic_element {
         using element_pair = typename mpl::deref<
             detail::find_if_second<typename detail::TypeMap<container_type>::map_type,
                                    mpl::bind<detail::quote<detail::is_convertible>, T, mpl::_1>>>::type;
-        typename mpl::second<element_pair>::type ret{};
+        typename mpl::second<element_pair>::type ret;
         detail::deserialise(m_data, ret);
         return T(std::move(ret));
     }

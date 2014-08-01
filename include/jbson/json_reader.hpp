@@ -869,73 +869,73 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 inline namespace literal {
 
 inline document_set operator"" _json_set(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }

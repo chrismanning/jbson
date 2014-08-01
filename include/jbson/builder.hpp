@@ -205,7 +205,7 @@ struct array_builder {
     template <typename... Args> array_builder& emplace(Args&&... args) & {
         static_assert(sizeof...(Args) > 0, "");
         std::array<char, std::numeric_limits<decltype(m_count)>::digits10 + 1> int_str;
-        auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", m_count);
+        auto n = std::snprintf(int_str.data(), int_str.size(), "%d", m_count);
         if(n <= 0) {
             if(errno)
                 BOOST_THROW_EXCEPTION(std::system_error(errno, std::generic_category()));

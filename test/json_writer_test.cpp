@@ -131,7 +131,7 @@ TEST(JsonWriterTest, JsonWriteTest2) {
 }
 
 TEST(JsonWriterTest, JsonWriteTest3) {
-    auto json = std::array<char, 22>{};
+    std::array<char, 22> json;
     auto doc = R"({ "hello" : "world" })"_json_doc;
     write_json(doc, json.begin());
 
@@ -215,7 +215,7 @@ TEST(JsonWriterTest, JsonWriteTest8) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    auto reader = json_reader{};
+    json_reader reader;
     ASSERT_NO_THROW(reader.parse(json));
     auto json_str = std::string{};
 
