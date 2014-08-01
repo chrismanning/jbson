@@ -419,13 +419,18 @@ template <class Container> struct basic_element {
 
     //! Apply the visitor pattern with a void-return visitor.
     template <typename Visitor>
-    void visit(Visitor&&, std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
-                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const;
+    void visit(Visitor&&,
+               std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+                   std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>* =
+                   nullptr) const;
     //! Apply the visitor pattern with a value-returning visitor.
     template <typename Visitor>
-    auto visit(Visitor&&, std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
-                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const
-        -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>()));
+    auto visit(Visitor&&,
+               std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+                   std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>* =
+                   nullptr) const -> decltype(std::declval<Visitor>()(std::declval<std::string>(),
+                                                                      std::declval<element_type>(),
+                                                                      std::declval<double>()));
 
     //! \brief Constructs a BSON element without data, in-place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
@@ -978,9 +983,10 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
  */
 template <class Container>
 template <typename Visitor>
-void basic_element<Container>::visit(Visitor&& visitor,
-                                     std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
-                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const {
+void basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+        std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>*) const {
     detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
     return;
 }
@@ -1002,10 +1008,12 @@ void basic_element<Container>::visit(Visitor&& visitor,
  */
 template <class Container>
 template <typename Visitor>
-auto basic_element<Container>::visit(Visitor&& visitor,
-                                     std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
-                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const
-    -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>())) {
+auto basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+        std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>*) const
+    -> decltype(std::declval<Visitor>()(std::declval<std::string>(), std::declval<element_type>(),
+                                        std::declval<double>())) {
     return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
 }
 
