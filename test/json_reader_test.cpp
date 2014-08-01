@@ -58,7 +58,7 @@ TEST(JsonReaderTest, JsonParseTest5) {
 }
 
 TEST(JsonReaderTest, JsonParseTest6) {
-    std::array<char, 13> json;
+    std::array<char, 13> json{0};
     boost::copy(boost::as_literal(R"({"key":true})"), json.data());
     json_reader reader;
     ASSERT_NO_THROW(reader.parse(json.data()));
