@@ -18,7 +18,7 @@ elseif(${JBSON_LEAK_CHECKER})
 endif()
 
 find_package(Boost REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 FILE(GLOB_RECURSE jbson_headers ${CMAKE_CURRENT_SOURCE_DIR}/include/jbson/*.hpp)
 add_custom_target(jbson_headers_lib ALL SOURCES ${jbson_headers})
@@ -67,7 +67,7 @@ ExternalProject_Get_Property(gtest_${PROJECT_NAME} source_dir)
 set(GTEST_INCLUDE_DIRS ${source_dir}/include)
 message(STATUS "Gtest include dirs: ${GTEST_INCLUDE_DIRS}")
 
-include_directories(${GTEST_INCLUDE_DIRS})
+include_directories(SYSTEM ${GTEST_INCLUDE_DIRS})
 add_library(${PROJECT_NAME}_test_main OBJECT test/test_main.cpp)
 
 add_dependencies(${PROJECT_NAME}_test_main gtest_${PROJECT_NAME})
