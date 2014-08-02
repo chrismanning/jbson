@@ -92,8 +92,8 @@ struct is_iterator_pointer<boost::iterator_range<Iterator>> : is_iterator_pointe
 template <typename Container, bool set = false> class TypeMap {
     using container_type =
         std::conditional_t<set, Container, boost::iterator_range<typename Container::const_iterator>>;
-    using string_type = std::conditional_t < !set && is_iterator_pointer<typename container_type::iterator>::value,
-          boost::string_ref, std::string > ;
+    using string_type = std::conditional_t<!set && is_iterator_pointer<typename container_type::iterator>::value,
+                                           boost::string_ref, std::string>;
 
   public:
 /*!
@@ -110,7 +110,6 @@ template <typename Container, bool set = false> class TypeMap {
         mpl::pair<element_type_c<element_type::double_element>, double>,
         mpl::pair<element_type_c<element_type::document_element>, basic_document<container_type, container_type>>,
         mpl::pair<element_type_c<element_type::array_element>, basic_array<container_type, container_type>>,
-        mpl::pair<element_type_c<element_type::binary_element>, container_type>,
         mpl::pair<element_type_c<element_type::undefined_element>, void>,
         mpl::pair<element_type_c<element_type::oid_element>, std::array<char, 12>>,
         mpl::pair<element_type_c<element_type::date_element>, int64_t>,
@@ -122,6 +121,7 @@ template <typename Container, bool set = false> class TypeMap {
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
                   std::tuple<string_type, basic_document<container_type, container_type>>>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
+        mpl::pair<element_type_c<element_type::binary_element>, container_type>,
         mpl::pair<element_type_c<element_type::min_key>, void>,
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
 #endif // DOXYGEN_SHOULD_SKIP_THIS
@@ -212,8 +212,7 @@ template <typename RangeT, typename ElementT>
 using is_range_of_same_value = is_range_of_value<RangeT, mpl::bind2<mpl::quote2<std::is_same>, ElementT, mpl::_1>>;
 
 namespace {
-template <typename T>
-using range_mutable_iterator = boost::range_mutable_iterator<T>;
+template <typename T> using range_mutable_iterator = boost::range_mutable_iterator<T>;
 }
 
 /*!
@@ -243,17 +242,17 @@ template <typename A, typename B, typename Enable = void> struct is_convertible 
 
 template <typename A, typename B>
 struct is_convertible<
-    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value&& std::is_floating_point<std::decay_t<B>>::value>>
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value && std::is_floating_point<std::decay_t<B>>::value>>
     : std::false_type {};
 
 template <typename A, typename B>
 struct is_convertible<
-    A, B, std::enable_if_t<std::is_integral<std::decay_t<B>>::value&& std::is_floating_point<std::decay_t<A>>::value>>
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<B>>::value && std::is_floating_point<std::decay_t<A>>::value>>
     : std::false_type {};
 
 template <typename A, typename B>
 struct is_convertible<
-    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value&& std::is_integral<std::decay_t<B>>::value>>
+    A, B, std::enable_if_t<std::is_integral<std::decay_t<A>>::value && std::is_integral<std::decay_t<B>>::value>>
     : std::integral_constant<bool, (sizeof(A) < sizeof(int32_t) && sizeof(A) < sizeof(B)) || (sizeof(A) == sizeof(B))> {
 };
 
