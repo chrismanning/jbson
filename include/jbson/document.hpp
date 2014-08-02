@@ -139,9 +139,9 @@ void init_empty(Container& c,
     c = arr;
 }
 
-template <typename Container>
-void init_empty(Container&, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-                std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value> * = nullptr) {}
+template <typename IteratorT> void init_empty(boost::iterator_range<IteratorT>&) {}
+
+void init_empty(...) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

@@ -146,13 +146,15 @@ static_assert(std::is_convertible<document_list_range, document>::value, "");
 TEST(DocumentTest, EmptyDocumentTest) {
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(document())));
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_document<std::array<char, 5>>())));
-    EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<const char*>>())));
+
+    EXPECT_ANY_THROW(EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<const char*>>())));
 
     EXPECT_ANY_THROW(EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<std::vector<char>::const_iterator>>())));
 
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(array())));
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_array<std::array<char, 5>>())));
-    EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_array<boost::iterator_range<const char*>>())));
+
+    EXPECT_ANY_THROW(EXPECT_EQ(0, boost::distance(basic_array<boost::iterator_range<const char*>>())));
 }
 
 TEST(DocumentTest, ValidityTest1) {
