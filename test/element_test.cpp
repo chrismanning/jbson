@@ -431,7 +431,6 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
 JBSON_POP_WARNINGS
 
 TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
-    using regex_type = typename TestFixture::template ElementTypeMap<element_type::regex_element>;
     basic_element<typename TestFixture::container_type> el{"some filter", element_type::regex_element};
     ASSERT_NO_THROW(el.value(std::make_tuple(".*", "i")));
     EXPECT_EQ(18, el.size());
