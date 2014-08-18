@@ -121,7 +121,7 @@ template <typename Container, bool set = false> class TypeMap {
         mpl::pair<element_type_c<element_type::scoped_javascript_element>,
                   std::tuple<string_type, basic_document<container_type, container_type>>>,
         mpl::pair<element_type_c<element_type::timestamp_element>, int64_t>,
-        mpl::pair<element_type_c<element_type::binary_element>, container_type>,
+        mpl::pair<element_type_c<element_type::binary_element>, struct binary_element>,
         mpl::pair<element_type_c<element_type::min_key>, void>,
         mpl::pair<element_type_c<element_type::max_key>, void>>::type map_type;
 #endif // DOXYGEN_SHOULD_SKIP_THIS
