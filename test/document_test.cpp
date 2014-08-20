@@ -30,7 +30,9 @@ static_assert(std::is_constructible<std::vector<element>, array>::value,"");
 static_assert(std::is_same<decltype(std::declval<document>().data()), std::vector<char>&&>::value,"");
 static_assert(std::is_same<decltype(std::declval<document&>().data()), const std::vector<char>&>::value,"");
 static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
+#ifndef JBSON_NO_CONST_RVALUE_THIS
 static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
+#endif //JBSON_NO_CONST_RVALUE_THIS
 
 static_assert(std::is_nothrow_move_assignable<basic_document<std::vector<char>>>::value, "");
 static_assert(std::is_nothrow_move_constructible<basic_document<std::vector<char>>>::value, "");

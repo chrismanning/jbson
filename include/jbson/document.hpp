@@ -446,9 +446,11 @@ template <class Container, class ElementContainer> class basic_document {
     //! \note const lvalue overload
     const container_type& data() const& noexcept { return m_data; }
 
+#ifndef JBSON_NO_CONST_RVALUE_THIS
     //! Returns copy of BSON data.
     //! \note const rvalue overload
     container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) { return m_data; }
+#endif //JBSON_NO_CONST_RVALUE_THIS
 
     //! Returns rvalue reference to BSON data.
     //! \note rvalue overload

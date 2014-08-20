@@ -7,6 +7,7 @@
 #define JBSON_CONFIG_HPP
 
 #include <boost/config.hpp>
+#include <boost/predef.h>
 
 #ifdef JBSON_DEPRECATED
     #undef JBSON_DEPRECATED
@@ -89,5 +90,9 @@
         #define JBSON_CLANG_POP_WARNINGS
     #endif
 #endif // DOXYGEN_SHOULD_SKIP_THIS
+
+#if BOOST_COMP_GNUC && BOOST_COMP_GNUC <= BOOST_VERSION_NUMBER(4,9,0)
+#define JBSON_NO_CONST_RVALUE_THIS
+#endif
 
 #endif // JBSON_CONFIG_HPP
