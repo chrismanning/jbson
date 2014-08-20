@@ -119,28 +119,27 @@ TEST_F(BsonTest, FileTest4) {
     EXPECT_EQ("utc", it->name());
     ASSERT_EQ(element_type::date_element, it->type());
     EXPECT_EQ(1319285594123, it->value<int64_t>());
-    EXPECT_EQ(1319285594123ms, it->value<std::chrono::milliseconds>());
+    EXPECT_EQ(std::chrono::milliseconds(1319285594123), it->value<std::chrono::milliseconds>());
     try {
-        auto e = element("date", element_type::date_element, 1319285594123ms);
+        auto e = element("date", element_type::date_element, std::chrono::milliseconds(1319285594123));
         EXPECT_EQ("date", e.name());
         ASSERT_EQ(element_type::date_element, e.type());
         EXPECT_EQ(1319285594123, e.value<int64_t>());
-        EXPECT_EQ(1319285594123ms, e.value<std::chrono::milliseconds>());
+        EXPECT_EQ(std::chrono::milliseconds(1319285594123), e.value<std::chrono::milliseconds>());
 
-        auto b = builder("date", element_type::date_element, 1319285594123ms);
+        auto b = builder("date", element_type::date_element, std::chrono::milliseconds(1319285594123));
 
         ASSERT_EQ(e, *document(b).begin());
 
-        e = element("date", 1319285594123ms);
+        e = element("date", std::chrono::milliseconds(1319285594123));
         EXPECT_EQ("date", e.name());
         ASSERT_EQ(element_type::int64_element, e.type());
         EXPECT_EQ(1319285594123, e.value<int64_t>());
-        EXPECT_EQ(1319285594123ms, e.value<std::chrono::milliseconds>());
+        EXPECT_EQ(std::chrono::milliseconds(1319285594123), e.value<std::chrono::milliseconds>());
 
         ASSERT_NO_THROW(e.type(element_type::date_element));
         EXPECT_EQ(1319285594123, e.value<int64_t>());
-        EXPECT_EQ(1319285594123ms, e.value<std::chrono::milliseconds>());
-
+        EXPECT_EQ(std::chrono::milliseconds(1319285594123), e.value<std::chrono::milliseconds>());
     }
     catch(...) {
         FAIL() << boost::current_exception_diagnostic_information();
@@ -513,7 +512,7 @@ TEST_F(BsonTest, FileTest15) {
 
         EXPECT_EQ("1", it->name());
         ASSERT_EQ(element_type::date_element, it->type());
-        EXPECT_EQ(1319285594123ms, it->value<std::chrono::milliseconds>());
+        EXPECT_EQ(std::chrono::milliseconds(1319285594123), it->value<std::chrono::milliseconds>());
 
         ++it;
         ASSERT_EQ(end, it);
@@ -892,8 +891,8 @@ TEST_F(BsonTest, FileTest26) {
 
     EXPECT_EQ("time_t", it->name());
     ASSERT_EQ(element_type::date_element, it->type());
-    EXPECT_EQ(1234567890000ms, it->value<std::chrono::milliseconds>());
-    EXPECT_EQ(1234567890s, it->value<std::chrono::seconds>());
+    EXPECT_EQ(std::chrono::milliseconds(1234567890000), it->value<std::chrono::milliseconds>());
+    EXPECT_EQ(std::chrono::seconds(1234567890), it->value<std::chrono::seconds>());
 
     ++it;
     ASSERT_EQ(end, it);

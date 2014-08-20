@@ -23,6 +23,15 @@ using namespace jbson;
 
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 
+struct find_by_element_name_impl {
+    template <typename SetT, typename NameT>
+    auto operator()(SetT&& set, NameT&& name) const {
+        return std::find_if(set.begin(), set.end(), [&](auto&& el) {
+            return el.name() == name;
+        });
+    }
+} find_by_element_name;
+
 TEST(JsonWriterTest, StringifyTest0) {
     auto json = std::string{};
     detail::stringify("some string", std::back_inserter(json));
@@ -96,7 +105,7 @@ TEST(JsonWriterTest, StringifyTest10) {
 
 TEST(JsonWriterTest, UnicodeTest1) {
     auto json = R"(["6U閆崬밺뀫颒myj츥휘:$薈mY햚#rz飏+玭V㭢뾿愴YꖚX亥ᮉ푊\u0006垡㐭룝\"厓ᔧḅ^Sqpv媫\"⤽걒\"˽Ἆ?ꇆ䬔未tv{DV鯀Tἆl凸g\\㈭ĭ즿UH㽤"])"_json_set;
-    auto it = json.find("0");
+    auto it = find_by_element_name(json, "0");
     ASSERT_NE(json.end(), it);
     auto str = std::string{};
     detail::stringify(it->value<std::string>(), std::back_inserter(str));
@@ -122,7 +131,7 @@ TEST(JsonWriterTest, JsonWriteTest2) {
 }
 
 TEST(JsonWriterTest, JsonWriteTest3) {
-    auto json = std::array<char, 22>{};
+    std::array<char, 22> json;
     auto doc = R"({ "hello" : "world" })"_json_doc;
     write_json(doc, json.begin());
 
@@ -198,7 +207,7 @@ TEST(JsonWriterTest, JsonWriteTest7) {
 }
 
 TEST(JsonWriterTest, JsonWriteTest8) {
-    auto ifs = std::ifstream{JBSON_FILES"/json_checker_test_suite/pass1.json", std::ios::in};
+    std::ifstream ifs{JBSON_FILES"/json_checker_test_suite/pass1.json", std::ios::in};
     auto json = std::vector<char>{};
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -206,7 +215,7 @@ TEST(JsonWriterTest, JsonWriteTest8) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    auto reader = json_reader{};
+    json_reader reader;
     ASSERT_NO_THROW(reader.parse(json));
     auto json_str = std::string{};
 
@@ -220,7 +229,7 @@ TEST(JsonWriterTest, JsonWriteTest8) {
     auto d = varr[8];
     ASSERT_EQ(element_type::document_element, d.type());
     auto set = document_set(d.value<document>());
-    auto it = set.find("E");
+    auto it = find_by_element_name(set, "E");
     ASSERT_NE(set.end(), it);
     ASSERT_EQ(element_type::double_element, it->type());
 }

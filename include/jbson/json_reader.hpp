@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <iterator>
 #include <memory>
-#include <codecvt>
 #include <vector>
 
 #include "detail/config.hpp"
@@ -26,6 +25,7 @@ JBSON_CLANG_POP_WARNINGS
 
 #include "document.hpp"
 #include "detail/traits.hpp"
+#include "detail/codecvt.hpp"
 
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 
@@ -51,39 +51,34 @@ struct json_reader {
         using ForwardRange = decltype(range);
         BOOST_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
         using line_it = line_pos_iterator<typename boost::range_const_iterator<std::decay_t<ForwardRange>>::type>;
-        parse(line_it{std::cbegin(range)}, line_it{std::cend(range)});
+        parse(line_it{std::begin(range)}, line_it{std::end(range)});
     }
 
-    template <typename C>
-    operator basic_document_set<C>() const& {
+    template <typename C> operator basic_document_set<C>() const & {
         if(m_data.size() < 5)
             return basic_document_set<C>{};
         return basic_document_set<C>(basic_document<C>(*this));
     }
 
-    template <typename C1, typename C2>
-    operator basic_document<C1, C2>() const& {
+    template <typename C1, typename C2> operator basic_document<C1, C2>() const & {
         if(m_data.size() < 5)
             return basic_document<C1, C2>{};
         return basic_document<C1, C2>{m_data};
     }
 
-    template <typename C1, typename C2>
-    operator basic_array<C1, C2>() const& {
+    template <typename C1, typename C2> operator basic_array<C1, C2>() const & {
         if(m_data.size() < 5)
             return basic_array<C1, C2>{};
         return basic_array<C1, C2>{m_data};
     }
 
-    template <typename Vec>
-    operator basic_document<container_type, Vec>() && {
+    template <typename Vec> operator basic_document<container_type, Vec>() && {
         if(m_data.size() < 5)
             return basic_document<container_type, Vec>{};
         return basic_document<container_type, Vec>{std::move(m_data)};
     }
 
-    template <typename Vec>
-    operator basic_array<container_type, Vec>() && {
+    template <typename Vec> operator basic_array<container_type, Vec>() && {
         if(m_data.size() < 5)
             return basic_array<container_type, Vec>{};
         return basic_array<container_type, Vec>{std::move(m_data)};
@@ -135,7 +130,11 @@ struct json_reader {
     container_type m_data;
 };
 
-enum class json_error_num { invalid_root_element, unexpected_end_of_range, unexpected_token, };
+enum class json_error_num {
+    invalid_root_element,
+    unexpected_end_of_range,
+    unexpected_token,
+};
 
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, json_error_num err) {
@@ -183,16 +182,18 @@ json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<Fo
                                                                             boost::as_literal("\n\r"));
         using cvt_char_type =
             std::conditional_t<std::is_same<char_type, container_type::value_type>::value, char32_t, char_type>;
-        thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
 
         std::basic_string<cvt_char_type> str{range.begin(), range.end()};
         if(std::is_same<char_type, container_type::value_type>::value)
             e << current_line_string(boost::lexical_cast<std::string>(range));
         else {
+#ifndef BOOST_NO_CXX11_HDR_CODECVT
             try {
+                thread_local std::wstring_convert<std::codecvt_utf8<cvt_char_type>, cvt_char_type> cvt;
                 e << current_line_string(cvt.to_bytes(str));
-            }
-            catch(...) {
+            } catch(...)
+#endif // BOOST_NO_CXX11_HDR_CODECVT
+            {
                 auto c = str[boost::spirit::get_line(current)];
                 e << current_line_string(std::to_string((int)c));
             }
@@ -635,20 +636,6 @@ template <typename CharT> constexpr bool isspace(CharT c) {
     return c == 0x20 || (std::make_unsigned_t<CharT>)(c - '\t') < 5;
 }
 
-template <typename CharT> struct codecvt {
-    using type = std::codecvt_utf8<CharT>;
-};
-
-template <> struct codecvt<char> : std::codecvt<char, char, std::mbstate_t> {
-    using type = codecvt<char>;
-};
-
-template <> struct codecvt<char16_t> {
-    using type = std::codecvt_utf8_utf16<char16_t>;
-};
-
-template <typename CharT> using codecvt_t = typename codecvt<CharT>::type;
-
 } // namespace detail
 
 template <typename ForwardIterator, typename OutputIterator>
@@ -664,7 +651,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
     std::advance(first, 1);
 
     detail::codecvt_t<char_type> cvt;
-    std::mbstate_t state{};
+    auto state = detail::create_state<char_type>();
     std::array<char_type, 2> buf;
 
     while(true) {
@@ -699,13 +686,13 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
             assert(out >= m_data.begin() && out <= m_data.end());
             out = std::next(m_data.insert(out, buf[0]));
         } else {
-            std::array<char, std::max(sizeof(buf), 2 * sizeof(char16_t)) + 1> to;
+            std::array<char, ((sizeof(buf) < 2 * sizeof(char16_t)) ? (2 * sizeof(char16_t)) : sizeof(buf)) + 1> to;
             to.fill(0);
             const char_type* frm_next;
             char* to_next;
             auto res = cvt.out(state, buf.data(), buf.data() + (buf[1] ? 2 : 1), frm_next, to.data(),
                                to.data() + to.size(), to_next);
-            if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
+            if(!detail::state_test(&state) || res != std::codecvt_base::ok)
                 BOOST_THROW_EXCEPTION(
                     make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
             auto len = std::strlen(to.data());
@@ -794,14 +781,14 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
                                                            "valid hex characters (0-9;a-f/A-F)"));
         }
 
-        std::codecvt_utf8_utf16<char16_t> cvt16;
-        std::mbstate_t state{};
+        detail::codecvt<char16_t> cvt16;
+        auto state = detail::create_state<char16_t>();
         buf.fill(0);
         const char16_t* frm_next;
         char* to_next;
         auto res = cvt16.out(state, codepoints.data(), codepoints.data() + codepoints.size(), frm_next, buf.data(),
                              buf.data() + buf.size(), to_next);
-        if(!std::mbsinit(&state) || res != std::codecvt_base::ok)
+        if(!detail::state_test(&state) || res != std::codecvt_base::ok)
             BOOST_THROW_EXCEPTION(
                 make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
         std::advance(first, 4);
@@ -882,73 +869,73 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 inline namespace literal {
 
 inline document_set operator"" _json_set(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const wchar_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char16_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline document_set operator"" _json_set(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return document_set(basic_document<std::vector<char>, std::vector<char>>(std::move(reader)));
 }
 
 inline document operator"" _json_doc(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }
 
 inline array operator"" _json_arr(const char32_t* str, size_t len) {
-    auto reader = json_reader{};
+    json_reader reader;
     reader.parse(str, str + len);
     return std::move(reader);
 }

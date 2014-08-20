@@ -73,7 +73,8 @@ template <class Container> struct basic_element {
                   "container_type must not be a string type (or convertible)");
     static_assert(std::is_same<typename container_type::value_type, char>::value,
                   "container_type's value_type must be char");
-    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
+    //    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept
+    //    swap()");
 
     /*!
      * \brief Default constructor.
@@ -92,7 +93,7 @@ template <class Container> struct basic_element {
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr,
                   std::enable_if_t<std::is_constructible<container_type, typename OtherContainer::const_iterator,
-                                                         typename OtherContainer::const_iterator>::value>* = nullptr);
+                                                         typename OtherContainer::const_iterator>::value> * = nullptr);
 
     //! \brief Move constructor.
     template <typename OtherContainer>
@@ -103,8 +104,8 @@ template <class Container> struct basic_element {
     template <typename ForwardRange>
     explicit basic_element(
         ForwardRange&&, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr,
-        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>* =
-            nullptr);
+        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value> *
+        = nullptr);
 
     //! \brief Construct an element from raw BSON byte sequence.
     /*!
@@ -120,7 +121,7 @@ template <class Container> struct basic_element {
                       !std::is_constructible<boost::string_ref, ForwardIterator>::value ||
                       std::is_convertible<ForwardIterator, typename container_type::const_iterator>::value>* = nullptr,
                   std::enable_if_t<detail::is_range_of_same_value<decltype(boost::make_iterator_range(first, last)),
-                                                                  typename Container::value_type>::value>* = nullptr)
+                                                                  typename Container::value_type>::value> * = nullptr)
         : basic_element(boost::make_iterator_range(first, last)) {}
 
     /*!
@@ -216,7 +217,7 @@ template <class Container> struct basic_element {
         using element_pair = typename mpl::deref<
             detail::find_if_second<typename detail::TypeMap<container_type>::map_type,
                                    mpl::bind<detail::quote<detail::is_convertible>, T, mpl::_1>>>::type;
-        typename mpl::second<element_pair>::type ret{};
+        typename mpl::second<element_pair>::type ret;
         detail::deserialise(m_data, ret);
         return T(std::move(ret));
     }
@@ -279,8 +280,7 @@ template <class Container> struct basic_element {
 
         try {
             value_set(*this, std::forward<T>(val));
-        }
-        catch(...) {
+        } catch(...) {
             m_type = old_type;
             swap(m_data, old_data);
             throw;
@@ -349,8 +349,7 @@ template <class Container> struct basic_element {
                     << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(m_data)))
                     << detail::expected_size(detail::detect_size(new_type, m_data.begin(), m_data.end())));
             type(new_type);
-        }
-        catch(...) {
+        } catch(...) {
             m_type = old_type;
             swap(m_data, old_data);
             throw;
@@ -382,12 +381,12 @@ template <class Container> struct basic_element {
         auto it = data.end();
         detail::serialise(data, it, std::forward<T>(val));
 
-        if(detail::size_func<EType, decltype(data.begin())> {}(data.begin(), data.end()) !=
+        if(detail::size_func<EType, decltype(data.begin())>{}(data.begin(), data.end()) !=
            static_cast<ptrdiff_t>(boost::distance(data)))
             BOOST_THROW_EXCEPTION(invalid_element_size{}
                                   << detail::actual_size(static_cast<ptrdiff_t>(boost::distance(data)))
-                                  << detail::expected_size(detail::size_func<EType, decltype(data.begin())> {}(
-                                         data.begin(), data.end())));
+                                  << detail::expected_size(
+                                         detail::size_func<EType, decltype(data.begin())>{}(data.begin(), data.end())));
 
         type(EType);
         using std::swap;
@@ -420,13 +419,18 @@ template <class Container> struct basic_element {
 
     //! Apply the visitor pattern with a void-return visitor.
     template <typename Visitor>
-    void visit(Visitor&&, std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
-                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const;
+    void visit(Visitor&&,
+               std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+                   std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>* =
+                   nullptr) const;
     //! Apply the visitor pattern with a value-returning visitor.
     template <typename Visitor>
-    auto visit(Visitor&&, std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
-                              "", std::declval<element_type>(), std::declval<double>()))>::value>* = nullptr) const
-        -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>()));
+    auto visit(Visitor&&,
+               std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+                   std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>* =
+                   nullptr) const -> decltype(std::declval<Visitor>()(std::declval<std::string>(),
+                                                                      std::declval<element_type>(),
+                                                                      std::declval<double>()));
 
     //! \brief Constructs a BSON element without data, in-place into a container.
     static void write_to_container(container_type&, typename container_type::const_iterator, boost::string_ref,
@@ -490,9 +494,9 @@ template <class Container> struct basic_element {
 
     //! Swaps contents with \p other.
     void swap(basic_element& other) noexcept {
-        static_assert(detail::is_nothrow_swappable<decltype(m_name)>::value, "");
-        static_assert(detail::is_nothrow_swappable<container_type>::value, "");
-        static_assert(detail::is_nothrow_swappable<element_type>::value, "");
+        //        static_assert(detail::is_nothrow_swappable<decltype(m_name)>::value, "");
+        //        static_assert(detail::is_nothrow_swappable<container_type>::value, "");
+        //        static_assert(detail::is_nothrow_swappable<element_type>::value, "");
         using std::swap;
         swap(m_name, other.m_name);
         swap(m_type, other.m_type);
@@ -979,9 +983,10 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
  */
 template <class Container>
 template <typename Visitor>
-void basic_element<Container>::visit(Visitor&& visitor,
-                                     std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
-                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const {
+void basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<std::is_void<decltype(std::declval<Visitor>()(
+        std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>*) const {
     detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
     return;
 }
@@ -1003,10 +1008,12 @@ void basic_element<Container>::visit(Visitor&& visitor,
  */
 template <class Container>
 template <typename Visitor>
-auto basic_element<Container>::visit(Visitor&& visitor,
-                                     std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
-                                         "", std::declval<element_type>(), std::declval<double>()))>::value>*) const
-    -> decltype(std::declval<Visitor>()("", std::declval<element_type>(), std::declval<double>())) {
+auto basic_element<Container>::visit(
+    Visitor&& visitor,
+    std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
+        std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>*) const
+    -> decltype(std::declval<Visitor>()(std::declval<std::string>(), std::declval<element_type>(),
+                                        std::declval<double>())) {
     return detail::visit<detail::element_visitor>(m_type, std::forward<Visitor>(visitor), *this);
 }
 

@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 #include <set>
-#include <codecvt>
 
 #include "detail/config.hpp"
 
@@ -23,6 +22,7 @@ JBSON_CLANG_POP_WARNINGS
 #include "element_fwd.hpp"
 #include "detail/traits.hpp"
 #include "element.hpp"
+#include "detail/codecvt.hpp"
 
 namespace jbson {
 
@@ -70,8 +70,8 @@ struct document_iter
      */
     template <class OtherValue, typename OtherIt>
     document_iter(const document_iter<OtherValue, OtherIt>& other,
-                  std::enable_if_t<std::is_convertible<OtherValue, element_type>::value&&
-                                       std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
+                  std::enable_if_t<std::is_convertible<OtherValue, element_type>::value &&
+                                   std::is_convertible<OtherIt, BaseIterator>::value>* = nullptr)
         : m_start(other.m_start), m_end(other.m_end) {
         if(m_start == m_end)
             return;
@@ -139,9 +139,9 @@ void init_empty(Container& c,
     c = arr;
 }
 
-template <typename Container>
-void init_empty(Container&, std::enable_if_t<!container_has_push_back<Container>::value>* = nullptr,
-                std::enable_if_t<!std::is_constructible<Container, std::array<char, 5>>::value>* = nullptr) {}
+template <typename IteratorT> void init_empty(boost::iterator_range<IteratorT>&) {}
+
+void init_empty(...) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -192,7 +192,8 @@ template <class Container, class ElementContainer> class basic_document {
   public:
     //! Type of underlying storage container/range.
     using container_type = std::decay_t<Container>;
-    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept swap()");
+    //    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept
+    //    swap()");
 
     //! Type of constituent elements.
     using element_type = basic_element<ElementContainer>;
@@ -276,11 +277,11 @@ template <class Container, class ElementContainer> class basic_document {
                                detail::is_range_of_iterator<
                                    ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>,
                                                                   typename container_type::iterator, boost::mpl::_1>>,
-                               std::true_type>::value>* = nullptr,
+                               std::true_type>::value> * = nullptr,
         std::enable_if_t<!std::is_same<container_type, std::decay_t<ForwardRange>>::value &&
                          detail::is_range_of_iterator<
                              ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
-                                                            boost::mpl::_1, boost::mpl::_1>>::value>* = nullptr)
+                                                            boost::mpl::_1, boost::mpl::_1>>::value> * = nullptr)
         : basic_document(container_type(std::begin(rng), std::end(rng))) {}
 
     /*!
@@ -307,7 +308,7 @@ template <class Container, class ElementContainer> class basic_document {
         }
         m_data.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
     }
@@ -368,7 +369,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.erase(it.m_start, std::next(it.m_start, it.m_cur->size()));
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
@@ -396,7 +397,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.insert(it.m_start, data.begin(), data.end());
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
@@ -423,7 +424,7 @@ template <class Container, class ElementContainer> class basic_document {
         auto pos = m_data.insert(it.m_start, data.begin(), data.end());
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
-        static_assert(4 == size.size(), "");
+        static_assert(4 == std::tuple_size<decltype(size)>::value, "");
 
         boost::range::copy(size, m_data.begin());
 
@@ -445,9 +446,11 @@ template <class Container, class ElementContainer> class basic_document {
     //! \note const lvalue overload
     const container_type& data() const& noexcept { return m_data; }
 
+#ifndef JBSON_NO_CONST_RVALUE_THIS
     //! Returns copy of BSON data.
     //! \note const rvalue overload
     container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) { return m_data; }
+#endif //JBSON_NO_CONST_RVALUE_THIS
 
     //! Returns rvalue reference to BSON data.
     //! \note rvalue overload
@@ -490,15 +493,23 @@ template <class Container, class ElementContainer> class basic_document {
 
                     if((lvl & validity_level::unicode_valid) == validity_level::unicode_valid &&
                        e.type() == jbson::element_type::string_element) {
-                        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> u8to32{};
-                        auto str = get<jbson::element_type::string_element>(e);
-                        u8to32.from_bytes(str.data(), str.data() + str.size());
+                        auto from = get<jbson::element_type::string_element>(e);
+
+                        detail::codecvt<char32_t> u8to32;
+                        auto state = detail::create_state<char32_t>();
+                        std::u32string to(from.size(), '\0');
+
+                        auto from_next = from.data();
+                        auto to_next = const_cast<char32_t*>(to.data());
+                        auto res = u8to32.in(state, from_next, from_next + from.size(), from_next, to_next,
+                                             to_next + to.size(), to_next);
+                        to.resize(to_next - to.data());
+                        ret = res != std::codecvt_base::error;
                     }
                     if(!ret)
                         break;
                 }
-            }
-            catch(...) {
+            } catch(...) {
                 ret = false;
             }
         }
@@ -583,8 +594,7 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
 
                     ++count;
                 }
-            }
-            catch(...) {
+            } catch(...) {
                 ret = false;
             }
         }
