@@ -23,6 +23,44 @@ namespace jbson {
 
 namespace detail {
 
+#ifndef JBSON_NO_ITERATOR_RANGE_DROP_FUNS
+
+template <typename IteratorT>
+void drop_front(boost::iterator_range<IteratorT>& rng) { rng.drop_front(); }
+
+template <typename IteratorT>
+void drop_front(boost::iterator_range<IteratorT>& rng, typename boost::iterator_range<IteratorT>::difference_type n) {
+    rng.drop_front(n);
+}
+
+template <typename IteratorT>
+void drop_back(boost::iterator_range<IteratorT>& rng) { rng.drop_back(); }
+
+template <typename IteratorT>
+void drop_back(boost::iterator_range<IteratorT>& rng, typename boost::iterator_range<IteratorT>::difference_type n) {
+    rng.drop_back(n);
+}
+
+#else
+
+template <typename IteratorT>
+void drop_front(boost::iterator_range<IteratorT>& rng) { rng.pop_front(); }
+
+template <typename IteratorT>
+void drop_front(boost::iterator_range<IteratorT>& rng, typename boost::iterator_range<IteratorT>::difference_type n) {
+    rng.advance_begin(n);
+}
+
+template <typename IteratorT>
+void drop_back(boost::iterator_range<IteratorT>& rng) { rng.pop_back(); }
+
+template <typename IteratorT>
+void drop_back(boost::iterator_range<IteratorT>& rng, typename boost::iterator_range<IteratorT>::difference_type n) {
+    rng.advance_end(n);
+}
+
+#endif
+
 template <typename ElemRangeT, typename StrRngT, typename OutIterator>
 void select(ElemRangeT&& doc, StrRngT path, OutIterator out);
 
@@ -66,7 +104,7 @@ template <typename ElemRangeT, typename StrRngT, typename OutIterator>
 void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator out) {
     using namespace boost;
 
-    path.drop_front(subscript.size() + 2);
+    drop_front(path, subscript.size() + 2);
     if(!subscript.empty() && subscript.back() == ']')
         BOOST_THROW_EXCEPTION(jbson_error());
 
@@ -74,31 +112,31 @@ void select_sub(ElemRangeT&& doc, StrRngT path, StrRngT subscript, OutIterator o
     while(!subscript.empty()) {
         StrRngT elem_name;
         if(subscript.front() == '"') {
-            subscript.drop_front();
+            drop_front(subscript);
             elem_name = range::find<return_begin_found>(subscript, '"');
-            subscript.drop_front(elem_name.size() + 1);
+            drop_front(subscript, elem_name.size() + 1);
         } else if(subscript.front() == '\'') {
-            subscript.drop_front();
+            drop_front(subscript);
             elem_name = range::find<return_begin_found>(subscript, '\'');
-            subscript.drop_front(elem_name.size() + 1);
+            drop_front(subscript, elem_name.size() + 1);
         } else if(::isdigit(subscript.front())) {
             elem_name = range::find<return_begin_found>(subscript, ',');
-            subscript.drop_front(elem_name.size());
+            drop_front(subscript, elem_name.size());
         } else if(subscript.front() == '*') {
             elem_name = {subscript.begin(), std::next(subscript.begin())};
-            subscript.drop_front();
+            drop_front(subscript);
         } else if(!range::binary_search("(?", subscript.front()))
             BOOST_THROW_EXCEPTION(jbson_error());
 
         if(!subscript.empty() && range::binary_search("(?", subscript.front())) {
             elem_name = range::find_if<return_begin_next>(subscript, boost::is_any_of(",]"));
-            subscript.drop_front(elem_name.size());
+            drop_front(subscript, elem_name.size());
             select_expr(std::forward<ElemRangeT>(doc), path, elem_name, out);
         } else
             select_name(std::forward<ElemRangeT>(doc), path, elem_name, std::back_inserter(vec));
 
         if(!subscript.empty() && range::binary_search(",]", subscript.front()))
-            subscript.drop_front();
+            drop_front(subscript);
     }
     out = range::unique_copy(vec, out);
 }
@@ -509,15 +547,15 @@ void select_expr(ElemRangeT&& doc, StrRngT path, StrRngT expr, OutIterator out) 
 
     if(expr.back() != ')')
         return;
-    expr.drop_back();
+    drop_back(expr);
 
     std::vector<int> code;
     bool filter = false;
     if(starts_with(expr, as_literal("?("))) {
-        expr.drop_front(2);
+        drop_front(expr, 2);
         filter = true;
     } else
-        expr.drop_front();
+        drop_front(expr);
 
     expression::error_handler<typename std::decay_t<StrRngT>::const_iterator> err_h{expr.begin(), expr.end()};
     expression::parser<typename std::decay_t<StrRngT>::const_iterator> expr_parser{err_h};
@@ -586,7 +624,7 @@ void select(ElemRangeT&& doc, StrRngT path, OutIterator out) {
     }
 
     if(path.front() == '@')
-        path.drop_front();
+        drop_front(path);
 
     StrRngT elem_name;
     if(!starts_with(path, as_literal("..")))
@@ -594,18 +632,18 @@ void select(ElemRangeT&& doc, StrRngT path, OutIterator out) {
 
     if(path.front() == '[') {
         elem_name = range::find<return_begin_found>(path, ']');
-        elem_name.drop_front();
+        drop_front(elem_name);
         select_sub(std::forward<ElemRangeT>(doc), path, elem_name, out);
     } else {
         if(starts_with(path, as_literal(".."))) {
             elem_name = {path.begin(), std::next(path.begin(), 2)};
             select_name(std::forward<ElemRangeT>(doc), path, elem_name, out);
-            path.drop_front(2);
+            drop_front(path, 2);
         }
         elem_name = range::find_if<return_begin_found>(path, is_any_of(".["));
-        path.drop_front(elem_name.size());
+        drop_front(path, elem_name.size());
         if(!path.empty() && path.front() == '.' && !starts_with(path, as_literal("..")))
-            path.drop_front();
+            drop_front(path);
         select_name(std::forward<ElemRangeT>(doc), path, elem_name, out);
     }
 }
