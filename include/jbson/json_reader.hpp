@@ -259,10 +259,7 @@ void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_itera
     BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
 
     m_data = container_type{};
-    if(detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value)
-        m_data.reserve(+std::distance(&*first, &*last));
-    else
-        m_data.reserve(+std::distance(first, last));
+    m_data.reserve(+std::distance(first.base(), last.base()));
 
     m_start = std::make_shared<line_pos_iterator<ForwardIterator>>(first);
     skip_space(first, last);
@@ -813,9 +810,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         return detail::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E';
     });
 
-    const auto buf_len = detail::is_iterator_pointer<std::decay_t<ForwardIterator>>::value
-                             ? std::distance(&*first_, &*last)
-                             : std::distance(first_, last);
+    const auto buf_len = std::distance(first_.base(), last.base());
     char* buf = (char*)alloca(buf_len + 1);
     char* const buf_end = buf + buf_len;
     *buf_end = 0;
