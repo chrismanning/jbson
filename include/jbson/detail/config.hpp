@@ -7,6 +7,10 @@
 #define JBSON_CONFIG_HPP
 
 #include <boost/config.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION < 105500
+#error ">=boost-1.55 is needed"
+#endif
 #include <boost/predef.h>
 
 #ifdef JBSON_DEPRECATED
@@ -95,7 +99,7 @@
 #define JBSON_NO_CONST_RVALUE_THIS
 #endif
 
-#if BOOST_VERSION < BOOST_VERSION_NUMBER(1,56,0)
+#if BOOST_VERSION < 105600
 #define JBSON_NO_ITERATOR_RANGE_DROP_FUNS
 #endif
 
