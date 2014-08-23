@@ -566,6 +566,7 @@ void select_expr(ElemRangeT&& doc, StrRngT path, StrRngT expr, OutIterator out) 
     assert(r);
     r = expression::compile_expr(ast, std::back_inserter(code));
     assert(r);
+    (void)r;
 
     using variable_type = decltype(expression::eval_expr(std::forward<ElemRangeT>(doc), code));
     variable_type v;

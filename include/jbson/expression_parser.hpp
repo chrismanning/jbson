@@ -209,7 +209,7 @@ struct parser : boost::spirit::qi::grammar<Iterator, ast::expression(), boost::s
 
         unary_expr = primary_expr | (unary_op > primary_expr);
 
-        primary_expr = int_ | quoted_string | identifier | bool_ | '(' > expr > ')';
+        primary_expr = int_ | quoted_string | identifier | bool_ | ('(' > expr > ')');
 
         quoted_string = lexeme['"' >> +(char_ - '"') >> '"'] | lexeme['\'' >> +(char_ - '\'') >> '\''];
 
