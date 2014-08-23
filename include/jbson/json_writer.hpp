@@ -14,6 +14,7 @@
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/utility/string_ref.hpp>
 #include <boost/range/as_literal.hpp>
+#include <boost/spirit/home/karma/numeric.hpp>
 JBSON_CLANG_POP_WARNINGS
 
 #include "element.hpp"
@@ -40,24 +41,35 @@ namespace {
 
 template <typename T, typename OutputIterator>
 std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
-                                       std::enable_if_t<std::is_integral<std::decay_t<T>>::value>* = nullptr) {
-    if(std::is_same<T, bool>::value)
-        return boost::range::copy(boost::as_literal(!!v ? "true" : "false"), out);
-    std::array<char, std::numeric_limits<T>::digits10 + 2> int_str;
-    auto n = std::snprintf(int_str.data(), int_str.size(), "%zd", static_cast<ptrdiff_t>(v));
-    assert(n > 0);
-    assert(static_cast<size_t>(n) <= int_str.size());
-    return boost::range::copy(boost::string_ref{int_str.data(), static_cast<size_t>(n)}, out);
+                                       std::enable_if_t<std::is_same<std::decay_t<T>, bool>::value>* = nullptr) {
+    return boost::range::copy(boost::as_literal(!!v ? "true" : "false"), out);
 }
 
 template <typename T, typename OutputIterator>
 std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
+                                       std::enable_if_t<std::is_integral<std::decay_t<T>>::value>* = nullptr,
+                                       std::enable_if_t<!std::is_same<std::decay_t<T>, bool>::value> * = nullptr) {
+    auto ok = boost::spirit::karma::int_inserter<10>::call(out, (std::make_signed_t<T>)v);
+    assert(ok);
+    (void)ok;
+
+    return out;
+}
+
+template <typename Num> struct real_gen_policy : boost::spirit::karma::real_policies<Num> {
+    static unsigned precision(Num) { return 8; }
+    template <typename... Args> static bool nan(Args&&...) { return false; }
+    template <typename... Args> static bool inf(Args&&...) { return false; }
+};
+
+template <typename T, typename OutputIterator>
+std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
                                        std::enable_if_t<std::is_floating_point<std::decay_t<T>>::value>* = nullptr) {
-    std::array<char, std::numeric_limits<T>::digits10 + 2> float_str;
-    auto n = std::snprintf(float_str.data(), float_str.size(), "%.8g", v);
-    assert(n > 0);
-    assert(static_cast<size_t>(n) <= float_str.size());
-    out = boost::range::copy(boost::string_ref{float_str.data(), static_cast<size_t>(n)}, out);
+    static const real_gen_policy<T> policy{};
+    auto ok = boost::spirit::karma::real_inserter<T, real_gen_policy<T>>::call(out, v, policy);
+    assert(ok);
+    (void)ok;
+
     return out;
 }
 

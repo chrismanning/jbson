@@ -21,6 +21,8 @@ JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/exception/exception.hpp>
 #include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 #include <boost/io/ios_state.hpp>
+#include <boost/spirit/home/qi/numeric/numeric_utils.hpp>
+#include <boost/spirit/home/qi/numeric/real.hpp>
 JBSON_CLANG_POP_WARNINGS
 
 #include "document.hpp"
@@ -798,6 +800,13 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
     return out;
 }
 
+template <typename Num> struct real_parse_policy : boost::spirit::qi::strict_real_policies<Num> {
+    static bool const allow_leading_dot = false;
+    static bool const allow_trailing_dot = false;
+    template <typename... Args> static bool parse_nan(Args&&...) { return false; }
+    template <typename... Args> static bool parse_inf(Args&&...) { return false; }
+};
+
 template <typename ForwardIterator, typename OutputIterator>
 std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first_,
                                                                    const line_pos_iterator<ForwardIterator>& last_,
@@ -806,9 +815,26 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 
     if(!detail::isdigit(*first_) && *first_ != '-')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
-    const auto last = std::find_if_not(first_, last_, [](char c) {
-        return detail::isdigit(c) || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E';
-    });
+    bool has_decimal = false;
+    line_pos_iterator<ForwardIterator> last;
+    std::tie(has_decimal, last) = [this](auto first, auto last) {
+        bool dec = false;
+        for(; first != last; first++) {
+            auto c = *first;
+            if(c == '.') {
+                if(!dec)
+                    dec = true;
+                else
+                    BOOST_THROW_EXCEPTION(
+                        make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
+                continue;
+            } else if(!(detail::isdigit(c) || c == '+' || c == '-' || c == 'e' || c == 'E'))
+                break;
+        }
+        return std::make_tuple(dec, line_pos_iterator<ForwardIterator>(first));
+    }(first_, last_);
+
+    assert(has_decimal == (std::find(first_.base(), last.base(), '.') != last.base()));
 
     const auto buf_len = std::distance(first_.base(), last.base());
     char* buf = (char*)alloca(buf_len + 1);
@@ -821,36 +847,34 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
     auto type = element_type::null_element;
 
-    char* pos;
-    const int64_t val = std::strtoll(buf, &pos, 10);
-
-    if(pos == buf || pos != buf_end || errno == ERANGE) {
-        errno = 0;
-        char* pos;
-        const double val = std::strtod(buf, &pos);
-
-        if(val == HUGE_VALL || pos == buf || pos != buf_end)
+    if(has_decimal) {
+        double val;
+        static const boost::spirit::qi::any_real_parser<double, real_parse_policy<double>> dbl_parser{};
+        auto ok = dbl_parser.parse(buf, buf_end, boost::spirit::unused, boost::spirit::unused, val);
+        if(!ok)
             BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
-
-        std::advance(first_, buf_len);
 
         assert(out >= m_data.begin() && out <= m_data.end());
         detail::serialise(m_data, out, val);
         type = element_type::double_element;
-        return std::make_tuple(out, type);
+    } else {
+        int64_t val = 0;
+        auto ok = boost::spirit::qi::extract_int<int64_t, 10, 1, -1>::call(buf, buf_end, val);
+        if(!ok)
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
+
+        if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
+            assert(out >= m_data.begin() && out <= m_data.end());
+            detail::serialise(m_data, out, static_cast<int32_t>(val));
+            type = element_type::int32_element;
+        } else {
+            assert(out >= m_data.begin() && out <= m_data.end());
+            detail::serialise(m_data, out, val);
+            type = element_type::int64_element;
+        }
     }
 
     std::advance(first_, buf_len);
-
-    if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
-        assert(out >= m_data.begin() && out <= m_data.end());
-        detail::serialise(m_data, out, static_cast<int32_t>(val));
-        type = element_type::int32_element;
-    } else {
-        assert(out >= m_data.begin() && out <= m_data.end());
-        detail::serialise(m_data, out, val);
-        type = element_type::int64_element;
-    }
 
     return std::make_tuple(out, type);
 }
