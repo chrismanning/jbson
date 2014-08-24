@@ -800,12 +800,16 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
     return out;
 }
 
-template <typename Num> struct real_parse_policy : boost::spirit::qi::strict_real_policies<Num> {
+namespace detail {
+
+template <typename Num> struct real_parse_policy : boost::spirit::qi::real_policies<Num> {
     static bool const allow_leading_dot = false;
     static bool const allow_trailing_dot = false;
     template <typename... Args> static bool parse_nan(Args&&...) { return false; }
     template <typename... Args> static bool parse_inf(Args&&...) { return false; }
 };
+
+} // namespace detail
 
 template <typename ForwardIterator, typename OutputIterator>
 std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first_,
@@ -815,53 +819,73 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 
     if(!detail::isdigit(*first_) && *first_ != '-')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
-    bool has_decimal = false;
-    line_pos_iterator<ForwardIterator> last;
-    std::tie(has_decimal, last) = [this](auto first, auto last) {
-        bool dec = false;
+
+    bool is_float = false;
+    ForwardIterator first = first_.base();
+    ForwardIterator last;
+    // find end of number and presence of decimal point or exponent
+    std::tie(is_float, last) = [this](auto first_, auto last_) {
+        auto first = first_.base(), last = last_.base();
+        bool dec = false, e = false;
         for(; first != last; first++) {
-            auto c = *first;
-            if(c == '.') {
-                if(!dec)
-                    dec = true;
-                else
-                    BOOST_THROW_EXCEPTION(
-                        make_parse_exception(json_error_num::unexpected_token, first, last, "number"));
+            if(detail::isdigit(*first))
                 continue;
-            } else if(!(detail::isdigit(c) || c == '+' || c == '-' || c == 'e' || c == 'E'))
-                break;
+            switch(*first) {
+                case '+':
+                case '-':
+                    break;
+                case '.':
+                    if(!dec)
+                        dec = true;
+                    else
+                        BOOST_THROW_EXCEPTION(make_parse_exception(
+                            json_error_num::unexpected_token, std::next(first_, std::distance(first_.base(), first)),
+                            last_, "number"));
+                    break;
+                case 'e':
+                case 'E':
+                    if(!e)
+                        e = true;
+                    else
+                        BOOST_THROW_EXCEPTION(make_parse_exception(
+                            json_error_num::unexpected_token, std::next(first_, std::distance(first_.base(), first)),
+                            last_, "number"));
+                    break;
+                default:
+                    return std::make_tuple(dec || e, first);
+            }
         }
-        return std::make_tuple(dec, line_pos_iterator<ForwardIterator>(first));
+        return std::make_tuple(dec || e, first);
     }(first_, last_);
 
-    assert(has_decimal == (std::find(first_.base(), last.base(), '.') != last.base()));
+    assert(is_float == (std::find(first, last, '.') != last));
 
-    const auto buf_len = std::distance(first_.base(), last.base());
-    char* buf = (char*)alloca(buf_len + 1);
-    char* const buf_end = buf + buf_len;
-    *buf_end = 0;
-    assert(buf != nullptr);
-    std::copy(first_, last, buf);
+    const auto num_len = std::distance(first, last);
 
-    if(*buf == '0' && buf_len > 1 && *std::next(buf) != '.')
-        BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
+    if(*first_ == '0' && num_len > 1 && *std::next(first) != '.')
+        BOOST_THROW_EXCEPTION(make_parse_exception(
+            json_error_num::unexpected_token, std::next(first_, std::distance(first_.base(), first)), last_, "number"));
     auto type = element_type::null_element;
 
-    if(has_decimal) {
+    if(is_float) {
         double val;
-        static const boost::spirit::qi::any_real_parser<double, real_parse_policy<double>> dbl_parser{};
-        auto ok = dbl_parser.parse(buf, buf_end, boost::spirit::unused, boost::spirit::unused, val);
+        static const boost::spirit::qi::any_real_parser<double, detail::real_parse_policy<double>> dbl_parser{};
+        auto ok = dbl_parser.parse(first, last, boost::spirit::unused, boost::spirit::unused, val);
         if(!ok)
-            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token,
+                                                       std::next(first_, std::distance(first_.base(), first)), last_,
+                                                       "number"));
 
         assert(out >= m_data.begin() && out <= m_data.end());
         detail::serialise(m_data, out, val);
         type = element_type::double_element;
     } else {
         int64_t val = 0;
-        auto ok = boost::spirit::qi::extract_int<int64_t, 10, 1, -1>::call(buf, buf_end, val);
+        auto ok = boost::spirit::qi::extract_int<int64_t, 10, 1, -1>::call(first, last, val);
         if(!ok)
-            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
+            BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token,
+                                                       std::next(first_, std::distance(first_.base(), first)), last_,
+                                                       "number"));
 
         if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
             assert(out >= m_data.begin() && out <= m_data.end());
@@ -874,7 +898,11 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         }
     }
 
-    std::advance(first_, buf_len);
+    if(first != last)
+        BOOST_THROW_EXCEPTION(make_parse_exception(
+            json_error_num::unexpected_token, std::next(first_, std::distance(first_.base(), first)), last_, "number"));
+
+    std::advance(first_, num_len);
 
     return std::make_tuple(out, type);
 }
