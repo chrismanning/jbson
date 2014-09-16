@@ -141,7 +141,7 @@ void init_empty(Container& c,
 
 template <typename IteratorT> void init_empty(boost::iterator_range<IteratorT>&) {}
 
-void init_empty(...) {}
+inline void init_empty(...) {}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
