@@ -42,7 +42,7 @@ struct json_reader {
     using container_type = std::vector<char>;
     using range_type = boost::iterator_range<container_type::const_iterator>;
 
-    json_reader() noexcept(std::is_nothrow_constructible<container_type>::value) = default;
+    json_reader() noexcept = default;
 
     template <typename ForwardIterator> void parse(ForwardIterator, ForwardIterator);
     template <typename ForwardIterator>
