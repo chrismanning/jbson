@@ -36,9 +36,7 @@ public:
         *p++ = '0';
         *p++ = ']';
 
-        json_reader r;
-        ASSERT_NO_THROW(r.parse(json_));
-        doc = document(std::move(r));
+        ASSERT_NO_THROW(doc = read_json(json_));
     }
 
     virtual void TearDown() {
@@ -63,8 +61,7 @@ TEST_F(PerfTest, WriteTest) {
 
 TEST_F(PerfTest, ParseTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_));
+        ASSERT_NO_THROW(read_json(json_));
     }
 }
 
@@ -74,8 +71,7 @@ TEST_F(PerfTest, Utf16ParseTest) {
     json_u16 = cvt.from_bytes(json_.data(), json_.data()+json_.size());
 
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_u16));
+        ASSERT_NO_THROW(read_json(json_u16));
     }
 }
 
@@ -84,17 +80,14 @@ TEST_F(PerfTest, Utf32ParseTest) {
     json_u32 = cvt.from_bytes(json_.data(), json_.data()+json_.size());
 
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_u32));
+        ASSERT_NO_THROW(read_json(json_u32));
     }
 }
 #endif // BOOST_NO_CXX11_HDR_CODECVT
 
 TEST_F(PerfTest, WhitespaceTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(whitespace_));
-        auto arr = array(std::move(reader));
+        auto arr = read_json_array(whitespace_);
         auto beg = arr.begin();
         ASSERT_NE(arr.end(), beg);
         ASSERT_EQ("0", beg->name());
@@ -102,27 +95,9 @@ TEST_F(PerfTest, WhitespaceTest) {
     }
 }
 
-TEST_F(PerfTest, LvalueTest) {
-    for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_));
-        auto d = document(reader);
-    }
-}
-
-TEST_F(PerfTest, RvalueTest) {
-    for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_));
-        auto d = document(std::move(reader));
-    }
-}
-
 TEST_F(PerfTest, ParseToSetTest) {
     for (size_t i = 0; i < kTrialCount; i++) {
-        json_reader reader;
-        ASSERT_NO_THROW(reader.parse(json_));
-        auto set = document_set(document(std::move(reader)));
+        auto set = document_set(read_json(json_));
     }
 }
 

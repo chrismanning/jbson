@@ -17,28 +17,24 @@ using namespace jbson;
 
 TEST(JsonReaderTest, JsonParseTest1) {
     auto json = boost::string_ref{R"({})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonParseTest2) {
     auto json = boost::string_ref{R"({{})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest3) {
     auto json = boost::string_ref{R"([])"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonParseTest4) {
     auto json = R"({       "key"       :   "value"  })";
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::string_element, elements.begin()->type());
@@ -47,10 +43,9 @@ TEST(JsonReaderTest, JsonParseTest4) {
 
 TEST(JsonReaderTest, JsonParseTest5) {
     auto json = boost::string_ref{"{\n\"key\"\t:\"value\"}"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::string_element, elements.begin()->type());
@@ -58,12 +53,12 @@ TEST(JsonReaderTest, JsonParseTest5) {
 }
 
 TEST(JsonReaderTest, JsonParseTest6) {
-    std::array<char, 13> json{0};
+    std::array<char, 13> json;
+    json.fill(0);
     boost::copy(boost::as_literal(R"({"key":true})"), json.data());
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json.data()));
+    ASSERT_NO_THROW(read_json(json.data()));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::boolean_element, elements.begin()->type());
@@ -72,10 +67,9 @@ TEST(JsonReaderTest, JsonParseTest6) {
 
 TEST(JsonReaderTest, JsonParseTest7) {
     auto json = boost::string_ref{R"({"key":123})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::int32_element, elements.begin()->type());
@@ -84,10 +78,9 @@ TEST(JsonReaderTest, JsonParseTest7) {
 
 TEST(JsonReaderTest, JsonParseTest8) {
     auto json = boost::string_ref{R"({"key":null})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::null_element, elements.begin()->type());
@@ -95,10 +88,9 @@ TEST(JsonReaderTest, JsonParseTest8) {
 
 TEST(JsonReaderTest, JsonParseTest9) {
     auto json = boost::string_ref{R"({"key":false})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::boolean_element, elements.begin()->type());
@@ -107,10 +99,9 @@ TEST(JsonReaderTest, JsonParseTest9) {
 
 TEST(JsonReaderTest, JsonParseTest10) {
     auto json = boost::string_ref{R"({"key":3.141})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::double_element, elements.begin()->type());
@@ -119,10 +110,9 @@ TEST(JsonReaderTest, JsonParseTest10) {
 
 TEST(JsonReaderTest, JsonParseTest11) {
     auto json = boost::string_ref{R"({"key":-123})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::int32_element, elements.begin()->type());
@@ -131,10 +121,9 @@ TEST(JsonReaderTest, JsonParseTest11) {
 
 TEST(JsonReaderTest, JsonParseTest12) {
     auto json = boost::string_ref{R"({"key": 4294967296})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::int64_element, elements.begin()->type());
@@ -143,10 +132,9 @@ TEST(JsonReaderTest, JsonParseTest12) {
 
 TEST(JsonReaderTest, JsonParseTest13) {
     auto json = boost::string_ref{R"({"key": {"nested key" : "nested value"}})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("key", elements.begin()->name());
     ASSERT_EQ(element_type::document_element, elements.begin()->type());
@@ -157,10 +145,9 @@ TEST(JsonReaderTest, JsonParseTest13) {
 
 TEST(JsonReaderTest, JsonParseTest14) {
     auto json = boost::string_ref{R"({"ke\ny":"value"})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     EXPECT_EQ("ke\ny", elements.begin()->name());
     ASSERT_EQ(element_type::string_element, elements.begin()->type());
@@ -169,16 +156,14 @@ TEST(JsonReaderTest, JsonParseTest14) {
 
 TEST(JsonReaderTest, JsonParseTest15) {
     auto json = boost::string_ref{R"(["key": 4294967296])"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest16) {
     auto json = boost::string_ref{R"([4294967296, "some string", true])"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(3, elements.size());
 
     auto it = elements.begin();
@@ -201,10 +186,9 @@ TEST(JsonReaderTest, JsonParseTest16) {
 
 TEST(JsonReaderTest, JsonParseTest16_utf32) {
     auto json = boost::u32string_ref{U"[4294967296, \"some \U0001D11E string\", true]"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(3, elements.size());
 
     auto it = elements.begin();
@@ -227,10 +211,9 @@ TEST(JsonReaderTest, JsonParseTest16_utf32) {
 
 TEST(JsonReaderTest, JsonParseTest16_utf16) {
     auto json = boost::u16string_ref{u"[4294967296, \"some \xD834\xDD1E string\", true]"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(3, elements.size());
 
     auto it = elements.begin();
@@ -253,22 +236,19 @@ TEST(JsonReaderTest, JsonParseTest16_utf16) {
 
 TEST(JsonReaderTest, JsonParseTest17) {
     auto json = boost::string_ref{R"({"bindata" : {"$binary": false}})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest18) {
     auto json = boost::string_ref{R"({"_id" : {"$oid": ""}})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest19) {
     auto json = boost::string_ref{R"({"_id" : {"$oid": "507f1f77bcf86cd799439011"}})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::oid_element, e.type());
@@ -291,10 +271,9 @@ TEST(JsonReaderTest, JsonParseTest19) {
 
 TEST(JsonReaderTest, JsonParseTest20) {
     auto json = boost::string_ref{R"({"dollar" : "\u0024"})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::string_element, e.type());
@@ -304,22 +283,19 @@ TEST(JsonReaderTest, JsonParseTest20) {
 
 TEST(JsonReaderTest, JsonParseTest21) {
     auto json = boost::string_ref{R"({"bad hex" : "\u002G"})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest22) {
     auto json = boost::string_ref{R"({"str" : "\a"})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest23) {
     auto json = boost::string_ref{R"({"utf" : "κ"})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(1, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::string_element, e.type());
@@ -330,10 +306,9 @@ TEST(JsonReaderTest, JsonParseTest23) {
 
 TEST(JsonReaderTest, JsonParseTest24) {
     auto json = boost::string_ref{R"({"a doc" : {}, "some int": 123})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(2, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::document_element, e.type());
@@ -346,10 +321,9 @@ TEST(JsonReaderTest, JsonParseTest24) {
 
 TEST(JsonReaderTest, JsonParseTest25) {
     auto json = boost::string_ref{R"({"a doc" : [], "some int": 123})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(2, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::array_element, e.type());
@@ -362,10 +336,9 @@ TEST(JsonReaderTest, JsonParseTest25) {
 
 TEST(JsonReaderTest, JsonParseTest26) {
     auto json = boost::string_ref{R"({"a doc" : [123, "str"], "some int": 123})"};
-    json_reader reader;
-    ASSERT_NO_THROW(reader.parse(json));
+    ASSERT_NO_THROW(read_json(json));
 
-    auto elements = basic_document_set<json_reader::range_type>(reader);
+    auto elements = document_set(read_json(json));
     ASSERT_EQ(2, elements.size());
     auto e = *elements.begin();
     ASSERT_EQ(element_type::array_element, e.type());
@@ -390,42 +363,37 @@ TEST(JsonReaderTest, JsonLiteralTest1) {
 
 TEST(JsonReaderTest, JsonParseErrorTest1) {
     auto json = boost::string_ref{R"({{})"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseUnicode) {
     auto json = boost::string_ref{R"([""])"};
-    json_reader reader;
     auto str = std::string{};
     str.resize(2);
-    ASSERT_NO_THROW(reader.parse(json));
-    auto doc = document(reader);
+    ASSERT_NO_THROW(read_json(json));
+    auto doc = document(read_json(json));
     str = doc.begin()->value<std::string>();
     EXPECT_EQ("", str);
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode1) {
     auto json = boost::string_ref{R"(["\uD834\uDD1E"])"};
-    json_reader reader;
     auto str = std::string{};
     str.resize(2);
-    ASSERT_NO_THROW(reader.parse(json));
-    auto doc = document(reader);
+    ASSERT_NO_THROW(read_json(json));
+    auto doc = document(read_json(json));
     str = doc.begin()->value<std::string>();
     EXPECT_EQ("\xF0\x9D\x84\x9E", str);
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode2) {
     auto json = boost::string_ref{R"(["\uD834\uDB00"])"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode3) {
     auto json = boost::string_ref{R"(["\uDEAD"])"};
-    json_reader reader;
-    ASSERT_THROW(reader.parse(json), json_parse_error);
+    ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonCheckerFail1) {
@@ -437,8 +405,7 @@ TEST(JsonReaderTest, JsonCheckerFail1) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail2) {
@@ -450,8 +417,7 @@ TEST(JsonReaderTest, JsonCheckerFail2) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail3) {
@@ -463,8 +429,7 @@ TEST(JsonReaderTest, JsonCheckerFail3) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail4) {
@@ -476,8 +441,7 @@ TEST(JsonReaderTest, JsonCheckerFail4) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail5) {
@@ -489,8 +453,7 @@ TEST(JsonReaderTest, JsonCheckerFail5) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail6) {
@@ -502,8 +465,7 @@ TEST(JsonReaderTest, JsonCheckerFail6) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail7) {
@@ -515,8 +477,7 @@ TEST(JsonReaderTest, JsonCheckerFail7) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail8) {
@@ -528,8 +489,7 @@ TEST(JsonReaderTest, JsonCheckerFail8) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail9) {
@@ -541,8 +501,7 @@ TEST(JsonReaderTest, JsonCheckerFail9) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail10) {
@@ -554,8 +513,7 @@ TEST(JsonReaderTest, JsonCheckerFail10) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail11) {
@@ -567,8 +525,7 @@ TEST(JsonReaderTest, JsonCheckerFail11) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail12) {
@@ -580,8 +537,7 @@ TEST(JsonReaderTest, JsonCheckerFail12) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail13) {
@@ -593,8 +549,7 @@ TEST(JsonReaderTest, JsonCheckerFail13) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail14) {
@@ -606,8 +561,7 @@ TEST(JsonReaderTest, JsonCheckerFail14) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail15) {
@@ -619,8 +573,7 @@ TEST(JsonReaderTest, JsonCheckerFail15) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail16) {
@@ -632,8 +585,7 @@ TEST(JsonReaderTest, JsonCheckerFail16) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail17) {
@@ -645,8 +597,7 @@ TEST(JsonReaderTest, JsonCheckerFail17) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 // this test assumes some maximum nesting depth
@@ -659,8 +610,7 @@ TEST(JsonReaderTest, JsonCheckerFail17) {
 //    ifs.seekg(0, std::ios::beg);
 //    ifs.read(json.data(), n);
 
-//    json_reader reader;
-//    EXPECT_ANY_THROW(reader.parse(json));
+////    EXPECT_ANY_THROW(read_json(json));
 //}
 
 TEST(JsonReaderTest, JsonCheckerFail19) {
@@ -672,8 +622,7 @@ TEST(JsonReaderTest, JsonCheckerFail19) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail20) {
@@ -685,8 +634,7 @@ TEST(JsonReaderTest, JsonCheckerFail20) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail21) {
@@ -698,8 +646,7 @@ TEST(JsonReaderTest, JsonCheckerFail21) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail22) {
@@ -711,8 +658,7 @@ TEST(JsonReaderTest, JsonCheckerFail22) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail23) {
@@ -724,8 +670,7 @@ TEST(JsonReaderTest, JsonCheckerFail23) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail24) {
@@ -737,8 +682,7 @@ TEST(JsonReaderTest, JsonCheckerFail24) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail25) {
@@ -750,8 +694,7 @@ TEST(JsonReaderTest, JsonCheckerFail25) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail26) {
@@ -763,8 +706,7 @@ TEST(JsonReaderTest, JsonCheckerFail26) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail27) {
@@ -776,8 +718,7 @@ TEST(JsonReaderTest, JsonCheckerFail27) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail28) {
@@ -789,8 +730,7 @@ TEST(JsonReaderTest, JsonCheckerFail28) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail29) {
@@ -802,8 +742,7 @@ TEST(JsonReaderTest, JsonCheckerFail29) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail30) {
@@ -815,8 +754,7 @@ TEST(JsonReaderTest, JsonCheckerFail30) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail31) {
@@ -828,8 +766,7 @@ TEST(JsonReaderTest, JsonCheckerFail31) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail32) {
@@ -841,8 +778,7 @@ TEST(JsonReaderTest, JsonCheckerFail32) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerFail33) {
@@ -854,8 +790,7 @@ TEST(JsonReaderTest, JsonCheckerFail33) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_ANY_THROW(reader.parse(json));
+    EXPECT_ANY_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerPass1) {
@@ -867,8 +802,7 @@ TEST(JsonReaderTest, JsonCheckerPass1) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_NO_THROW(reader.parse(json));
+    EXPECT_NO_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerPass2) {
@@ -880,8 +814,7 @@ TEST(JsonReaderTest, JsonCheckerPass2) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_NO_THROW(reader.parse(json));
+    EXPECT_NO_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonCheckerPass3) {
@@ -893,6 +826,5 @@ TEST(JsonReaderTest, JsonCheckerPass3) {
     ifs.seekg(0, std::ios::beg);
     ifs.read(json.data(), n);
 
-    json_reader reader;
-    EXPECT_NO_THROW(reader.parse(json));
+    EXPECT_NO_THROW(read_json(json));
 }

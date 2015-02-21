@@ -33,10 +33,19 @@ JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 
 namespace jbson {
 
-using boost::spirit::line_pos_iterator;
+struct json_parse_error : jbson_error {
+    const char* what() const noexcept override { return "json_parse_error"; }
+};
 
-struct json_parse_error;
-enum class json_error_num;
+enum class json_error_num {
+    invalid_root_element,
+    unexpected_end_of_range,
+    unexpected_token,
+};
+
+namespace detail {
+
+using boost::spirit::line_pos_iterator;
 
 struct json_reader {
     using container_type = std::vector<char>;
@@ -51,7 +60,7 @@ struct json_reader {
     template <typename ForwardRange_> void parse(ForwardRange_&& range_) {
         auto range = boost::as_literal(std::forward<ForwardRange_>(range_));
         using ForwardRange = decltype(range);
-        BOOST_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
+        JBSON_CONCEPT_ASSERT((boost::ForwardRangeConcept<ForwardRange>));
         using line_it = line_pos_iterator<typename boost::range_const_iterator<std::decay_t<ForwardRange>>::type>;
         parse(line_it{std::begin(range)}, line_it{std::end(range)});
     }
@@ -132,48 +141,18 @@ struct json_reader {
     container_type m_data;
 };
 
-enum class json_error_num {
-    invalid_root_element,
-    unexpected_end_of_range,
-    unexpected_token,
-};
-
-template <typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, json_error_num err) {
-    switch(err) {
-        case json_error_num::invalid_root_element:
-            os << "invalid root element; must be document (object) or array";
-            break;
-        case json_error_num::unexpected_end_of_range:
-            os << "unexpected end of range";
-            break;
-        case json_error_num::unexpected_token:
-            os << "unexpected token";
-            break;
-        default:
-            os << "unknown error";
-    }
-    return os;
-}
-
 using parse_error = boost::error_info<struct err_val_, json_error_num>;
 using expected_token = boost::error_info<struct token_, std::string>;
 using current_line_string = boost::error_info<struct line_, std::string>;
 using line_position = boost::error_info<struct line_pos_, size_t>;
 using line_number = boost::error_info<struct line_num_, size_t>;
 
-struct json_parse_error : jbson_error {
-    const char* what() const noexcept override { return "json_parse_error"; }
-};
-
-std::string to_string(const json_parse_error&);
-
 template <typename ForwardIterator>
 json_parse_error
 json_reader::make_parse_exception(json_error_num err, const line_pos_iterator<ForwardIterator>& current,
                                   const line_pos_iterator<ForwardIterator>& last, const std::string& expected) const {
     using char_type = typename std::iterator_traits<ForwardIterator>::value_type;
-    BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
+    JBSON_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
     auto e = make_parse_exception(err, expected);
     if(m_start) {
         auto start = *static_cast<line_pos_iterator<ForwardIterator>*>(m_start.get());
@@ -215,50 +194,13 @@ inline json_parse_error json_reader::make_parse_exception(json_error_num err, co
     return e;
 }
 
-inline std::string error_message(json_parse_error& err) {
-    std::stringstream is;
-
-    const auto line_num = boost::get_error_info<line_number>(err);
-    if(line_num)
-        is << "line " << *line_num << ": ";
-
-    is << err.what() << ": ";
-    const auto num = boost::get_error_info<parse_error>(err);
-    if(!num) {
-        is << "unknown error";
-        return is.str();
-    }
-    is << *num << "\n";
-
-    const auto line = boost::get_error_info<current_line_string>(err);
-    if(!line)
-        return is.str();
-    const auto pos = boost::get_error_info<line_position>(err);
-    if(!pos)
-        return is.str();
-
-    is << *line << "\n";
-    {
-        boost::io::ios_width_saver ios(is);
-        is << std::setw(*pos) << "^";
-    }
-
-    const auto expected = boost::get_error_info<expected_token>(err);
-    if(!expected || expected->empty())
-        return is.str();
-
-    is << "\nExpected: " << *expected;
-
-    return is.str();
-}
-
 template <typename ForwardIterator> void json_reader::parse(ForwardIterator first, ForwardIterator last) {
     parse(line_pos_iterator<ForwardIterator>{first}, line_pos_iterator<ForwardIterator>{last});
 }
 
 template <typename ForwardIterator>
 void json_reader::parse(line_pos_iterator<ForwardIterator> first, line_pos_iterator<ForwardIterator> last) {
-    BOOST_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
+    JBSON_CONCEPT_ASSERT((boost::ForwardIteratorConcept<ForwardIterator>));
 
     m_data = container_type{};
     m_data.reserve(+std::distance(first.base(), last.base()));
@@ -617,8 +559,6 @@ OutputIterator json_reader::parse_string(line_pos_iterator<ForwardIterator>& fir
     return out;
 }
 
-namespace detail {
-
 template <typename CharT> constexpr bool iscntrl(CharT c) {
     // ignore 0x7f
     return (std::make_unsigned_t<CharT>)c < 0x1f;
@@ -635,8 +575,6 @@ template <typename CharT> constexpr bool isspace(CharT c) {
     return c == 0x20 || (std::make_unsigned_t<CharT>)(c - '\t') < 5;
 }
 
-} // namespace detail
-
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first,
                                        const line_pos_iterator<ForwardIterator>& last, OutputIterator out,
@@ -649,8 +587,8 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "\""));
     std::advance(first, 1);
 
-    detail::codecvt_t<char_type> cvt;
-    auto state = detail::create_state<char_type>();
+    codecvt_t<char_type> cvt;
+    auto state = create_state<char_type>();
     std::array<char_type, 2> buf;
 
     while(true) {
@@ -691,7 +629,7 @@ OutputIterator json_reader::parse_name(line_pos_iterator<ForwardIterator>& first
             char* to_next;
             auto res = cvt.out(state, buf.data(), buf.data() + (buf[1] ? 2 : 1), frm_next, to.data(),
                                to.data() + to.size(), to_next);
-            if(!detail::state_test(&state) || res != std::codecvt_base::ok)
+            if(!state_test(&state) || res != std::codecvt_base::ok)
                 BOOST_THROW_EXCEPTION(
                     make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
             auto len = std::strlen(to.data());
@@ -780,14 +718,14 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
                                                            "valid hex characters (0-9;a-f/A-F)"));
         }
 
-        detail::codecvt<char16_t> cvt16;
-        auto state = detail::create_state<char16_t>();
+        codecvt<char16_t> cvt16;
+        auto state = create_state<char16_t>();
         buf.fill(0);
         const char16_t* frm_next;
         char* to_next;
         auto res = cvt16.out(state, codepoints.data(), codepoints.data() + codepoints.size(), frm_next, buf.data(),
                              buf.data() + buf.size(), to_next);
-        if(!detail::state_test(&state) || res != std::codecvt_base::ok)
+        if(!state_test(&state) || res != std::codecvt_base::ok)
             BOOST_THROW_EXCEPTION(
                 make_parse_exception(json_error_num::unexpected_token, first, last, "valid unicode code point(s)"));
         std::advance(first, 4);
@@ -800,8 +738,6 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
     return out;
 }
 
-namespace detail {
-
 template <typename Num> struct real_parse_policy : boost::spirit::qi::real_policies<Num> {
     static bool const allow_leading_dot = false;
     static bool const allow_trailing_dot = false;
@@ -809,15 +745,13 @@ template <typename Num> struct real_parse_policy : boost::spirit::qi::real_polic
     template <typename... Args> static bool parse_inf(Args&&...) { return false; }
 };
 
-} // namespace detail
-
 template <typename ForwardIterator, typename OutputIterator>
 std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iterator<ForwardIterator>& first_,
                                                                    const line_pos_iterator<ForwardIterator>& last_,
                                                                    OutputIterator out) {
     assert(last_ != first_);
 
-    if(!detail::isdigit(*first_) && *first_ != '-')
+    if(!isdigit(*first_) && *first_ != '-')
         BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first_, last_, "number"));
 
     bool is_float = false;
@@ -828,7 +762,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         auto first = first_.base(), last = last_.base();
         bool dec = false, e = false;
         for(; first != last; first++) {
-            if(detail::isdigit(*first))
+            if(isdigit(*first))
                 continue;
             switch(*first) {
                 case '+':
@@ -858,7 +792,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
         return std::make_tuple(dec || e, first);
     }(first_, last_);
 
-    assert(is_float == (std::find(first, last, '.') != last));
+    assert(is_float == std::any_of(first, last, [](auto&& c) { return c == '.' || c == 'e' || c == 'E'; }));
 
     const auto num_len = std::distance(first, last);
 
@@ -877,7 +811,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
                                                        "number"));
 
         assert(out >= m_data.begin() && out <= m_data.end());
-        detail::serialise(m_data, out, val);
+        serialise(m_data, out, val);
         type = element_type::double_element;
     } else {
         int64_t val = 0;
@@ -889,11 +823,11 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 
         if(val > std::numeric_limits<int32_t>::min() && val < std::numeric_limits<int32_t>::max()) {
             assert(out >= m_data.begin() && out <= m_data.end());
-            detail::serialise(m_data, out, static_cast<int32_t>(val));
+            serialise(m_data, out, static_cast<int32_t>(val));
             type = element_type::int32_element;
         } else {
             assert(out >= m_data.begin() && out <= m_data.end());
-            detail::serialise(m_data, out, val);
+            serialise(m_data, out, val);
             type = element_type::int64_element;
         }
     }
@@ -910,7 +844,83 @@ std::tuple<OutputIterator, element_type> json_reader::parse_number(line_pos_iter
 template <typename ForwardIterator>
 void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
                              const line_pos_iterator<ForwardIterator>& last) {
-    first = std::find_if_not(first, last, [](auto&& c) { return detail::isspace(c); });
+    first = std::find_if_not(first, last, [](auto&& c) { return isspace(c); });
+}
+
+} // namespace detail
+
+template <typename StringT>
+document read_json(StringT&& str) {
+    detail::json_reader reader{};
+    reader.parse(std::forward<StringT>(str));
+
+    return std::move(reader);
+}
+
+template <typename StringT>
+array read_json_array(StringT&& str) {
+    detail::json_reader reader{};
+    reader.parse(std::forward<StringT>(str));
+
+    return std::move(reader);
+}
+
+struct [[deprecated("Use read_json()")]] json_reader : detail::json_reader {
+    using detail::json_reader::json_reader;
+};
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, json_error_num err) {
+    switch(err) {
+        case json_error_num::invalid_root_element:
+            os << "invalid root element; must be document (object) or array";
+            break;
+        case json_error_num::unexpected_end_of_range:
+            os << "unexpected end of range";
+            break;
+        case json_error_num::unexpected_token:
+            os << "unexpected token";
+            break;
+        default:
+            os << "unknown error";
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const json_parse_error& err) {
+    const auto line_num = boost::get_error_info<detail::line_number>(err);
+    if(line_num)
+        os << "line " << *line_num << ": ";
+
+    os << err.what() << ": ";
+    const auto num = boost::get_error_info<detail::parse_error>(err);
+    if(num) {
+        os << *num << "\n";
+    }
+    else {
+        os << "unknown error";
+    }
+
+    const auto line = boost::get_error_info<detail::current_line_string>(err);
+    const auto pos = boost::get_error_info<detail::line_position>(err);
+
+    if(pos && line) {
+        os << *line << "\n";
+        boost::io::ios_width_saver ios(os);
+        os << std::setw(*pos) << "^";
+    }
+
+    const auto expected = boost::get_error_info<detail::expected_token>(err);
+    if(expected && !expected->empty())
+        os << "\nExpected: " << *expected;
+
+    return os;
+}
+
+inline std::string error_message(json_parse_error& err) {
+    std::stringstream os;
+    os << err;
+    return os.str();
 }
 
 inline namespace literal {

@@ -288,6 +288,12 @@ template <typename T> struct is_nothrow_swappable : std::integral_constant<bool,
 } // namespace detail
 } // namespace jbson
 
+#ifdef __clang__
+#define JBSON_CONCEPT_ASSERT [[gnu::unused]] BOOST_CONCEPT_ASSERT
+#else
+#define JBSON_CONCEPT_ASSERT BOOST_CONCEPT_ASSERT
+#endif
+
 JBSON_POP_WARNINGS
 
 #endif // JBSON_TRAITS_HPP
