@@ -214,7 +214,7 @@ struct array_builder {
         auto old_size = m_elements.size();
         try {
             basic_element<decltype(m_elements)>::write_to_container(
-                m_elements, m_elements.end(), boost::string_ref{int_str.data(), static_cast<size_t>(n)},
+                m_elements, m_elements.end(), std::string_view{int_str.data(), static_cast<size_t>(n)},
                 std::forward<Args>(args)...);
             m_count++;
         }

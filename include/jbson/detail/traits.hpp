@@ -7,6 +7,7 @@
 #define JBSON_TRAITS_HPP
 
 #include <type_traits>
+#include <experimental/string_view>
 
 #include "./config.hpp"
 
@@ -14,7 +15,6 @@ JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/range/iterator_range.hpp>
 #include <boost/mpl/not.hpp>
 #include <boost/mpl/and.hpp>
-#include <boost/utility/string_ref_fwd.hpp>
 #include <boost/tti/has_member_function.hpp>
 #include <boost/range/metafunctions.hpp>
 #include <boost/mpl/same_as.hpp>
@@ -84,7 +84,7 @@ struct is_iterator_pointer<boost::iterator_range<Iterator>> : is_iterator_pointe
  * Otherwise it uses a boost::iterator_range.
  *
  * When Container's iterators are pointers (according to is_iterator_pointer) all string types will be
- * boost::string_ref.
+ * std::string_view.
  * Otherwise strings are all std::string.
  *
  * \sa is_iterator_pointer ElementTypeMap ElementTypeMapSet
@@ -93,7 +93,7 @@ template <typename Container, bool set = false> class TypeMap {
     using container_type =
         std::conditional_t<set, Container, boost::iterator_range<typename Container::const_iterator>>;
     using string_type = std::conditional_t<!set && is_iterator_pointer<typename container_type::iterator>::value,
-                                           boost::string_ref, std::string>;
+                                           std::string_view, std::string>;
 
   public:
 /*!

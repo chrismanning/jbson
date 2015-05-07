@@ -32,11 +32,11 @@ static_assert(!detail::is_nothrow_swappable<boost::container::vector<char>>::val
 //static_assert(std::is_nothrow_move_assignable<basic_element<std::deque<char>>>::value, "");
 //static_assert(std::is_nothrow_move_constructible<basic_element<std::deque<char>>>::value, "");
 
-static_assert(!std::is_constructible<std::string, std::tuple<boost::string_ref, boost::string_ref>>::value,"");
+static_assert(!std::is_constructible<std::string, std::tuple<std::string_view, std::string_view>>::value,"");
 
 static_assert(detail::is_valid_element_value_type<std::vector<char>, bool>::value, "");
 static_assert(detail::is_valid_element_value_type<std::vector<char>, int32_t>::value, "");
-static_assert(detail::is_valid_element_value_type<std::vector<char>, boost::string_ref>::value, "");
+static_assert(detail::is_valid_element_value_type<std::vector<char>, std::string_view>::value, "");
 
 static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::chrono::milliseconds>::value, "");
 static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::set<int>>::value, "");
@@ -50,7 +50,7 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_NO_THROW(EXPECT_EQ("test", get<element_type::string_element>(el1)));
 
     EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
-    EXPECT_NO_THROW(el1.value<boost::string_ref>());
+    EXPECT_NO_THROW(el1.value<std::string_view>());
     EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
 
     EXPECT_NO_THROW(el1.value(element_type::boolean_element, false));
@@ -313,10 +313,10 @@ TEST(ElementTest, ElementVoidTest) {
 }
 
 TEST(ElementTest, ElementRefTest1) {
-    static_assert(std::is_same<boost::string_ref, decltype(get<element_type::string_element>(
-                                                      std::declval<basic_element<boost::string_ref>>()))>::value,
+    static_assert(std::is_same<std::string_view, decltype(get<element_type::string_element>(
+                                                      std::declval<basic_element<std::string_view>>()))>::value,
                   "");
-    static_assert(std::is_same<boost::string_ref, decltype(get<element_type::string_element>(
+    static_assert(std::is_same<std::string_view, decltype(get<element_type::string_element>(
                                                       std::declval<basic_element<std::vector<char>>>()))>::value,
                   "");
     static_assert(std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
@@ -327,7 +327,7 @@ TEST(ElementTest, ElementRefTest1) {
                                                 std::declval<basic_element<std::list<char>>>()))>::value,
                   "");
     ASSERT_TRUE(
-        (std::is_same<boost::string_ref, decltype(get<element_type::string_element>(std::declval<element>()))>::value));
+        (std::is_same<std::string_view, decltype(get<element_type::string_element>(std::declval<element>()))>::value));
 }
 
 TEST(ElementTest, ElementRefTest2) {
@@ -351,15 +351,15 @@ template <typename ElemType> struct VoidVisitor {
 
     explicit VoidVisitor(ElemType v) : m_v(v) {}
 
-    void operator()(boost::string_ref /*name*/, element_type e, ElemType v) {
+    void operator()(std::string_view /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(element_type::double_element, e);
         EXPECT_EQ(m_v, v);
     }
 
-    template <typename T> void operator()(boost::string_ref, element_type, T&&) {
+    template <typename T> void operator()(std::string_view, element_type, T&&) {
         FAIL();
     }
-    void operator()(boost::string_ref, element_type) {
+    void operator()(std::string_view, element_type) {
         FAIL();
     }
 };
@@ -377,13 +377,13 @@ template <typename ElemType> struct BoolVisitor {
 
     explicit BoolVisitor(ElemType v) : m_v(v) {}
 
-    bool operator()(boost::string_ref /*name*/, element_type e, ElemType v) {
+    bool operator()(std::string_view /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(m_v, v);
         return element_type::double_element == e;
     }
 
-    template <typename T> bool operator()(boost::string_ref, element_type, T&&) { return false; }
-    bool operator()(boost::string_ref, element_type) { return false; }
+    template <typename T> bool operator()(std::string_view, element_type, T&&) { return false; }
+    bool operator()(std::string_view, element_type) { return false; }
 };
 
 TEST(ElementTest, ElementVisitTest2) {

@@ -16,17 +16,17 @@ using namespace std::literals;
 using namespace jbson;
 
 TEST(JsonReaderTest, JsonParseTest1) {
-    auto json = boost::string_ref{R"({})"};
+    auto json = std::string_view{R"({})"};
     ASSERT_NO_THROW(read_json(json));
 }
 
 TEST(JsonReaderTest, JsonParseTest2) {
-    auto json = boost::string_ref{R"({{})"};
+    auto json = std::string_view{R"({{})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest3) {
-    auto json = boost::string_ref{R"([])"};
+    auto json = std::string_view{R"([])"};
     ASSERT_NO_THROW(read_json(json));
 }
 
@@ -42,7 +42,7 @@ TEST(JsonReaderTest, JsonParseTest4) {
 }
 
 TEST(JsonReaderTest, JsonParseTest5) {
-    auto json = boost::string_ref{"{\n\"key\"\t:\"value\"}"};
+    auto json = std::string_view{"{\n\"key\"\t:\"value\"}"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -66,7 +66,7 @@ TEST(JsonReaderTest, JsonParseTest6) {
 }
 
 TEST(JsonReaderTest, JsonParseTest7) {
-    auto json = boost::string_ref{R"({"key":123})"};
+    auto json = std::string_view{R"({"key":123})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -77,7 +77,7 @@ TEST(JsonReaderTest, JsonParseTest7) {
 }
 
 TEST(JsonReaderTest, JsonParseTest8) {
-    auto json = boost::string_ref{R"({"key":null})"};
+    auto json = std::string_view{R"({"key":null})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -87,7 +87,7 @@ TEST(JsonReaderTest, JsonParseTest8) {
 }
 
 TEST(JsonReaderTest, JsonParseTest9) {
-    auto json = boost::string_ref{R"({"key":false})"};
+    auto json = std::string_view{R"({"key":false})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -98,7 +98,7 @@ TEST(JsonReaderTest, JsonParseTest9) {
 }
 
 TEST(JsonReaderTest, JsonParseTest10) {
-    auto json = boost::string_ref{R"({"key":3.141})"};
+    auto json = std::string_view{R"({"key":3.141})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -109,7 +109,7 @@ TEST(JsonReaderTest, JsonParseTest10) {
 }
 
 TEST(JsonReaderTest, JsonParseTest11) {
-    auto json = boost::string_ref{R"({"key":-123})"};
+    auto json = std::string_view{R"({"key":-123})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -120,7 +120,7 @@ TEST(JsonReaderTest, JsonParseTest11) {
 }
 
 TEST(JsonReaderTest, JsonParseTest12) {
-    auto json = boost::string_ref{R"({"key": 4294967296})"};
+    auto json = std::string_view{R"({"key": 4294967296})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -131,7 +131,7 @@ TEST(JsonReaderTest, JsonParseTest12) {
 }
 
 TEST(JsonReaderTest, JsonParseTest13) {
-    auto json = boost::string_ref{R"({"key": {"nested key" : "nested value"}})"};
+    auto json = std::string_view{R"({"key": {"nested key" : "nested value"}})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -144,7 +144,7 @@ TEST(JsonReaderTest, JsonParseTest13) {
 }
 
 TEST(JsonReaderTest, JsonParseTest14) {
-    auto json = boost::string_ref{R"({"ke\ny":"value"})"};
+    auto json = std::string_view{R"({"ke\ny":"value"})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -155,12 +155,12 @@ TEST(JsonReaderTest, JsonParseTest14) {
 }
 
 TEST(JsonReaderTest, JsonParseTest15) {
-    auto json = boost::string_ref{R"(["key": 4294967296])"};
+    auto json = std::string_view{R"(["key": 4294967296])"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest16) {
-    auto json = boost::string_ref{R"([4294967296, "some string", true])"};
+    auto json = std::string_view{R"([4294967296, "some string", true])"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -185,7 +185,7 @@ TEST(JsonReaderTest, JsonParseTest16) {
 }
 
 TEST(JsonReaderTest, JsonParseTest16_utf32) {
-    auto json = boost::u32string_ref{U"[4294967296, \"some \U0001D11E string\", true]"};
+    auto json = std::u32string{U"[4294967296, \"some \U0001D11E string\", true]"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -210,7 +210,7 @@ TEST(JsonReaderTest, JsonParseTest16_utf32) {
 }
 
 TEST(JsonReaderTest, JsonParseTest16_utf16) {
-    auto json = boost::u16string_ref{u"[4294967296, \"some \xD834\xDD1E string\", true]"};
+    auto json = std::u16string{u"[4294967296, \"some \xD834\xDD1E string\", true]"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -235,17 +235,17 @@ TEST(JsonReaderTest, JsonParseTest16_utf16) {
 }
 
 TEST(JsonReaderTest, JsonParseTest17) {
-    auto json = boost::string_ref{R"({"bindata" : {"$binary": false}})"};
+    auto json = std::string_view{R"({"bindata" : {"$binary": false}})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest18) {
-    auto json = boost::string_ref{R"({"_id" : {"$oid": ""}})"};
+    auto json = std::string_view{R"({"_id" : {"$oid": ""}})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest19) {
-    auto json = boost::string_ref{R"({"_id" : {"$oid": "507f1f77bcf86cd799439011"}})"};
+    auto json = std::string_view{R"({"_id" : {"$oid": "507f1f77bcf86cd799439011"}})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -270,7 +270,7 @@ TEST(JsonReaderTest, JsonParseTest19) {
 }
 
 TEST(JsonReaderTest, JsonParseTest20) {
-    auto json = boost::string_ref{R"({"dollar" : "\u0024"})"};
+    auto json = std::string_view{R"({"dollar" : "\u0024"})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -282,17 +282,17 @@ TEST(JsonReaderTest, JsonParseTest20) {
 }
 
 TEST(JsonReaderTest, JsonParseTest21) {
-    auto json = boost::string_ref{R"({"bad hex" : "\u002G"})"};
+    auto json = std::string_view{R"({"bad hex" : "\u002G"})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest22) {
-    auto json = boost::string_ref{R"({"str" : "\a"})"};
+    auto json = std::string_view{R"({"str" : "\a"})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseTest23) {
-    auto json = boost::string_ref{R"({"utf" : "κ"})"};
+    auto json = std::string_view{R"({"utf" : "κ"})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -305,7 +305,7 @@ TEST(JsonReaderTest, JsonParseTest23) {
 }
 
 TEST(JsonReaderTest, JsonParseTest24) {
-    auto json = boost::string_ref{R"({"a doc" : {}, "some int": 123})"};
+    auto json = std::string_view{R"({"a doc" : {}, "some int": 123})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -320,7 +320,7 @@ TEST(JsonReaderTest, JsonParseTest24) {
 }
 
 TEST(JsonReaderTest, JsonParseTest25) {
-    auto json = boost::string_ref{R"({"a doc" : [], "some int": 123})"};
+    auto json = std::string_view{R"({"a doc" : [], "some int": 123})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -335,7 +335,7 @@ TEST(JsonReaderTest, JsonParseTest25) {
 }
 
 TEST(JsonReaderTest, JsonParseTest26) {
-    auto json = boost::string_ref{R"({"a doc" : [123, "str"], "some int": 123})"};
+    auto json = std::string_view{R"({"a doc" : [123, "str"], "some int": 123})"};
     ASSERT_NO_THROW(read_json(json));
 
     auto elements = document_set(read_json(json));
@@ -362,12 +362,12 @@ TEST(JsonReaderTest, JsonLiteralTest1) {
 }
 
 TEST(JsonReaderTest, JsonParseErrorTest1) {
-    auto json = boost::string_ref{R"({{})"};
+    auto json = std::string_view{R"({{})"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseUnicode) {
-    auto json = boost::string_ref{R"([""])"};
+    auto json = std::string_view{R"([""])"};
     auto str = std::string{};
     str.resize(2);
     ASSERT_NO_THROW(read_json(json));
@@ -377,7 +377,7 @@ TEST(JsonReaderTest, JsonParseUnicode) {
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode1) {
-    auto json = boost::string_ref{R"(["\uD834\uDD1E"])"};
+    auto json = std::string_view{R"(["\uD834\uDD1E"])"};
     auto str = std::string{};
     str.resize(2);
     ASSERT_NO_THROW(read_json(json));
@@ -387,12 +387,12 @@ TEST(JsonReaderTest, JsonParseSurrogateUnicode1) {
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode2) {
-    auto json = boost::string_ref{R"(["\uD834\uDB00"])"};
+    auto json = std::string_view{R"(["\uD834\uDB00"])"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 
 TEST(JsonReaderTest, JsonParseSurrogateUnicode3) {
-    auto json = boost::string_ref{R"(["\uDEAD"])"};
+    auto json = std::string_view{R"(["\uDEAD"])"};
     ASSERT_THROW(read_json(json), json_parse_error);
 }
 

@@ -400,10 +400,10 @@ TEST(DocumentTest, SetTest1) {
     EXPECT_EQ(1991, it->value<int32_t>());
     it = find_by_element_name(set, "first name");
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("Chris", it->value<boost::string_ref>());
+    EXPECT_EQ("Chris", it->value<std::string_view>());
     it = find_by_element_name(set, "surname");
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("Manning", it->value<boost::string_ref>());
+    EXPECT_EQ("Manning", it->value<std::string_view>());
 }
 
 TEST(DocumentTest, SetTest2) {
@@ -417,10 +417,10 @@ TEST(DocumentTest, SetTest2) {
     EXPECT_EQ(1991, it->value<int32_t>());
     it = doc.find("first name");
     ASSERT_NE(doc.end(), it);
-    EXPECT_EQ("Chris", it->value<boost::string_ref>());
+    EXPECT_EQ("Chris", it->value<std::string_view>());
     it = doc.find("surname");
     ASSERT_NE(doc.end(), it);
-    EXPECT_EQ("Manning", it->value<boost::string_ref>());
+    EXPECT_EQ("Manning", it->value<std::string_view>());
 }
 
 TEST(DocumentTest, SetTest3) {
@@ -432,19 +432,19 @@ TEST(DocumentTest, SetTest3) {
     set.emplace("key", element_type::string_element, "ââ");
     auto it = set.begin();
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("aa", it->value<boost::string_ref>());
+    EXPECT_EQ("aa", it->value<std::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ââ", it->value<boost::string_ref>());
+    EXPECT_EQ("ââ", it->value<std::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ää", it->value<boost::string_ref>());
+    EXPECT_EQ("ää", it->value<std::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ææ", it->value<boost::string_ref>());
+    EXPECT_EQ("ææ", it->value<std::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("bb", it->value<boost::string_ref>());
+    EXPECT_EQ("bb", it->value<std::string_view>());
     it++;
     ASSERT_EQ(set.end(), it);
 }

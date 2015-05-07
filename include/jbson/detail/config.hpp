@@ -103,4 +103,9 @@
 #define JBSON_NO_ITERATOR_RANGE_DROP_FUNS
 #endif
 
+namespace std {
+namespace experimental {}
+using namespace experimental;
+}
+
 #endif // JBSON_CONFIG_HPP

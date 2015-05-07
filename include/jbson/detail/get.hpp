@@ -13,7 +13,7 @@
 #include "./config.hpp"
 
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
-#include <boost/utility/string_ref.hpp>
+//
 JBSON_CLANG_POP_WARNINGS
 
 #include "traits.hpp"
@@ -39,10 +39,10 @@ template <typename StringT> struct make_string {
     }
 };
 
-template <> struct make_string<boost::string_ref> {
-    template <typename Iterator> static boost::string_ref call(const Iterator& first, const Iterator& last) {
+template <> struct make_string<std::string_view> {
+    template <typename Iterator> static std::string_view call(const Iterator& first, const Iterator& last) {
         static_assert(is_iterator_pointer<Iterator>::value, "can only use string_ref for raw memory");
-        return boost::string_ref{&*first, static_cast<size_t>(std::distance(first, last))};
+        return std::string_view{&*first, static_cast<size_t>(std::distance(first, last))};
     }
 };
 
@@ -58,7 +58,7 @@ void deserialise(const RangeT& data, ArithT& num, std::enable_if_t<std::is_arith
 // string
 template <typename RangeT, typename StringT>
 void deserialise(const RangeT& data, StringT& str,
-                 std::enable_if_t<std::is_convertible<std::decay_t<StringT>, boost::string_ref>::value>* = nullptr) {
+                 std::enable_if_t<std::is_convertible<std::decay_t<StringT>, std::string_view>::value>* = nullptr) {
     auto first = data.begin(), last = data.end();
     if(std::distance(first, last) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
         BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))

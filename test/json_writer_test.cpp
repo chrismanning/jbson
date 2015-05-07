@@ -138,7 +138,7 @@ TEST(JsonWriterTest, JsonWriteTest3) {
     EXPECT_EQ(boost::as_array(R"({ "hello" : "world" })"), json);
 }
 
-std::string demangle(boost::string_ref t) {
+std::string demangle(std::string_view t) {
     const auto str = abi::__cxa_demangle(t.data(), nullptr, nullptr, nullptr);
     std::string out;
     if(str) {

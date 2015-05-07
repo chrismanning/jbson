@@ -8,11 +8,11 @@
 
 #include <string>
 #include <iterator>
+#include <experimental/string_view>
 
 #include "detail/config.hpp"
 
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
-#include <boost/utility/string_ref.hpp>
 #include <boost/range/as_literal.hpp>
 #include <boost/spirit/home/karma/numeric.hpp>
 JBSON_CLANG_POP_WARNINGS
@@ -73,7 +73,7 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
     return out;
 }
 
-template <typename OutputIterator> std::decay_t<OutputIterator> stringify(boost::string_ref v, OutputIterator out) {
+template <typename OutputIterator> std::decay_t<OutputIterator> stringify(std::string_view v, OutputIterator out) {
     auto str = std::vector<char>(v.begin(), v.end());
     for(auto i = str.begin(); i != str.end(); ++i) {
         switch(*i) {
@@ -176,7 +176,7 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
         for(size_t i = 0; i < oid.size(); ++i)
             std::snprintf(&buf[i * 2], 3, "%02x", static_cast<unsigned char>(oid[i]));
         return stringify(
-            static_cast<document>(builder("$oid", element_type::string_element, boost::string_ref(buf.data(), 24))),
+            static_cast<document>(builder("$oid", element_type::string_element, std::string_view(buf.data(), 24))),
             out);
     }
 };

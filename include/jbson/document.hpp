@@ -9,13 +9,13 @@
 #include <memory>
 #include <vector>
 #include <set>
+#include <experimental/optional>
 
 #include "detail/config.hpp"
 
 JBSON_PUSH_DISABLE_DOCUMENTATION_WARNING
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_traits.hpp>
-#include <boost/optional.hpp>
 JBSON_CLANG_POP_WARNINGS
 
 #include "document_fwd.hpp"
@@ -83,6 +83,7 @@ struct document_iter
     friend class boost::iterator_core_access;
     template <typename, typename> friend struct document_iter;
     template <typename, typename> friend class jbson::basic_document;
+    template <typename, typename> friend struct basic_object_base;
 #endif
 
     template <typename OtherValue, typename OtherIterator>
@@ -92,13 +93,13 @@ struct document_iter
 
     void increment() {
         if(m_start == m_end) {
-            m_cur = boost::none;
+            m_cur = std::nullopt;
             return;
         }
 
         std::advance(m_start, m_cur->size());
         if(m_start == m_end)
-            m_cur = boost::none;
+            m_cur = std::nullopt;
         else
             m_cur = element_type{m_start, m_end};
     }
@@ -117,7 +118,7 @@ struct document_iter
   private:
     BaseIterator m_start;
     BaseIterator m_end;
-    boost::optional<std::remove_const_t<element_type>> m_cur;
+    std::optional<std::remove_const_t<element_type>> m_cur;
 };
 
 #ifdef DOXYGEN_SHOULD_SKIP_THIS
@@ -183,17 +184,17 @@ inline validity_level operator|(validity_level a, validity_level b) {
                                        (std::underlying_type_t<validity_level>)b);
 }
 
+namespace detail {
+
 /*!
  * basic_document represents a range of BSON elements
  * \tparam Container Type of underlying storage container/range. Must be range of `char`.
  * \tparam ElementContainer Type of underlying storage of constituent elements.
  */
-template <class Container, class ElementContainer> class basic_document {
-  public:
+template <class Container, class ElementContainer = boost::iterator_range<typename Container::const_iterator>>
+struct basic_object_base {
     //! Type of underlying storage container/range.
     using container_type = std::decay_t<Container>;
-    //    static_assert(detail::is_nothrow_swappable<container_type>::value, "container_type must have noexcept
-    //    swap()");
 
     //! Type of constituent elements.
     using element_type = basic_element<ElementContainer>;
@@ -209,7 +210,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \note When container_type is able to own data, this results in a valid, empty document.
      * \note Otherwise (e.g. is boost::iterator_range<>), results in an invalid document.
      */
-    basic_document() { detail::init_empty(m_data); }
+    basic_object_base() { init_empty(m_data); }
 
     /*!
      * \brief Constructs a document with an existing container of data.
@@ -224,7 +225,7 @@ template <class Container, class ElementContainer> class basic_document {
      *                               When the size of c differs from the size specified by c's data.
      */
     template <typename SomeType>
-    explicit basic_document(SomeType&& c,
+    explicit basic_object_base(SomeType&& c,
                             std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
         if(!valid(validity_level::data_size))
@@ -243,7 +244,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \tparam OtherContainer basic_document container from which `container_type` can be constructed.
      */
     template <typename OtherContainer>
-    basic_document(const basic_document<OtherContainer>& other,
+    basic_object_base(const basic_object_base<OtherContainer>& other,
                    std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
                        nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
         : m_data(other.m_data) {}
@@ -254,7 +255,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \tparam OtherContainer basic_document container from whose iterator_type `container_type` can be constructed.
      */
     template <typename OtherContainer>
-    basic_document(const basic_document<OtherContainer>& other,
+    basic_object_base(const basic_object_base<OtherContainer>& other,
                    std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
                                     detail::container_has_push_back<container_type>::value &&
                                     std::is_constructible<container_type, typename OtherContainer::const_iterator,
@@ -262,7 +263,7 @@ template <class Container, class ElementContainer> class basic_document {
         : m_data(other.m_data.begin(), other.m_data.end()) {}
 
     //! \brief Disallows construction from arrays of invalid document size.
-    template <size_t N> explicit basic_document(std::array<char, N>, std::enable_if_t<(N < 5)>* = nullptr) = delete;
+    template <size_t N> explicit basic_object_base(std::array<char, N>, std::enable_if_t<(N < 5)>* = nullptr) = delete;
 
     /*!
      * \brief Constructs a document from a range of `char`.
@@ -270,7 +271,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \tparam ForwardRange Range of `char` (not `container_type`)
      */
     template <typename ForwardRange>
-    explicit basic_document(
+    explicit basic_object_base(
         ForwardRange&& rng, std::enable_if_t<detail::is_range_of_same_value<ForwardRange, char>::value>* = nullptr,
         std::enable_if_t<
             std::conditional_t<detail::is_iterator_range<container_type>::value,
@@ -282,7 +283,7 @@ template <class Container, class ElementContainer> class basic_document {
                          detail::is_range_of_iterator<
                              ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
                                                             boost::mpl::_1, boost::mpl::_1>>::value> * = nullptr)
-        : basic_document(container_type(std::begin(rng), std::end(rng))) {}
+        : basic_object_base(container_type(std::begin(rng), std::end(rng))) {}
 
     /*!
      * \brief Constructs a document from a range of `basic_element`.
@@ -293,7 +294,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \tparam ForwardRange Range whose `value_type` is `basic_element<...>`.
      */
     template <typename ForwardRange>
-    explicit basic_document(
+    explicit basic_object_base(
         ForwardRange&& rng,
         std::enable_if_t<
             boost::mpl::and_<detail::is_range_of_value<ForwardRange, boost::mpl::quote1<detail::is_element>>,
@@ -317,10 +318,10 @@ template <class Container, class ElementContainer> class basic_document {
      * \brief Constructs a document from two iterators. Forwards to the range-based constructors.
      */
     template <typename ForwardIterator>
-    basic_document(ForwardIterator first, ForwardIterator last,
+    basic_object_base(ForwardIterator first, ForwardIterator last,
                    std::enable_if_t<
-                       std::is_constructible<basic_document, boost::iterator_range<ForwardIterator>>::value>* = nullptr)
-        : basic_document(boost::make_iterator_range(first, last)) {}
+                       std::is_constructible<basic_object_base, boost::iterator_range<ForwardIterator>>::value>* = nullptr)
+        : basic_object_base(boost::make_iterator_range(first, last)) {}
 
     /*!
      * \brief Returns an iterator to the first element of the container.
@@ -350,7 +351,7 @@ template <class Container, class ElementContainer> class basic_document {
      * \param elem_name Name of required element.
      * \return const_iterator to item with specified name, or end().
      */
-    const_iterator find(boost::string_ref elem_name) const {
+    const_iterator find(std::string_view elem_name) const {
         return std::find_if(begin(), end(), [&elem_name](auto&& elem) { return elem.name() == elem_name; });
     }
 
@@ -526,24 +527,77 @@ template <class Container, class ElementContainer> class basic_document {
     }
 
     //! Determines equality with another basic_document.
-    template <typename C, typename EC> bool operator==(const basic_document<C, EC>& other) const {
+    template <typename C, typename EC> bool operator==(const basic_object_base<C, EC>& other) const {
         return boost::equal(m_data, other.m_data);
     }
 
+    template <typename C, typename EC> bool operator<(const basic_object_base<C, EC>& other) const {
+        return boost::range::lexicographical_compare(m_data, other.m_data);
+    }
+
     //! Swaps contents with another basic_document.
-    void swap(basic_document& other) noexcept {
+    void swap(basic_object_base& other) noexcept {
         using std::swap;
         swap(m_data, other.m_data);
     }
 
-  private:
-    container_type m_data;
+    template <typename, typename> friend class basic_document;
+    template <typename, typename> friend class basic_array;
+    template <typename, typename> friend struct basic_object_base;
+protected:
+  container_type m_data;
+};
+
+} // namespace detail
+
+template <class Container, class ElementContainer> class basic_document :
+        public detail::basic_object_base<Container, ElementContainer> {
+    using base = detail::basic_object_base<Container, ElementContainer>;
+  public:
+    using typename base::container_type;
+    using typename base::element_type;
+    using typename base::iterator;
+    using typename base::const_iterator;
+    using typename base::value_type;
+
+    basic_document() : base() {}
+
+    template <typename OtherContainer>
+    basic_document(const basic_document<OtherContainer>& other,
+                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
+                                    detail::container_has_push_back<container_type>::value &&
+                                    std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                                          typename OtherContainer::const_iterator>::value>* = nullptr)
+        : base(other.m_data.begin(), other.m_data.end()) {}
+
+    template <typename OtherContainer>
+    basic_document(const basic_document<OtherContainer>& other,
+                std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                    nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+        : base(other.m_data) {}
+
+    template <typename Arg>
+    explicit basic_document(
+        Arg&& arg,
+        std::enable_if_t<std::is_constructible<base, Arg&&>::value && !std::is_convertible<Arg&&, base>::value>* =
+            nullptr) noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
+        : base(std::forward<Arg>(arg)) {}
+
+    template <typename Arg1, typename Arg2>
+    basic_document(Arg1&& arg1, Arg2&& arg2,
+                std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* =
+                    nullptr) noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
+        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
+
+//    using base::basic_object_base;
+
     template <typename, typename> friend class basic_document;
     template <typename, typename> friend class basic_array;
 };
 
-template <class Container, class ElementContainer> class basic_array : basic_document<Container, ElementContainer> {
-    using base = basic_document<Container, ElementContainer>;
+template <class Container, class ElementContainer> class basic_array :
+        public detail::basic_object_base<Container, ElementContainer> {
+    using base = detail::basic_object_base<Container, ElementContainer>;
     template <typename, typename> friend class basic_array;
 
   public:
@@ -553,14 +607,15 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
     using typename base::const_iterator;
     using typename base::value_type;
 
-    using base::m_data;
-    using base::begin;
-    using base::end;
-    using base::data;
-    using base::size;
-    using base::swap;
-
     basic_array() : base() {}
+
+    template <typename OtherContainer>
+    basic_array(const basic_array<OtherContainer>& other,
+                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
+                                    detail::container_has_push_back<container_type>::value &&
+                                    std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                                          typename OtherContainer::const_iterator>::value>* = nullptr)
+        : base(other.m_data.begin(), other.m_data.end()) {}
 
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
@@ -599,6 +654,15 @@ template <class Container, class ElementContainer> class basic_array : basic_doc
             }
         }
         return ret;
+    }
+
+    //! Determines equality with another basic_array.
+    template <typename C, typename EC> bool operator==(const basic_array<C, EC>& other) const {
+        return boost::equal(base::data(), other.data());
+    }
+
+    template <typename C, typename EC> bool operator<(const basic_array<C, EC>& other) const {
+        return boost::range::lexicographical_compare(base::data(), other.data());
     }
 
     template <typename SequenceContainer,

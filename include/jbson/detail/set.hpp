@@ -30,7 +30,7 @@ void serialise(Container& c, IteratorT& it, T val, std::enable_if_t<std::is_arit
 }
 
 // string
-template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, boost::string_ref val) {
+template <typename Container, typename IteratorT> void serialise(Container& c, IteratorT& it, std::string_view val) {
     serialise(c, it, static_cast<int32_t>(val.size() + 1));
     it = c.insert(it, std::begin(val), std::end(val));
     if(it != std::end(c))
@@ -75,14 +75,14 @@ void serialise(Container& c, IteratorT& it, const std::array<char, 12>& val) {
 // regex
 template <typename Container, typename IteratorT, typename StringT>
 void serialise(Container& c, IteratorT& it, const std::tuple<StringT, StringT>& val,
-               std::enable_if_t<std::is_convertible<StringT, boost::string_ref>::value>* = nullptr) {
-    boost::string_ref str1 = std::get<0>(val);
+               std::enable_if_t<std::is_convertible<StringT, std::string_view>::value>* = nullptr) {
+    std::string_view str1 = std::get<0>(val);
     it = c.insert(it, std::begin(str1), std::end(str1));
     if(it != std::end(c))
         std::advance(it, boost::distance(str1));
     it = std::next(c.insert(it, '\0'));
 
-    boost::string_ref str2 = std::get<1>(val);
+    std::string_view str2 = std::get<1>(val);
     it = c.insert(it, std::begin(str2), std::end(str2));
     if(it != std::end(c))
         std::advance(it, boost::distance(str2));
@@ -99,7 +99,7 @@ void serialise(Container& c, IteratorT& it, const std::tuple<StringT, std::array
 // scoped javascript
 template <typename Container, typename IteratorT, typename StringT, typename DocContainer, typename DocEContainer>
 void serialise(Container&, IteratorT&, const std::tuple<StringT, basic_document<DocContainer, DocEContainer>>&,
-               std::enable_if_t<std::is_convertible<StringT, boost::string_ref>::value>* = nullptr) {
+               std::enable_if_t<std::is_convertible<StringT, std::string_view>::value>* = nullptr) {
     assert(false);
     BOOST_THROW_EXCEPTION(incompatible_type_conversion{});
 }

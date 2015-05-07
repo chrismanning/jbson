@@ -57,6 +57,10 @@ struct invalid_element_size : jbson_error {
     const char* what() const noexcept override { return "invalid_element_size"; }
 };
 
+struct jbson_path_error : jbson_error {
+    const char* what() const noexcept override { return "jbson_path_error"; }
+};
+
 enum class element_type : uint8_t;
 
 namespace detail {
@@ -67,6 +71,7 @@ using expected_size = boost::error_info<struct expected_size_, ptrdiff_t>;
 using actual_size = boost::error_info<struct actual_size_, ptrdiff_t>;
 using expected_element_type = boost::error_info<struct expected_element_type_, element_type>;
 using actual_element_type = boost::error_info<struct actual_element_type_, element_type>;
+using unknown_path = boost::error_info<struct unknown_path_type_, std::string>;
 
 } // namespace detail
 } // namespace jbson
