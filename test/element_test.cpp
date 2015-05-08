@@ -495,12 +495,12 @@ TEST(ExceptionSafetyTest, ElementExceptionSafetyTest1) {
 
     // value(new_type, new_value) - new_value is an invalid document
     ASSERT_EQ(2, e.size());
-    ASSERT_THROW(e.value(element_type::document_element, invalid_doc), invalid_element_size);
+    ASSERT_THROW(e.value(element_type::document_element, invalid_doc), invalid_document_size);
     EXPECT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(2, e.size());
 
     // value(new_value) - new_value forms an invalid element
-    ASSERT_THROW(e.value(invalid_doc), invalid_element_size);
+    ASSERT_THROW(e.value(invalid_doc), invalid_document_size);
     EXPECT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(2, e.size());
 

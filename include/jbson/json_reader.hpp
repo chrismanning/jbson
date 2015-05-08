@@ -34,7 +34,9 @@ JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 namespace jbson {
 
 struct json_parse_error : jbson_error {
-    const char* what() const noexcept override { return "json_parse_error"; }
+    const char* what() const noexcept override {
+        return "json_parse_error";
+    }
 };
 
 enum class json_error_num {
@@ -394,7 +396,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
         case 'f':
             type = element_type::boolean_element;
             if(boost::equal(boost::as_literal("false"), boost::make_iterator_range(first, std::next(first, 5)),
-                            [](char a, auto&& b) { return b == (decltype(b))a; })) {
+                            [](char a, auto b) { return b == static_cast<decltype(b)>(a); })) {
                 assert(out >= m_data.begin() && out <= m_data.end());
                 out = std::next(m_data.insert(out, false));
                 std::advance(first, 5);
@@ -404,14 +406,14 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
         case 'n':
             type = element_type::null_element;
             if(!boost::equal(boost::as_literal("null"), boost::make_iterator_range(first, std::next(first, 4)),
-                             [](char a, auto&& b) { return b == (decltype(b))a; }))
+                             [](char a, auto b) { return b == static_cast<decltype(b)>(a); }))
                 BOOST_THROW_EXCEPTION(make_parse_exception(json_error_num::unexpected_token, first, last, "null"));
             std::advance(first, 4);
             break;
         case 't':
             type = element_type::boolean_element;
             if(boost::equal(boost::as_literal("true"), boost::make_iterator_range(first, std::next(first, 4)),
-                            [](char a, auto&& b) { return b == (decltype(b))a; })) {
+                            [](char a, auto b) { return b == static_cast<decltype(b)>(a); })) {
                 assert(out >= m_data.begin() && out <= m_data.end());
                 out = std::next(m_data.insert(out, true));
                 std::advance(first, 4);
@@ -564,7 +566,9 @@ template <typename CharT> constexpr bool iscntrl(CharT c) {
     return (std::make_unsigned_t<CharT>)c < 0x1f;
 }
 
-template <typename CharT> constexpr bool isdigit(CharT c) { return (std::make_unsigned_t<CharT>)(c - '0') < 10; }
+template <typename CharT> constexpr bool isdigit(CharT c) {
+    return (std::make_unsigned_t<CharT>)(c - '0') < 10;
+}
 
 template <typename CharT> constexpr bool isxdigit(CharT c) {
     return detail::isdigit(c) || (std::make_unsigned_t<CharT>)(c - 'A') < 6 ||
@@ -741,8 +745,12 @@ OutputIterator json_reader::parse_escape(line_pos_iterator<ForwardIterator>& fir
 template <typename Num> struct real_parse_policy : boost::spirit::qi::real_policies<Num> {
     static bool const allow_leading_dot = false;
     static bool const allow_trailing_dot = false;
-    template <typename... Args> static bool parse_nan(Args&&...) { return false; }
-    template <typename... Args> static bool parse_inf(Args&&...) { return false; }
+    template <typename... Args> static bool parse_nan(Args&&...) {
+        return false;
+    }
+    template <typename... Args> static bool parse_inf(Args&&...) {
+        return false;
+    }
 };
 
 template <typename ForwardIterator, typename OutputIterator>
@@ -849,23 +857,21 @@ void json_reader::skip_space(line_pos_iterator<ForwardIterator>& first,
 
 } // namespace detail
 
-template <typename StringT>
-document read_json(StringT&& str) {
+template <typename StringT> document read_json(StringT&& str) {
     detail::json_reader reader{};
     reader.parse(std::forward<StringT>(str));
 
     return std::move(reader);
 }
 
-template <typename StringT>
-array read_json_array(StringT&& str) {
+template <typename StringT> array read_json_array(StringT&& str) {
     detail::json_reader reader{};
     reader.parse(std::forward<StringT>(str));
 
     return std::move(reader);
 }
 
-struct [[deprecated("Use read_json()")]] json_reader : detail::json_reader {
+struct[[deprecated("Use read_json()")]] json_reader : detail::json_reader {
     using detail::json_reader::json_reader;
 };
 
@@ -896,8 +902,7 @@ std::ostream& operator<<(std::ostream& os, const json_parse_error& err) {
     const auto num = boost::get_error_info<detail::parse_error>(err);
     if(num) {
         os << *num << "\n";
-    }
-    else {
+    } else {
         os << "unknown error";
     }
 

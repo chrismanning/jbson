@@ -167,14 +167,14 @@ TEST(PathTest, JbsonPathTestArrayWildcardAccess2) {
     EXPECT_EQ(96, res.back().value<int32_t>());
 }
 
-TEST(PathTest, JbsonPathTestRecurse1) {
+TEST(PathTest, DISABLED_JbsonPathTestRecurse1) {
     auto res = path_select(R"({"arr": [76, [923], {"obj":12}, 765]})"_json_doc, "$.arr..obj");
     ASSERT_EQ(1, res.size());
     EXPECT_EQ(element_type::int32_element, res.front().type());
     EXPECT_EQ(12, res.front().value<int32_t>());
 }
 
-TEST(PathTest, JbsonPathTestRecurse2) {
+TEST(PathTest, DISABLED_JbsonPathTestRecurse2) {
     auto res = path_select(R"({"arr": [76, [923], {"obj":12}, [765, {"obj": 24}]]})"_json_doc, "$.arr..obj");
     ASSERT_EQ(2, res.size());
     EXPECT_EQ(element_type::int32_element, res.front().type());
