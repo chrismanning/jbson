@@ -140,65 +140,6 @@ constexpr std::string_view operator""_sv(const char* str, size_t len) {
     return {str, len};
 }
 
-template <typename Iterator> struct error_handler {
-    template <typename, typename, typename> struct result { typedef void type; };
-
-    error_handler(Iterator first, Iterator last) : first(first), last(last) {
-    }
-
-    template <typename Message, typename What>
-    void operator()(Message const& message, What const& what, Iterator err_pos) const {
-        int line;
-        Iterator line_start = get_pos(err_pos, line);
-        if(err_pos != last) {
-            std::clog << message << what << " line " << line << ':' << std::endl;
-            std::clog << get_line(line_start) << std::endl;
-            for(; line_start != err_pos; ++line_start)
-                std::clog << ' ';
-            std::clog << '^' << std::endl;
-        } else {
-            std::clog << "Unexpected end of file. ";
-            std::clog << message << what << " line " << line << std::endl;
-        }
-    }
-
-    Iterator get_pos(Iterator err_pos, int& line) const {
-        line = 1;
-        Iterator i = first;
-        Iterator line_start = first;
-        while(i != err_pos) {
-            bool eol = false;
-            if(i != err_pos && *i == '\r') // CR
-            {
-                eol = true;
-                line_start = ++i;
-            }
-            if(i != err_pos && *i == '\n') // LF
-            {
-                eol = true;
-                line_start = ++i;
-            }
-            if(eol)
-                ++line;
-            else
-                ++i;
-        }
-        return line_start;
-    }
-
-    std::string get_line(Iterator err_pos) const {
-        Iterator i = err_pos;
-        // position i to the next EOL
-        while(i != last && (*i != '\r' && *i != '\n'))
-            ++i;
-        return std::string(err_pos, i);
-    }
-
-    Iterator first;
-    Iterator last;
-    std::vector<Iterator> iters;
-};
-
 inline bool parse_path_expression(std::string_view& expr, ast::path_expression& ast);
 inline bool parse_path_expression(std::string_view& expr, ast::operand& ast);
 inline bool parse_path_descent(std::string_view& expr, std::vector<ast::path_descend>& ast);

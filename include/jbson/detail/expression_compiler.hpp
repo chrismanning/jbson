@@ -59,7 +59,7 @@ enum class byte_code {
     op_slice,
 };
 
-std::ostream& operator<<(std::ostream& os, byte_code val) {
+inline std::ostream& operator<<(std::ostream& os, byte_code val) {
     switch(val) {
         case byte_code::op_neg:
             os << "op_neg";

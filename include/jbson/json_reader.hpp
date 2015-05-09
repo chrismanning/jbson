@@ -893,7 +893,7 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const json_parse_error& err) {
+inline std::ostream& operator<<(std::ostream& os, const json_parse_error& err) {
     const auto line_num = boost::get_error_info<detail::line_number>(err);
     if(line_num)
         os << "line " << *line_num << ": ";
