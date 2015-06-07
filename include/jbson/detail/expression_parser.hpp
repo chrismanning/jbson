@@ -140,6 +140,8 @@ constexpr std::string_view operator""_sv(const char* str, size_t len) {
     return {str, len};
 }
 
+static const std::locale json_parse_locale{"en_GB.UTF-8"};
+
 inline bool parse_path_expression(std::string_view& expr, ast::path_expression& ast);
 inline bool parse_path_expression(std::string_view& expr, ast::operand& ast);
 inline bool parse_path_descent(std::string_view& expr, std::vector<ast::path_descend>& ast);
@@ -294,14 +296,15 @@ inline bool parse_field(std::string_view& expr, ast::field_access& ast) {
         quote = loc_expr.front();
         loc_expr.remove_prefix(1);
     }
-    if(::isalnum(loc_expr.front()) || boost::algorithm::any_of_equal("_@$"_sv, loc_expr.front())) {
+    if(std::isalnum(loc_expr.front(), json_parse_locale) ||
+       boost::algorithm::any_of_equal("_@$#"_sv, loc_expr.front())) {
         std::string field;
         do {
             field += loc_expr.front();
             loc_expr.remove_prefix(1);
-        } while(!loc_expr.empty() &&
-                (::isalnum(loc_expr.front()) || boost::algorithm::any_of_equal("_@$"_sv, loc_expr.front()) ||
-                 (quote && (::isspace(loc_expr.front()) || loc_expr.front() != quote))));
+        } while(!loc_expr.empty() && (std::isalnum(loc_expr.front(), json_parse_locale) ||
+                                      boost::algorithm::any_of_equal("_@$#"_sv, loc_expr.front()) ||
+                                      (quote && (::isspace(loc_expr.front()) || loc_expr.front() != quote))));
         if(quote) {
             loc_expr.remove_prefix(1);
         }
@@ -597,8 +600,8 @@ inline bool parse_path(std::string_view& expr, ast::operand& ast) {
 
             path += loc_expr.front();
             loc_expr.remove_prefix(1);
-        } while(!loc_expr.empty() &&
-                (::isalnum(loc_expr.front()) || boost::algorithm::any_of_equal(".@_["_sv, loc_expr.front())));
+        } while(!loc_expr.empty() && (std::isalnum(loc_expr.front(), json_parse_locale) ||
+                                      boost::algorithm::any_of_equal(".@_["_sv, loc_expr.front())));
         expr = loc_expr;
         ast = ast::path_expression{{std::move(path)}, {}};
         return true;
