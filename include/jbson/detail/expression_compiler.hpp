@@ -198,7 +198,6 @@ template <typename OutIterator> bool compile_expr(int64_t x, OutIterator out) {
 }
 
 template <typename OutIterator> bool compile_expr(const ast::path_descend& x, OutIterator out) {
-    using namespace std::placeholders;
     switch(x.operator_) {
         case ast::optoken::recurse:
             *out++ = static_cast<char>(byte_code::op_recurse);
@@ -218,10 +217,7 @@ template <typename OutIterator> bool compile_expr(const ast::path_descend& x, Ou
 }
 
 template <typename OutIterator> bool compile_expr(const ast::path_union& x, OutIterator out) {
-    using namespace std::placeholders;
-    auto f = std::bind(Visitor(), _1, out);
-    //    if(!x.rest.empty())
-    //        *out++ = static_cast<char>(byte_code::op_union);
+    auto f = std::bind(Visitor(), std::placeholders::_1, out);
     if(!boost::apply_visitor(f, x.first))
         return false;
     for(auto&& operand : x.rest) {
@@ -280,8 +276,7 @@ template <typename OutIterator> bool compile_expr(const jbson::array& x, OutIter
 }
 
 template <typename OutIterator> bool compile_expr(const ast::operation& x, OutIterator out) {
-    using namespace std::placeholders;
-    auto f = std::bind(Visitor(), _1, out);
+    auto f = std::bind(Visitor(), std::placeholders::_1, out);
     if(!x.operand_.apply_visitor(f))
         return false;
     switch(x.operator_) {
@@ -329,8 +324,7 @@ template <typename OutIterator> bool compile_expr(const ast::operation& x, OutIt
 }
 
 template <typename OutIterator> bool compile_expr(const ast::unary& x, OutIterator out) {
-    using namespace std::placeholders;
-    auto f = std::bind(Visitor(), _1, out);
+    auto f = std::bind(Visitor(), std::placeholders::_1, out);
     if(!boost::apply_visitor(f, x.operand_))
         return false;
     switch(x.operator_) {
@@ -351,8 +345,7 @@ template <typename OutIterator> bool compile_expr(const ast::unary& x, OutIterat
 }
 
 template <typename OutIterator> bool compile_expr(const ast::expression& x, OutIterator out) {
-    using namespace std::placeholders;
-    auto f = std::bind(Visitor(), _1, out);
+    auto f = std::bind(Visitor(), std::placeholders::_1, out);
     if(!boost::apply_visitor(f, x.first))
         return false;
     for(const auto& oper : x.rest) {
