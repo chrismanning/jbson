@@ -19,10 +19,6 @@ JBSON_CLANG_POP_WARNINGS
 #include <jbson/detail/expression_parser.hpp>
 #include <jbson/element.hpp>
 
-namespace std {
-using namespace experimental;
-}
-
 namespace jbson {
 namespace detail {
 namespace path_expression {
