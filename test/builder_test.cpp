@@ -47,12 +47,8 @@ TEST(BuilderTest, BuildTest2) {
 JBSON_POP_WARNINGS
 
 TEST(BuilderTest, BuildTest3) {
-    auto doc = static_cast<document>(
-                       builder
-                       ("first name", element_type::string_element, "Chris")
-                       ("surname", element_type::string_element, "Manning")
-                       ("yob", element_type::int32_element, 1991)
-                    );
+    auto doc = static_cast<document>(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     static_assert(std::is_same<decltype(doc), document>::value, "");
     auto it = doc.begin();
     auto end = doc.end();
@@ -103,11 +99,8 @@ TEST(BuilderTest, ArrayBuildTest1) {
 
 TEST(BuilderTest, BuildNestTest1) {
     document doc;
-    doc = document(builder
-                        ("hello", element_type::string_element, "world")
-                        ("embedded array", element_type::array_element, array_builder
-                         ("awesome")(5.05)(1986)
-                        ));
+    doc = document(builder("hello", element_type::string_element, "world")(
+        "embedded array", element_type::array_element, array_builder("awesome")(5.05)(1986)));
 
     auto it = doc.begin();
     auto end = doc.end();
@@ -147,13 +140,8 @@ TEST(BuilderTest, BuildNestTest1) {
 }
 
 TEST(BuilderTest, BuildNestTest2) {
-    auto root_doc = document(builder
-                        ("hello", element_type::string_element, "world")
-                        ("embedded doc", element_type::document_element, builder
-                         ("a", "awesome")
-                         ("b", 5.05)
-                         ("c", 1986)
-                        ));
+    auto root_doc = document(builder("hello", element_type::string_element, "world")(
+        "embedded doc", element_type::document_element, builder("a", "awesome")("b", 5.05)("c", 1986)));
 
     auto it = root_doc.begin();
     auto end = root_doc.end();
@@ -173,7 +161,8 @@ TEST(BuilderTest, BuildNestTest2) {
     auto doc = get<element_type::document_element>(doc_el);
     static_assert(detail::is_document<decltype(doc)>::value, "");
     static_assert(
-        std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(doc)>::value, "");
+        std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(doc)>::value,
+        "");
 
     it = doc.begin();
     end = doc.end();
@@ -193,16 +182,9 @@ TEST(BuilderTest, BuildNestTest2) {
 }
 
 TEST(BuilderTest, BuildNestTest3) {
-    auto root_doc = document(builder
-                        ("hello", element_type::string_element, "world")
-                        ("embedded doc", element_type::array_element, array_builder
-                         ("awesome")
-                         (5.05)
-                         (element_type::document_element, builder
-                          ("y", "sauce")
-                          ("z", 57)
-                         )
-                        ));
+    auto root_doc = document(builder("hello", element_type::string_element, "world")(
+        "embedded doc", element_type::array_element,
+        array_builder("awesome")(5.05)(element_type::document_element, builder("y", "sauce")("z", 57))));
 
     auto it = root_doc.begin();
     auto end = root_doc.end();
@@ -256,16 +238,9 @@ TEST(BuilderTest, BuildNestTest3) {
 }
 
 TEST(BuilderTest, BuildNestTest4) {
-    auto root_doc = document(builder
-                        ("hello", element_type::string_element, "world")
-                        ("embedded doc", element_type::document_element, builder
-                         ("a", "awesome")
-                         ("b", 5.05)
-                         ("c", element_type::document_element, builder
-                          ("y", "sauce")
-                          ("z", 57)
-                         )
-                        ));
+    auto root_doc = document(builder("hello", element_type::string_element, "world")(
+        "embedded doc", element_type::document_element,
+        builder("a", "awesome")("b", 5.05)("c", element_type::document_element, builder("y", "sauce")("z", 57))));
 
     auto it = root_doc.begin();
     auto end = root_doc.end();
@@ -285,7 +260,8 @@ TEST(BuilderTest, BuildNestTest4) {
     auto doc = get<element_type::document_element>(doc_el);
     static_assert(detail::is_document<decltype(doc)>::value, "");
     static_assert(
-        std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(doc)>::value, "");
+        std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(doc)>::value,
+        "");
 
     it = doc.begin();
     end = doc.end();
@@ -319,32 +295,22 @@ TEST(BuilderTest, BuildNestTest4) {
 
 TEST(BuilderTest, BuildNestTest5) {
     document root_doc;
-    EXPECT_NO_THROW(root_doc = builder
-                               ("hello", element_type::string_element, "world")
-                               ("embedded doc", element_type::document_element, builder
-                                ("a", "awesome")
-                                ("b", 5.05)
-                                ("c", element_type::document_element, R"({"y":"sauce","z":57})"_json_set)
-                               ));
+    EXPECT_NO_THROW(root_doc = builder("hello", element_type::string_element, "world")(
+                        "embedded doc", element_type::document_element,
+                        builder("a", "awesome")("b", 5.05)("c", element_type::document_element,
+                                                           R"({"y":"sauce","z":57})"_json_set)));
 
     EXPECT_NO_THROW((void)document(R"({"y":"sauce","z":57})"_json_set));
-    EXPECT_NO_THROW(root_doc = builder
-                               ("hello", element_type::string_element, "world")
-                               ("embedded doc", element_type::document_element, builder
-                                ("a", "awesome")
-                                ("b", 5.05)
-                                ("c", element_type::document_element, R"({"y":"sauce","z":57})"_json_doc)
-                               ));
+    EXPECT_NO_THROW(root_doc = builder("hello", element_type::string_element, "world")(
+                        "embedded doc", element_type::document_element,
+                        builder("a", "awesome")("b", 5.05)("c", element_type::document_element,
+                                                           R"({"y":"sauce","z":57})"_json_doc)));
     std::vector<element> elems;
     elems.emplace_back("y", "sauce");
     elems.emplace_back("z", 57);
-    EXPECT_NO_THROW(root_doc = builder
-                               ("hello", element_type::string_element, "world")
-                               ("embedded doc", element_type::document_element, builder
-                                ("a", "awesome")
-                                ("b", 5.05)
-                                ("c", element_type::document_element, document(elems))
-                               ));
+    EXPECT_NO_THROW(root_doc = builder("hello", element_type::string_element, "world")(
+                        "embedded doc", element_type::document_element,
+                        builder("a", "awesome")("b", 5.05)("c", element_type::document_element, document(elems))));
     auto it = root_doc.find("embedded doc");
     ASSERT_NE(root_doc.end(), it);
     ASSERT_EQ(element_type::document_element, it->type());

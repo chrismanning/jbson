@@ -34,20 +34,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -std=c++1y -pthread -Wa
 if(${JBSON_ENABLE_TESTING})
 enable_testing()
 
-get_cmake_property(CACHE_VARS CACHE_VARIABLES)
-foreach(CACHE_VAR ${CACHE_VARS})
-  get_property(CACHE_VAR_HELPSTRING CACHE ${CACHE_VAR} PROPERTY HELPSTRING)
-  if(CACHE_VAR_HELPSTRING STREQUAL "No help, variable specified on the command line.")
-    get_property(CACHE_VAR_TYPE CACHE ${CACHE_VAR} PROPERTY TYPE)
-    if(CACHE_VAR_TYPE STREQUAL "UNINITIALIZED")
-      set(CACHE_VAR_TYPE)
-    else()
-      set(CACHE_VAR_TYPE :${CACHE_VAR_TYPE})
-    endif()
-    set(PARENT_CMAKE_ARGS ${PARENT_CMAKE_ARGS} "-D${CACHE_VAR}${CACHE_VAR_TYPE}=${${CACHE_VAR}}")
-  endif()
-endforeach()
-
 include(ExternalProject)
 ExternalProject_Add(
     gtest_${PROJECT_NAME}
@@ -55,7 +41,9 @@ ExternalProject_Add(
     SVN_REVISION -r 660
     UPDATE_COMMAND ""
     TIMEOUT 10
-    CMAKE_ARGS --no-warn-unused-cli ${PARENT_CMAKE_ARGS} "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -std=c++11" -DBUILD_SHARED_LIBS=OFF
+    CMAKE_ARGS --no-warn-unused-cli -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
+        "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -std=c++11" -DBUILD_SHARED_LIBS=OFF
     # Disable install step
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON

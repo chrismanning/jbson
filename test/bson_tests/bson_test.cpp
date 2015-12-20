@@ -19,7 +19,7 @@ using namespace jbson;
 #endif
 
 class BsonTest : public ::testing::Test {
-public:
+  public:
     virtual void SetUp() {
     }
 
@@ -27,7 +27,7 @@ public:
     }
 
     void init_bson(std::string filename) {
-        std::ifstream ifs(std::string{BSON_BINARY_DIR"/"}+filename);
+        std::ifstream ifs(std::string{BSON_BINARY_DIR "/"} + filename);
         ASSERT_FALSE(ifs.fail());
 
         ifs.seekg(0, std::ios::end);
@@ -39,7 +39,7 @@ public:
         ASSERT_NO_THROW((doc = document{std::move(data)}));
     }
 
-protected:
+  protected:
     document doc;
 };
 
@@ -97,8 +97,8 @@ TEST_F(BsonTest, FileTest3) {
 namespace std {
 template <typename Container, typename RepT, typename RatioT>
 void value_get(const basic_element<Container>& elem, std::chrono::duration<RepT, RatioT>& dur) {
-    dur = std::chrono::duration_cast
-          <std::chrono::duration<RepT, RatioT>>(std::chrono::duration<RepT, std::milli>{elem.template value<RepT>()});
+    dur = std::chrono::duration_cast<std::chrono::duration<RepT, RatioT>>(
+        std::chrono::duration<RepT, std::milli>{elem.template value<RepT>()});
 }
 
 template <typename Container, typename RepT, typename RatioT>
@@ -140,8 +140,7 @@ TEST_F(BsonTest, FileTest4) {
         ASSERT_NO_THROW(e.type(element_type::date_element));
         EXPECT_EQ(1319285594123, e.value<int64_t>());
         EXPECT_EQ(std::chrono::milliseconds(1319285594123), e.value<std::chrono::milliseconds>());
-    }
-    catch(...) {
+    } catch(...) {
         FAIL() << boost::current_exception_diagnostic_information();
     }
 
@@ -907,7 +906,7 @@ TEST_F(BsonTest, FileTest27) {
     const auto end = doc.end();
     ASSERT_NE(end, it);
 
-    std::string_view regex, options;
+    std::experimental::string_view regex, options;
     EXPECT_EQ("regex", it->name());
     ASSERT_EQ(element_type::regex_element, it->type());
 
@@ -928,11 +927,11 @@ TEST_F(BsonTest, FileTest27b) {
     const auto end = doc.end();
     ASSERT_NE(end, it);
 
-    std::string_view regex, options;
+    std::experimental::string_view regex, options;
     EXPECT_EQ("regex", it->name());
     ASSERT_EQ(element_type::regex_element, it->type());
 
-    std::tie(regex, options) = it->value<std::tuple<std::string_view,std::string_view>>();
+    std::tie(regex, options) = it->value<std::tuple<std::experimental::string_view, std::experimental::string_view>>();
     EXPECT_EQ("^abcd", regex);
     EXPECT_EQ("ilx", options);
 
@@ -950,7 +949,7 @@ TEST_F(BsonTest, FileTest28) {
     const auto end = doc.end();
     ASSERT_NE(end, it);
 
-    std::string_view collection;
+    std::experimental::string_view collection;
     std::array<char, 12> oid;
     EXPECT_EQ("dbpointer", it->name());
     ASSERT_EQ(element_type::db_pointer_element, it->type());
@@ -974,12 +973,12 @@ TEST_F(BsonTest, FileTest28b) {
     const auto end = doc.end();
     ASSERT_NE(end, it);
 
-    std::string_view collection;
+    std::experimental::string_view collection;
     std::array<char, 12> oid;
     EXPECT_EQ("dbpointer", it->name());
     ASSERT_EQ(element_type::db_pointer_element, it->type());
 
-    std::tie(collection, oid) = it->value<std::tuple<std::string_view,std::array<char,12>>>();
+    std::tie(collection, oid) = it->value<std::tuple<std::experimental::string_view, std::array<char, 12>>>();
     EXPECT_EQ("foo", collection);
     EXPECT_PRED2(([](auto&& a, auto&& b) { return boost::range::equal(a, b); }),
                  boost::as_literal("\x01\x23\xab\xcd\x01\x23\xab\xcd\x01\x23\xab\xcd"),
@@ -1001,7 +1000,7 @@ TEST_F(BsonTest, FileTest29) {
 
     EXPECT_EQ("code", it->name());
     ASSERT_EQ(element_type::javascript_element, it->type());
-    EXPECT_EQ("var a = {};", it->value<std::string_view>());
+    EXPECT_EQ("var a = {};", it->value<std::experimental::string_view>());
 
     ++it;
     ASSERT_EQ(end, it);
@@ -1018,7 +1017,7 @@ TEST_F(BsonTest, FileTest30) {
 
     EXPECT_EQ("code", it->name());
     ASSERT_EQ(element_type::javascript_element, it->type());
-    EXPECT_EQ("var a = {};", it->value<std::string_view>());
+    EXPECT_EQ("var a = {};", it->value<std::experimental::string_view>());
 
     ++it;
     ASSERT_EQ(end, it);
@@ -1034,15 +1033,14 @@ TEST_F(BsonTest, FileTest31) {
     ASSERT_NE(end, it);
 
     decltype(get<element_type::document_element>(*it)) scope;
-    std::string_view code;
+    std::experimental::string_view code;
     EXPECT_EQ("code", it->name());
     ASSERT_EQ(element_type::scoped_javascript_element, it->type());
 
     try {
-    std::tie(code, scope) = get<element_type::scoped_javascript_element>(*it);
-    EXPECT_EQ("var a = {};", code);
-    }
-    catch(...) {
+        std::tie(code, scope) = get<element_type::scoped_javascript_element>(*it);
+        EXPECT_EQ("var a = {};", code);
+    } catch(...) {
         std::clog << boost::current_exception_diagnostic_information();
         FAIL();
     }
@@ -1056,7 +1054,7 @@ TEST_F(BsonTest, FileTest31) {
 
         EXPECT_EQ("foo", it->name());
         ASSERT_EQ(element_type::string_element, it->type());
-        EXPECT_EQ("bar", it->value<std::string_view>());
+        EXPECT_EQ("bar", it->value<std::experimental::string_view>());
 
         ++it;
         ASSERT_EQ(end, it);
@@ -1078,7 +1076,7 @@ TEST_F(BsonTest, FileTest32) {
 
     EXPECT_EQ("hello", it->name());
     ASSERT_EQ(element_type::symbol_element, it->type());
-    EXPECT_EQ("world", it->value<std::string_view>());
+    EXPECT_EQ("world", it->value<std::experimental::string_view>());
 
     ++it;
     ASSERT_EQ(end, it);

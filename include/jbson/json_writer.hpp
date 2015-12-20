@@ -48,7 +48,7 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
 template <typename T, typename OutputIterator>
 std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
                                        std::enable_if_t<std::is_integral<std::decay_t<T>>::value>* = nullptr,
-                                       std::enable_if_t<!std::is_same<std::decay_t<T>, bool>::value> * = nullptr) {
+                                       std::enable_if_t<!std::is_same<std::decay_t<T>, bool>::value>* = nullptr) {
     auto ok = boost::spirit::karma::int_inserter<10>::call(out, (std::make_signed_t<T>)v);
     assert(ok);
     (void)ok;
@@ -57,9 +57,15 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
 }
 
 template <typename Num> struct real_gen_policy : boost::spirit::karma::real_policies<Num> {
-    static unsigned precision(Num) { return 8; }
-    template <typename... Args> static bool nan(Args&&...) { return false; }
-    template <typename... Args> static bool inf(Args&&...) { return false; }
+    static unsigned precision(Num) {
+        return 8;
+    }
+    template <typename... Args> static bool nan(Args&&...) {
+        return false;
+    }
+    template <typename... Args> static bool inf(Args&&...) {
+        return false;
+    }
 };
 
 template <typename T, typename OutputIterator>
@@ -73,7 +79,8 @@ std::decay_t<OutputIterator> stringify(T&& v, OutputIterator out,
     return out;
 }
 
-template <typename OutputIterator> std::decay_t<OutputIterator> stringify(std::string_view v, OutputIterator out) {
+template <typename OutputIterator>
+std::decay_t<OutputIterator> stringify(std::experimental::string_view v, OutputIterator out) {
     auto str = std::vector<char>(v.begin(), v.end());
     for(auto i = str.begin(); i != str.end(); ++i) {
         switch(*i) {
@@ -175,9 +182,9 @@ struct json_element_visitor<element_type::oid_element, Element, OutputIterator> 
         std::array<char, 25> buf;
         for(size_t i = 0; i < oid.size(); ++i)
             std::snprintf(&buf[i * 2], 3, "%02x", static_cast<unsigned char>(oid[i]));
-        return stringify(
-            static_cast<document>(builder("$oid", element_type::string_element, std::string_view(buf.data(), 24))),
-            out);
+        return stringify(static_cast<document>(builder("$oid", element_type::string_element,
+                                                       std::experimental::string_view(buf.data(), 24))),
+                         out);
     }
 };
 
@@ -220,7 +227,9 @@ struct json_element_visitor<element_type::regex_element, Element, OutputIterator
 // scoped code
 template <typename Element, typename OutputIterator>
 struct json_element_visitor<element_type::scoped_javascript_element, Element, OutputIterator> {
-    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const { return out; }
+    std::decay_t<OutputIterator> operator()(Element&&, std::decay_t<OutputIterator> out) const {
+        return out;
+    }
 };
 
 // voids

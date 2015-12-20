@@ -101,8 +101,7 @@ struct builder {
         try {
             basic_element<decltype(m_elements)>::write_to_container(m_elements, m_elements.end(),
                                                                     std::forward<Args>(args)...);
-        }
-        catch(...) {
+        } catch(...) {
             m_elements.resize(old_size);
             throw;
         }
@@ -151,7 +150,7 @@ struct builder {
      *
      * Constructs a basic_document with copy of internal storage.
      */
-    template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const& {
+    template <typename Container, typename EContainer> operator basic_document<Container, EContainer>() const & {
         static_assert(!detail::is_iterator_range<Container>::value, "");
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
@@ -214,11 +213,10 @@ struct array_builder {
         auto old_size = m_elements.size();
         try {
             basic_element<decltype(m_elements)>::write_to_container(
-                m_elements, m_elements.end(), std::string_view{int_str.data(), static_cast<size_t>(n)},
+                m_elements, m_elements.end(), std::experimental::string_view{int_str.data(), static_cast<size_t>(n)},
                 std::forward<Args>(args)...);
             m_count++;
-        }
-        catch(...) {
+        } catch(...) {
             m_elements.resize(old_size);
             throw;
         }
@@ -236,7 +234,7 @@ struct array_builder {
         return std::move(emplace(std::forward<Args>(args)...));
     }
 
-    template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const& {
+    template <typename Container, typename EContainer> operator basic_array<Container, EContainer>() const & {
         m_elements.push_back('\0');
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_elements.size()));
         static_assert(4 == std::tuple_size<decltype(size)>::value, "");

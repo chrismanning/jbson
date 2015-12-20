@@ -25,7 +25,7 @@ JBSON_CLANG_POP_WARNINGS
 namespace jbson {
 
 template <typename Container, typename EContainer>
-auto path_select(basic_document<Container, EContainer>&& doc, std::string_view path) {
+auto path_select(basic_document<Container, EContainer>&& doc, std::experimental::string_view path) {
     std::vector<basic_element<Container>> results;
 
     detail::path_expression::ast::path_expression ast;
@@ -52,19 +52,17 @@ auto path_select(basic_document<Container, EContainer>&& doc, std::string_view p
     else if(detail::path_expression::is_which<basic_document<Container, Container>>(v)) {
         if(auto doc = get<basic_document<Container, Container>>(&v))
             results.emplace_back("", *doc);
-    }
-    else if(detail::path_expression::is_which<basic_array<Container, Container>>(v)) {
+    } else if(detail::path_expression::is_which<basic_array<Container, Container>>(v)) {
         if(auto doc = get<basic_array<Container, Container>>(&v))
             results.emplace_back("", *doc);
-    }
-    else if(detail::path_expression::is_which<std::vector<basic_element<Container>>>(v))
+    } else if(detail::path_expression::is_which<std::vector<basic_element<Container>>>(v))
         boost::push_back(results, get<std::vector<basic_element<Container>>>(v));
 
     return results;
 }
 
 template <typename Container, typename EContainer>
-auto path_select(const basic_document<Container, EContainer>& doc, std::string_view path) {
+auto path_select(const basic_document<Container, EContainer>& doc, std::experimental::string_view path) {
     std::vector<basic_element<EContainer>> results;
 
     detail::path_expression::ast::path_expression ast;
@@ -85,21 +83,20 @@ auto path_select(const basic_document<Container, EContainer>& doc, std::string_v
     else if(detail::path_expression::is_which<basic_document<EContainer, EContainer>>(v)) {
         if(auto doc = get<basic_document<EContainer, EContainer>>(&v))
             results.push_back(basic_element<EContainer>::raw("", element_type::document_element, doc->data()));
-    }
-    else if(detail::path_expression::is_which<basic_array<EContainer, EContainer>>(v)) {
+    } else if(detail::path_expression::is_which<basic_array<EContainer, EContainer>>(v)) {
         if(auto arr = get<basic_array<EContainer, EContainer>>(&v))
             results.push_back(basic_element<EContainer>::raw("", element_type::array_element, arr->data()));
-    }
-    else if(detail::path_expression::is_which<std::vector<basic_element<EContainer>>>(v))
+    } else if(detail::path_expression::is_which<std::vector<basic_element<EContainer>>>(v))
         boost::push_back(results, get<std::vector<basic_element<EContainer>>>(v));
 
     return results;
 }
 
-//template <typename ElemRangeT>
-//auto path_select(
-//    ElemRangeT& doc, std::string_view path,
-//    std::enable_if_t<detail::is_range_of_value<ElemRangeT, boost::mpl::quote1<detail::is_element>>::value>* = nullptr) {
+// template <typename ElemRangeT>
+// auto path_select(
+//    ElemRangeT& doc, std::experimental::string_view path,
+//    std::enable_if_t<detail::is_range_of_value<ElemRangeT, boost::mpl::quote1<detail::is_element>>::value>* = nullptr)
+//    {
 //    using Container = typename boost::range_value<ElemRangeT>::type::container_type;
 
 //    return path_select(basic_document<Container>{doc}, path);

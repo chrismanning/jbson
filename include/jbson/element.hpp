@@ -93,7 +93,7 @@ template <class Container> struct basic_element {
     basic_element(const basic_element<OtherContainer>&,
                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>* = nullptr,
                   std::enable_if_t<std::is_constructible<container_type, typename OtherContainer::const_iterator,
-                                                         typename OtherContainer::const_iterator>::value> * = nullptr);
+                                                         typename OtherContainer::const_iterator>::value>* = nullptr);
 
     //! \brief Move constructor.
     template <typename OtherContainer>
@@ -104,8 +104,8 @@ template <class Container> struct basic_element {
     template <typename ForwardRange>
     explicit basic_element(
         ForwardRange&&, std::enable_if_t<!std::is_constructible<std::string, ForwardRange>::value>* = nullptr,
-        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value> *
-        = nullptr);
+        std::enable_if_t<detail::is_range_of_same_value<ForwardRange, typename Container::value_type>::value>* =
+            nullptr);
 
     //! \brief Construct an element from raw BSON byte sequence.
     /*!
@@ -116,13 +116,15 @@ template <class Container> struct basic_element {
      * \throws invalid_element_type When the detected element_type is invalid.
      */
     template <typename ForwardIterator>
-    basic_element(ForwardIterator&& first, ForwardIterator&& last,
-                  std::enable_if_t<
-                      !std::is_constructible<std::string_view, ForwardIterator>::value ||
-                      std::is_convertible<ForwardIterator, typename container_type::const_iterator>::value>* = nullptr,
-                  std::enable_if_t<detail::is_range_of_same_value<decltype(boost::make_iterator_range(first, last)),
-                                                                  typename Container::value_type>::value> * = nullptr)
-        : basic_element(boost::make_iterator_range(first, last)) {}
+    basic_element(
+        ForwardIterator&& first, ForwardIterator&& last,
+        std::enable_if_t<!std::is_constructible<std::experimental::string_view, ForwardIterator>::value ||
+                         std::is_convertible<ForwardIterator, typename container_type::const_iterator>::value>* =
+            nullptr,
+        std::enable_if_t<detail::is_range_of_same_value<decltype(boost::make_iterator_range(first, last)),
+                                                        typename Container::value_type>::value>* = nullptr)
+        : basic_element(boost::make_iterator_range(first, last)) {
+    }
 
     /*!
      * \brief Construct an element with specified name, type and value.
@@ -156,10 +158,11 @@ template <class Container> struct basic_element {
     /*!
      * \brief Returns name of element.
      *
-     * \return std::string_view. The basic_element must remain alive at least as long as the returned string.
+     * \return std::experimental::string_view. The basic_element must remain alive at least as long as the returned
+     * string.
      */
-    std::string_view name() const
-        noexcept(std::is_nothrow_constructible<std::string_view, const std::string&>::value) {
+    std::experimental::string_view name() const
+        noexcept(std::is_nothrow_constructible<std::experimental::string_view, const std::string&>::value) {
         return m_name;
     }
 
@@ -168,13 +171,17 @@ template <class Container> struct basic_element {
      * \param[in] n Name to set element to.
      * \warning Strong exception guarantee (parameter \p n construction could throw).
      */
-    void name(std::string n) { m_name.swap(n); }
+    void name(std::string n) {
+        m_name.swap(n);
+    }
 
     //! Returns size in bytes.
     size_t size() const noexcept;
 
     //! Returns BSON type of this element.
-    element_type type() const noexcept { return m_type; }
+    element_type type() const noexcept {
+        return m_type;
+    }
 
     /*!
      * \brief Sets type of this element.
@@ -428,26 +435,29 @@ template <class Container> struct basic_element {
     auto visit(Visitor&&,
                std::enable_if_t<!std::is_void<decltype(std::declval<Visitor>()(
                    std::declval<std::string>(), std::declval<element_type>(), std::declval<double>()))>::value>* =
-                   nullptr) const -> decltype(std::declval<Visitor>()(std::declval<std::string>(),
-                                                                      std::declval<element_type>(),
-                                                                      std::declval<double>()));
+                   nullptr) const
+        -> decltype(std::declval<Visitor>()(std::declval<std::string>(), std::declval<element_type>(),
+                                            std::declval<double>()));
 
     //! \brief Constructs a BSON element without data, in-place into a container.
-    static void write_to_container(container_type&, typename container_type::const_iterator, std::string_view,
-                                   element_type);
+    static void write_to_container(container_type&, typename container_type::const_iterator,
+                                   std::experimental::string_view, element_type);
     //! \brief Constructs a type-deduced BSON element in-place into a container.
     template <typename T>
-    static void write_to_container(container_type&, typename container_type::const_iterator, std::string_view, T&&);
+    static void write_to_container(container_type&, typename container_type::const_iterator,
+                                   std::experimental::string_view, T&&);
     //! \brief Constructs a BSON element in-place, from compatible data, into a container.
     template <typename T>
     static void
-    write_to_container(container_type&, typename container_type::const_iterator, std::string_view, element_type, T&&,
+    write_to_container(container_type&, typename container_type::const_iterator, std::experimental::string_view,
+                       element_type, T&&,
                        std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>* = nullptr);
 
     //! \brief Constructs a BSON element in-place, from incompatible data, into a container.
     template <typename T>
     static void
-    write_to_container(container_type&, typename container_type::const_iterator, std::string_view, element_type, T&&,
+    write_to_container(container_type&, typename container_type::const_iterator, std::experimental::string_view,
+                       element_type, T&&,
                        std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>* = nullptr);
 
     //! \brief Transforms basic_element to BSON data.
@@ -463,7 +473,9 @@ template <class Container> struct basic_element {
         return m_name == other.m_name && m_type == other.m_type && boost::range::equal(m_data, other.m_data);
     }
     //! \brief Checks if this and \p other are not equal.
-    bool operator!=(const basic_element& other) const { return !(*this == other); }
+    bool operator!=(const basic_element& other) const {
+        return !(*this == other);
+    }
 
     /*!
      * \brief Checks if this is less than (<) \p other.
@@ -571,7 +583,7 @@ void basic_element<Container>::write_to_container(OutContainer& c, typename OutC
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
-                                                  std::string_view name, T&& val) {
+                                                  std::experimental::string_view name, T&& val) {
     static_assert(!std::is_same<element_type, T>::value, "");
     static_assert(detail::is_valid_element_set_type<container_type, T>::value, "T must be compatible for deduction");
 
@@ -603,8 +615,8 @@ void basic_element<Container>::write_to_container(container_type& c, typename co
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(
-    container_type& c, typename container_type::const_iterator it, std::string_view name, element_type type, T&& val,
-    std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>*) {
+    container_type& c, typename container_type::const_iterator it, std::experimental::string_view name,
+    element_type type, T&& val, std::enable_if_t<detail::is_valid_element_set_type<container_type, T>::value>*) {
     if(!detail::valid_type(type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
@@ -639,8 +651,8 @@ void basic_element<Container>::write_to_container(
 template <typename Container>
 template <typename T>
 void basic_element<Container>::write_to_container(
-    container_type& c, typename container_type::const_iterator it, std::string_view name, element_type type, T&& val,
-    std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>*) {
+    container_type& c, typename container_type::const_iterator it, std::experimental::string_view name,
+    element_type type, T&& val, std::enable_if_t<!detail::is_valid_element_set_type<container_type, T>::value>*) {
     auto e = basic_element{name.to_string(), type, std::forward<T>(val)};
     e.write_to_container(c, it);
 }
@@ -658,7 +670,7 @@ void basic_element<Container>::write_to_container(
  */
 template <typename Container>
 void basic_element<Container>::write_to_container(container_type& c, typename container_type::const_iterator it,
-                                                  std::string_view name, element_type type) {
+                                                  std::experimental::string_view name, element_type type) {
     if(!detail::valid_type(type))
         BOOST_THROW_EXCEPTION(invalid_element_type{});
 
@@ -688,7 +700,8 @@ template <class Container>
 template <typename OtherContainer>
 basic_element<Container>::basic_element(const basic_element<OtherContainer>& elem,
                                         std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>*)
-    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data) {}
+    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data) {
+}
 
 /*!
  * Copies the contents of a basic_element with an incompatible container_type.
@@ -702,7 +715,8 @@ basic_element<Container>::basic_element(
     std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value>*,
     std::enable_if_t<std::is_constructible<container_type, typename OtherContainer::const_iterator,
                                            typename OtherContainer::const_iterator>::value>*)
-    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data.begin(), elem.m_data.end()) {}
+    : m_name(elem.m_name), m_type(elem.m_type), m_data(elem.m_data.begin(), elem.m_data.end()) {
+}
 
 /*!
  * Moves the contents of a basic_element with a compatible container_type.
@@ -713,7 +727,8 @@ template <typename OtherContainer>
 basic_element<Container>::basic_element(
     basic_element<OtherContainer>&& elem,
     std::enable_if_t<std::is_constructible<container_type, OtherContainer&&>::value>*)
-    : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)), m_data(std::move(elem.m_data)) {}
+    : m_name(std::move(elem.m_name)), m_type(std::move(elem.m_type)), m_data(std::move(elem.m_data)) {
+}
 
 /*!
  * \param range Range of bytes representing BSON data.
@@ -809,11 +824,15 @@ template <typename Visitor, typename Element> struct element_visitor<element_typ
 };
 
 template <typename Visitor, typename Element> struct element_visitor<element_type::min_key, Visitor, Element> {
-    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), element_type::min_key); }
+    auto operator()(Visitor&& visitor, Element&& elem) const {
+        return visitor(elem.name(), element_type::min_key);
+    }
 };
 
 template <typename Visitor, typename Element> struct element_visitor<element_type::max_key, Visitor, Element> {
-    auto operator()(Visitor&& visitor, Element&& elem) const { return visitor(elem.name(), element_type::max_key); }
+    auto operator()(Visitor&& visitor, Element&& elem) const {
+        return visitor(elem.name(), element_type::max_key);
+    }
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
@@ -836,11 +855,13 @@ struct elem_compare {
         return lhs < rhs;
     }
     //! Functor call operator. Heterogeneous comparison.
-    template <typename EContainer> bool operator()(const basic_element<EContainer>& lhs, std::string_view rhs) const {
+    template <typename EContainer>
+    bool operator()(const basic_element<EContainer>& lhs, std::experimental::string_view rhs) const {
         return lhs.name() < rhs;
     }
     //! Functor call operator. Heterogeneous comparison.
-    template <typename EContainer> bool operator()(std::string_view lhs, const basic_element<EContainer>& rhs) const {
+    template <typename EContainer>
+    bool operator()(std::experimental::string_view lhs, const basic_element<EContainer>& rhs) const {
         return lhs < rhs.name();
     }
 };
@@ -849,9 +870,10 @@ struct elem_compare {
 template <typename T, typename Container> struct is_valid_func {
     //! Visitor for checking validity of a type for fetching.
     template <element_type EType, typename... Args>
-    struct inner : std::integral_constant<
-                       bool, mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
-                                      std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value> {
+    struct inner
+        : std::integral_constant<bool,
+                                 mpl::or_<std::is_convertible<T, detail::ElementTypeMap<EType, Container>>,
+                                          std::is_constructible<detail::ElementTypeMap<EType, Container>, T>>::value> {
         static_assert(sizeof...(Args) == 0, "");
     };
     //! Visitor for checking validity of a type for setting.
@@ -980,8 +1002,8 @@ inline std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, 
  * Will pass the element's value, or nothing when the value type is void, to a supplied functor which returns `void`.
  * This value is retrieved as if via get(), so the functor must accept all variations of:
  * \code
- visitor(std::string_view, element_type) // for void types, e.g. element_type::null_element
- visitor(std::string_view, element_type, detail::ElementTypeMap<type>) // for all other element_type
+ visitor(std::experimental::string_view, element_type) // for void types, e.g. element_type::null_element
+ visitor(std::experimental::string_view, element_type, detail::ElementTypeMap<type>) // for all other element_type
  \endcode
  *
  * \param visitor Functor that should accept multiple signatures.
@@ -1005,8 +1027,8 @@ void basic_element<Container>::visit(
  * non-void type.
  * This value is retrieved as if via get(), so the functor must accept all variations of:
  * \code
- visitor(std::string_view, element_type) // for void types, e.g. element_type::null_element
- visitor(std::string_view, element_type, detail::ElementTypeMap<type>) // for all other element_type
+ visitor(std::experimental::string_view, element_type) // for void types, e.g. element_type::null_element
+ visitor(std::experimental::string_view, element_type, detail::ElementTypeMap<type>) // for all other element_type
  \endcode
  *
  * \param visitor Functor that should accept multiple signatures.

@@ -113,7 +113,8 @@ TEST(PathTest, JbsonPathTestRootNestAltSyntaxMultiple) {
 }
 
 TEST(PathTest, JbsonPathTestRootNestAltSyntaxMultiple2) {
-    auto res = path_select(R"({"elem": {"nest1":321, "nest2":123, "nest3":456}})"_json_doc, R"($["elem"]["nest2","nest3"])");
+    auto res =
+        path_select(R"({"elem": {"nest1":321, "nest2":123, "nest3":456}})"_json_doc, R"($["elem"]["nest2","nest3"])");
     ASSERT_EQ(2, res.size());
     ASSERT_EQ(element_type::int32_element, res.front().type());
     EXPECT_EQ(123, res.front().value<int32_t>());
@@ -207,18 +208,19 @@ TEST(PathTest, JbsonPathExprTest_inEquality) {
 
 TEST(PathTest, JbsonPathExprTest_equalityAccess) {
     try {
-    auto res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc, R"($.arr[?(@.obj == "some string")].obj)");
-    ASSERT_EQ(1, res.size());
-    ASSERT_EQ(element_type::string_element, res.front().type());
-    EXPECT_EQ("some string", get<element_type::string_element>(res.front()));
-    }
-    catch(...) {
+        auto res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc,
+                               R"($.arr[?(@.obj == "some string")].obj)");
+        ASSERT_EQ(1, res.size());
+        ASSERT_EQ(element_type::string_element, res.front().type());
+        EXPECT_EQ("some string", get<element_type::string_element>(res.front()));
+    } catch(...) {
         FAIL() << boost::current_exception_diagnostic_information();
     }
 }
 
 TEST(PathTest, JbsonPathExprTest_objectAccessInequality) {
-    auto res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc, R"($.arr[?(@.obj != "ghgf")].obj)");
+    auto res =
+        path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc, R"($.arr[?(@.obj != "ghgf")].obj)");
     ASSERT_EQ(1, res.size());
     ASSERT_EQ(element_type::string_element, res.front().type());
     EXPECT_EQ("some string", get<element_type::string_element>(res.front()));
@@ -285,7 +287,7 @@ TEST(PathTest, JbsonPathExprTest_strIndexExpr) {
     EXPECT_EQ(923, get<element_type::int32_element>(*std::begin(arr)));
 }
 
-//TEST(PathTest, JbsonPathExprTest_array) {
+// TEST(PathTest, JbsonPathExprTest_array) {
 //    try {
 //    auto res = path_select(R"({"arr": [76, [923], {"obj": "some string"}]})"_json_doc,
 //                           R"($.arr[?(@[?(@ == 923)].length > 0)])");
@@ -346,7 +348,7 @@ TEST(PathTest, JbsonPathExprTest5) {
     res = path_select(R"({"arr": [{"key":"year", "value":2014},
                                   {"key":"year", "value":2012},
                                   {"key":"year", "value":2013}]})"_json_doc,
-                           R"($.arr[?(@.value <= 2013)].value)");
+                      R"($.arr[?(@.value <= 2013)].value)");
     ASSERT_EQ(2, res.size());
     ASSERT_EQ(element_type::int32_element, res.front().type());
     EXPECT_EQ(2012, get<element_type::int32_element>(res.front()));

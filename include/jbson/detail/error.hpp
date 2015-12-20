@@ -22,7 +22,9 @@ namespace jbson {
  */
 struct jbson_error : virtual std::exception, virtual boost::exception {
     //! Returns name of exception.
-    const char* what() const noexcept override { return "jbson_error"; }
+    const char* what() const noexcept override {
+        return "jbson_error";
+    }
 };
 
 /*!
@@ -30,7 +32,9 @@ struct jbson_error : virtual std::exception, virtual boost::exception {
  */
 struct invalid_element_type : jbson_error {
     //! \copybrief jbson_error::what
-    const char* what() const noexcept override { return "invalid_element_type"; }
+    const char* what() const noexcept override {
+        return "invalid_element_type";
+    }
 };
 
 /*!
@@ -38,7 +42,9 @@ struct invalid_element_type : jbson_error {
  */
 struct incompatible_element_conversion : jbson_error {
     //! \copybrief jbson_error::what
-    const char* what() const noexcept override { return "incompatible_element_conversion"; }
+    const char* what() const noexcept override {
+        return "incompatible_element_conversion";
+    }
 };
 
 /*!
@@ -46,7 +52,9 @@ struct incompatible_element_conversion : jbson_error {
  */
 struct incompatible_type_conversion : jbson_error {
     //! \copybrief jbson_error::what
-    const char* what() const noexcept override { return "incompatible_type_conversion"; }
+    const char* what() const noexcept override {
+        return "incompatible_type_conversion";
+    }
 };
 
 /*!
@@ -54,11 +62,15 @@ struct incompatible_type_conversion : jbson_error {
  */
 struct invalid_element_size : jbson_error {
     //! \copybrief jbson_error::what
-    const char* what() const noexcept override { return "invalid_element_size"; }
+    const char* what() const noexcept override {
+        return "invalid_element_size";
+    }
 };
 
 struct jbson_path_error : jbson_error {
-    const char* what() const noexcept override { return "jbson_path_error"; }
+    const char* what() const noexcept override {
+        return "jbson_path_error";
+    }
 };
 
 enum class element_type : uint8_t;

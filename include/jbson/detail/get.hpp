@@ -23,8 +23,7 @@ JBSON_CLANG_POP_WARNINGS
 
 namespace jbson {
 
-template <typename Container>
-void value_get(const basic_element<Container>&, ...) {
+template <typename Container> void value_get(const basic_element<Container>&, ...) {
     static_assert(std::is_void<Container>::value,
                   "A valid overload of value_get must be supplied for user-defined types.");
 }
@@ -39,10 +38,11 @@ template <typename StringT> struct make_string {
     }
 };
 
-template <> struct make_string<std::string_view> {
-    template <typename Iterator> static std::string_view call(const Iterator& first, const Iterator& last) {
+template <> struct make_string<std::experimental::string_view> {
+    template <typename Iterator>
+    static std::experimental::string_view call(const Iterator& first, const Iterator& last) {
         static_assert(is_iterator_pointer<Iterator>::value, "can only use string_ref for raw memory");
-        return std::string_view{&*first, static_cast<size_t>(std::distance(first, last))};
+        return std::experimental::string_view{&*first, static_cast<size_t>(std::distance(first, last))};
     }
 };
 
@@ -57,8 +57,9 @@ void deserialise(const RangeT& data, ArithT& num, std::enable_if_t<std::is_arith
 
 // string
 template <typename RangeT, typename StringT>
-void deserialise(const RangeT& data, StringT& str,
-                 std::enable_if_t<std::is_convertible<std::decay_t<StringT>, std::string_view>::value>* = nullptr) {
+void deserialise(
+    const RangeT& data, StringT& str,
+    std::enable_if_t<std::is_convertible<std::decay_t<StringT>, std::experimental::string_view>::value>* = nullptr) {
     auto first = data.begin(), last = data.end();
     if(std::distance(first, last) <= static_cast<ptrdiff_t>(sizeof(int32_t)))
         BOOST_THROW_EXCEPTION(invalid_element_size{} << detail::actual_size(std::distance(first, last))
@@ -92,7 +93,9 @@ template <typename RangeT> void deserialise(const RangeT& data, std::vector<char
 }
 
 // ditto
-template <typename RangeT> void deserialise(const RangeT& data, RangeT& vec) { vec = data; }
+template <typename RangeT> void deserialise(const RangeT& data, RangeT& vec) {
+    vec = data;
+}
 
 // oid
 template <typename RangeT> void deserialise(const RangeT& data, std::array<char, 12>& oid) {
@@ -149,8 +152,7 @@ void deserialise(const RangeT& data, std::tuple<StringT, basic_document<DocConta
 
 } // namespace detail
 
-template <typename Container>
-void value_get(const basic_element<Container>& elem, std::string& str) {
+template <typename Container> void value_get(const basic_element<Container>& elem, std::string& str) {
     str = std::string(elem.template value<detail::ElementTypeMap<element_type::string_element, Container>>());
 }
 

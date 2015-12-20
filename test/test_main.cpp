@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-GTEST_API_ int main(int argc, char **argv) {
+GTEST_API_ int main(int argc, char** argv) {
     std::locale loc{"en_GB.UTF-8"};
     std::locale::global(loc.combine<std::numpunct<char>>(std::locale("C")));
     loc = std::locale{};

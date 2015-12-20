@@ -428,7 +428,7 @@ std::tuple<OutputIterator, element_type> json_reader::parse_value(line_pos_itera
             assert(std::distance(std::next(m_data.begin(), idx), r) >= 5);
             assert(doc.size() >= 5);
 
-            std::string_view name;
+            std::experimental::string_view name;
             const auto it = doc.begin();
             if(it != doc.end())
                 name = it->name();

@@ -27,16 +27,18 @@ using namespace jbson;
 static_assert(detail::is_nothrow_swappable<element>::value, "");
 static_assert(!detail::is_nothrow_swappable<boost::container::vector<char>>::value, "");
 
-//static_assert(std::is_nothrow_move_assignable<basic_element<std::vector<char>>>::value, "");
-//static_assert(std::is_nothrow_move_constructible<basic_element<std::vector<char>>>::value, "");
-//static_assert(std::is_nothrow_move_assignable<basic_element<std::deque<char>>>::value, "");
-//static_assert(std::is_nothrow_move_constructible<basic_element<std::deque<char>>>::value, "");
+// static_assert(std::is_nothrow_move_assignable<basic_element<std::vector<char>>>::value, "");
+// static_assert(std::is_nothrow_move_constructible<basic_element<std::vector<char>>>::value, "");
+// static_assert(std::is_nothrow_move_assignable<basic_element<std::deque<char>>>::value, "");
+// static_assert(std::is_nothrow_move_constructible<basic_element<std::deque<char>>>::value, "");
 
-static_assert(!std::is_constructible<std::string, std::tuple<std::string_view, std::string_view>>::value,"");
+static_assert(!std::is_constructible<std::string,
+                                     std::tuple<std::experimental::string_view, std::experimental::string_view>>::value,
+              "");
 
 static_assert(detail::is_valid_element_value_type<std::vector<char>, bool>::value, "");
 static_assert(detail::is_valid_element_value_type<std::vector<char>, int32_t>::value, "");
-static_assert(detail::is_valid_element_value_type<std::vector<char>, std::string_view>::value, "");
+static_assert(detail::is_valid_element_value_type<std::vector<char>, std::experimental::string_view>::value, "");
 
 static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::chrono::milliseconds>::value, "");
 static_assert(!detail::is_valid_element_value_type<std::vector<char>, std::set<int>>::value, "");
@@ -50,7 +52,7 @@ TEST(ElementTest, ElementParseTest1) {
     EXPECT_NO_THROW(EXPECT_EQ("test", get<element_type::string_element>(el1)));
 
     EXPECT_THROW(get<element_type::boolean_element>(el1), incompatible_element_conversion);
-    EXPECT_NO_THROW(el1.value<std::string_view>());
+    EXPECT_NO_THROW(el1.value<std::experimental::string_view>());
     EXPECT_THROW(el1.value<bool>(), incompatible_type_conversion);
 
     EXPECT_NO_THROW(el1.value(element_type::boolean_element, false));
@@ -92,8 +94,10 @@ TEST(ElementTest, ElementParseTest1) {
 }
 
 TEST(ElementTest, ElementParseTest2) {
-    auto bson = boost::make_iterator_range("\x02hello\x00\x06\x00\x00\x00world\x00"s);
-    auto el1 = basic_element<std::list<char>>{bson};
+    try {
+    auto bson_data = "\x02hello\x00\x06\x00\x00\x00world\x00"s;
+    auto bson = boost::make_iterator_range(bson_data);
+    auto el1 = basic_element<std::vector<char>>{bson};
     EXPECT_EQ(bson.size(), el1.size());
     ASSERT_EQ(element_type::string_element, el1.type());
     EXPECT_EQ("hello", el1.name());
@@ -106,15 +110,20 @@ TEST(ElementTest, ElementParseTest2) {
     ASSERT_EQ(element_type::int32_element, el1.type());
     EXPECT_EQ(1234, get<element_type::int32_element>(el1));
     EXPECT_EQ(15, el1.size());
+    }
+    catch(...) {
+        FAIL() << boost::current_exception_diagnostic_information();
+    }
 }
 
 TEST(ElementTest, ElementParseTest3) {
     auto bson = boost::make_iterator_range("\x00hello\x00\x06\x00\x00\x00world\x00"s);
     ASSERT_THROW(element{bson}, invalid_element_type);
     bson = "\x02hello\x06\x00\x00\x00world\x00"s;
-    ASSERT_THROW(element{bson}, invalid_element_size);
+    ASSERT_THROW(element{bson}, invalid_element_type);
+
     bson = "\x02hello\x00\x06\x00\x00\x00world"s;
-    ASSERT_THROW(element{bson}, invalid_element_size);
+    ASSERT_THROW(element{bson}, invalid_element_type);
 }
 
 TEST(ElementTest, ElementTypeConversionsTest1) {
@@ -132,9 +141,8 @@ TEST(ElementTest, ElementTypeConversionsTest1) {
     EXPECT_THROW(el1.value<int64_t>(), invalid_element_size);
 
     try {
-    EXPECT_EQ(123, el1.value<short>());
-    }
-    catch(...) {
+        EXPECT_EQ(123, el1.value<short>());
+    } catch(...) {
         FAIL() << boost::current_exception_diagnostic_information();
     }
 
@@ -313,21 +321,23 @@ TEST(ElementTest, ElementVoidTest) {
 }
 
 TEST(ElementTest, ElementRefTest1) {
-    static_assert(std::is_same<std::string_view, decltype(get<element_type::string_element>(
-                                                      std::declval<basic_element<std::string_view>>()))>::value,
+    static_assert(std::is_same<std::experimental::string_view,
+                               decltype(get<element_type::string_element>(
+                                   std::declval<basic_element<std::experimental::string_view>>()))>::value,
                   "");
-    static_assert(std::is_same<std::string_view, decltype(get<element_type::string_element>(
-                                                      std::declval<basic_element<std::vector<char>>>()))>::value,
-                  "");
+    static_assert(
+        std::is_same<std::experimental::string_view, decltype(get<element_type::string_element>(
+                                                         std::declval<basic_element<std::vector<char>>>()))>::value,
+        "");
     static_assert(std::is_same<basic_document<boost::iterator_range<std::vector<char>::const_iterator>>,
-                  decltype(get<element_type::document_element>(
-                                                      std::declval<basic_element<std::vector<char>>>()))>::value,
+                               decltype(get<element_type::document_element>(
+                                   std::declval<basic_element<std::vector<char>>>()))>::value,
                   "");
     static_assert(std::is_same<std::string, decltype(get<element_type::string_element>(
                                                 std::declval<basic_element<std::list<char>>>()))>::value,
                   "");
-    ASSERT_TRUE(
-        (std::is_same<std::string_view, decltype(get<element_type::string_element>(std::declval<element>()))>::value));
+    ASSERT_TRUE((std::is_same<std::experimental::string_view,
+                              decltype(get<element_type::string_element>(std::declval<element>()))>::value));
 }
 
 TEST(ElementTest, ElementRefTest2) {
@@ -349,17 +359,18 @@ TEST(ElementTest, ElementRefTest2) {
 template <typename ElemType> struct VoidVisitor {
     ElemType m_v;
 
-    explicit VoidVisitor(ElemType v) : m_v(v) {}
+    explicit VoidVisitor(ElemType v) : m_v(v) {
+    }
 
-    void operator()(std::string_view /*name*/, element_type e, ElemType v) {
+    void operator()(std::experimental::string_view /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(element_type::double_element, e);
         EXPECT_EQ(m_v, v);
     }
 
-    template <typename T> void operator()(std::string_view, element_type, T&&) {
+    template <typename T> void operator()(std::experimental::string_view, element_type, T&&) {
         FAIL();
     }
-    void operator()(std::string_view, element_type) {
+    void operator()(std::experimental::string_view, element_type) {
         FAIL();
     }
 };
@@ -375,15 +386,20 @@ TEST(ElementTest, ElementVisitTest1) {
 template <typename ElemType> struct BoolVisitor {
     ElemType m_v;
 
-    explicit BoolVisitor(ElemType v) : m_v(v) {}
+    explicit BoolVisitor(ElemType v) : m_v(v) {
+    }
 
-    bool operator()(std::string_view /*name*/, element_type e, ElemType v) {
+    bool operator()(std::experimental::string_view /*name*/, element_type e, ElemType v) {
         EXPECT_EQ(m_v, v);
         return element_type::double_element == e;
     }
 
-    template <typename T> bool operator()(std::string_view, element_type, T&&) { return false; }
-    bool operator()(std::string_view, element_type) { return false; }
+    template <typename T> bool operator()(std::experimental::string_view, element_type, T&&) {
+        return false;
+    }
+    bool operator()(std::experimental::string_view, element_type) {
+        return false;
+    }
 };
 
 TEST(ElementTest, ElementVisitTest2) {
@@ -395,29 +411,30 @@ TEST(ElementTest, ElementVisitTest2) {
 }
 
 TEST(ElementTest, ElementGetDocumentTest1) {
-    element::container_type data{{0x03,'e','m','b','e','d','d','e','d',' ','d','o','c','u','m','e','n','t','\0',0x05,0x00,0x00,0x00,0x00}};
+    element::container_type data{{0x03, 'e', 'm', 'b', 'e', 'd', 'd', 'e', 'd', ' ', 'd', 'o', 'c', 'u', 'm', 'e', 'n',
+                                  't', '\0', 0x05, 0x00, 0x00, 0x00, 0x00}};
     auto el1 = basic_element<boost::iterator_range<element::container_type::const_iterator>>{data};
     ASSERT_EQ(element_type::document_element, el1.type());
     EXPECT_EQ("embedded document", el1.name());
     auto doc = get<element_type::document_element>(el1);
-    static_assert(detail::is_document<decltype(doc)>::value,"");
+    static_assert(detail::is_document<decltype(doc)>::value, "");
     static_assert(std::is_same<boost::iterator_range<element::container_type::const_iterator>,
-                  decltype(doc)::container_type>::value,"");
+                               decltype(doc)::container_type>::value,
+                  "");
     EXPECT_EQ(5, doc.size());
 }
 
-template <typename Container>
-struct ParameterizedContainerTest : ::testing::Test {
+template <typename Container> struct ParameterizedContainerTest : ::testing::Test {
     using container_type = Container;
-    template <element_type EType>
-    using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
+    template <element_type EType> using ElementTypeMap = detail::ElementTypeMap<EType, container_type>;
     using string_type = ElementTypeMap<element_type::string_element>;
 };
 TYPED_TEST_CASE_P(ParameterizedContainerTest);
 
 JBSON_PUSH_DISABLE_DEPRECATED_WARNING
 TYPED_TEST_P(ParameterizedContainerTest, ElementOIDTest) {
-    const typename TestFixture::template ElementTypeMap<element_type::oid_element> oid{{1,2,3,4,5,6,7,8,9,10,11,12}};
+    const typename TestFixture::template ElementTypeMap<element_type::oid_element> oid{
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
     basic_element<typename TestFixture::container_type> el{"_id", element_type::oid_element, oid};
     EXPECT_EQ(oid, get<element_type::oid_element>(el));
 
@@ -441,7 +458,7 @@ TYPED_TEST_P(ParameterizedContainerTest, ElementRegexTest) {
 }
 
 REGISTER_TYPED_TEST_CASE_P(ParameterizedContainerTest, ElementOIDTest, ElementRegexTest);
-using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char>/*,
+using ContainerTypes = ::testing::Types<std::vector<char>, std::deque<char>, std::list<char> /*,
                                         boost::container::stable_vector<char>*/>;
 INSTANTIATE_TYPED_TEST_CASE_P(ParameterizedOIDTest, ParameterizedContainerTest, ContainerTypes);
 
@@ -481,7 +498,7 @@ TEST(ExceptionSafetyTest, ElementExceptionSafetyTest1) {
 
     // value(new_type, new_value) - new_type invalid
     ASSERT_EQ(2, e.size());
-    ASSERT_THROW(e.value((element_type) 0, "not a number"), invalid_element_type);
+    ASSERT_THROW(e.value((element_type)0, "not a number"), invalid_element_type);
     EXPECT_EQ(element_type::int32_element, e.type());
     EXPECT_EQ(2, e.size());
 

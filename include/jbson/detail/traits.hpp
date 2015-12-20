@@ -84,7 +84,7 @@ struct is_iterator_pointer<boost::iterator_range<Iterator>> : is_iterator_pointe
  * Otherwise it uses a boost::iterator_range.
  *
  * When Container's iterators are pointers (according to is_iterator_pointer) all string types will be
- * std::string_view.
+ * std::experimental::string_view.
  * Otherwise strings are all std::string.
  *
  * \sa is_iterator_pointer ElementTypeMap ElementTypeMapSet
@@ -93,7 +93,7 @@ template <typename Container, bool set = false> class TypeMap {
     using container_type =
         std::conditional_t<set, Container, boost::iterator_range<typename Container::const_iterator>>;
     using string_type = std::conditional_t<!set && is_iterator_pointer<typename container_type::iterator>::value,
-                                           std::string_view, std::string>;
+                                           std::experimental::string_view, std::string>;
 
   public:
 /*!

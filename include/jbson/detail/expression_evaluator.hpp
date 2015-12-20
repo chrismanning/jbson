@@ -27,8 +27,8 @@ using variable_type =
                    basic_array<ContainerT, EContainerT>, std::vector<basic_element<EContainerT>>>;
 
 template <typename ContainerT, typename EContainerT>
-std::optional<variable_type<ContainerT, EContainerT>> load_by_name(variable_type<ContainerT, EContainerT> var,
-                                                                   std::string_view name) {
+std::experimental::optional<variable_type<ContainerT, EContainerT>>
+load_by_name(variable_type<ContainerT, EContainerT> var, std::experimental::string_view name) {
     using variable_type = variable_type<ContainerT, EContainerT>;
     if(is_which<basic_element<EContainerT>>(var)) {
         auto elem = get<basic_element<EContainerT>>(var);
@@ -66,7 +66,7 @@ std::optional<variable_type<ContainerT, EContainerT>> load_by_name(variable_type
             return variable_type{vars};
     }
 
-    return std::nullopt;
+    return std::experimental::nullopt;
 }
 
 template <typename ContainerT, typename EContainerT>
@@ -152,10 +152,10 @@ template <typename ContainerT, typename EContainerT> struct equality_operation {
     using result_type = vector_t;
 
     struct element_visitor {
-        template <typename T> variable_t operator()(std::string_view, element_type) const {
+        template <typename T> variable_t operator()(std::experimental::string_view, element_type) const {
             return {false};
         }
-        template <typename T> variable_t operator()(std::string_view, element_type, T&& t) const {
+        template <typename T> variable_t operator()(std::experimental::string_view, element_type, T&& t) const {
             return {t};
         }
     };
@@ -171,21 +171,21 @@ template <typename ContainerT, typename EContainerT> struct equality_operation {
 
     vector_t operator()(const vector_t& elems, int64_t val) const {
         auto range = elems | boost::adaptors::filtered([&val](auto&& elem) {
-            if(elem.type() == element_type::int32_element || elem.type() == element_type::int64_element) {
-                return get<int64_t>(elem) == val;
-            }
-            return false;
-        });
+                         if(elem.type() == element_type::int32_element || elem.type() == element_type::int64_element) {
+                             return get<int64_t>(elem) == val;
+                         }
+                         return false;
+                     });
         return {range.begin(), range.end()};
     }
 
     vector_t operator()(const vector_t& elems, std::string val) const {
         auto range = elems | boost::adaptors::filtered([&val](auto&& elem) {
-            if(elem.type() == element_type::string_element) {
-                return get<element_type::string_element>(elem) == val;
-            }
-            return false;
-        });
+                         if(elem.type() == element_type::string_element) {
+                             return get<element_type::string_element>(elem) == val;
+                         }
+                         return false;
+                     });
         return {range.begin(), range.end()};
     }
 
@@ -197,52 +197,53 @@ template <typename ContainerT, typename EContainerT> struct equality_operation {
 template <typename ContainerT, typename EContainerT> struct element_variable_visitor {
     using result_type = variable_type<ContainerT, EContainerT>;
 
-    result_type operator()(std::string_view, element_type type) const {
+    result_type operator()(std::experimental::string_view, element_type type) const {
         BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
     }
 
-    result_type operator()(std::string_view, element_type type, const std::array<char, 12>&) const {
-        BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
-    }
-
-    template <typename StringT>
-    result_type operator()(std::string_view, element_type type, const std::tuple<StringT, StringT>&) const {
+    result_type operator()(std::experimental::string_view, element_type type, const std::array<char, 12>&) const {
         BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
     }
 
     template <typename StringT>
-    result_type operator()(std::string_view, element_type type,
+    result_type operator()(std::experimental::string_view, element_type type,
+                           const std::tuple<StringT, StringT>&) const {
+        BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
+    }
+
+    template <typename StringT>
+    result_type operator()(std::experimental::string_view, element_type type,
                            const std::tuple<StringT, std::array<char, 12>>&) const {
         BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
     }
 
     template <typename StringT, typename C, typename E>
-    result_type operator()(std::string_view, element_type type,
+    result_type operator()(std::experimental::string_view, element_type type,
                            const std::tuple<StringT, basic_document<C, E>>&) const {
         BOOST_THROW_EXCEPTION(jbson_path_error{} << detail::actual_element_type{type});
     }
 
-    result_type operator()(std::string_view, element_type, double val) const {
+    result_type operator()(std::experimental::string_view, element_type, double val) const {
         return result_type{static_cast<int64_t>(val)};
     }
 
-    result_type operator()(std::string_view, element_type, std::string_view val) const {
+    result_type operator()(std::experimental::string_view, element_type, std::experimental::string_view val) const {
         return result_type{static_cast<std::string>(val)};
     }
 
     template <typename C, typename E>
-    result_type operator()(std::string_view, element_type, basic_array<C, E> val) const {
+    result_type operator()(std::experimental::string_view, element_type, basic_array<C, E> val) const {
         return result_type{basic_array<ContainerT, EContainerT>(val)};
     }
 
     template <typename C, typename E>
-    result_type operator()(std::string_view, element_type, basic_document<C, E> val) const {
+    result_type operator()(std::experimental::string_view, element_type, basic_document<C, E> val) const {
         return result_type{static_cast<basic_document<ContainerT, EContainerT>>(val)};
     }
 
     template <typename T>
-    std::enable_if_t<detail::is_document<T>::value, result_type> operator()(std::string_view, element_type,
-                                                                            T&& val) const {
+    std::enable_if_t<detail::is_document<T>::value, result_type> operator()(std::experimental::string_view,
+                                                                            element_type, T&& val) const {
         return result_type{std::forward<T>(val)};
     }
 };
@@ -754,18 +755,17 @@ template <typename ContainerT, typename EContainerT, typename CodeIterator>
 variable_type<ContainerT, EContainerT> eval_expr(const basic_document<ContainerT, EContainerT>& root,
                                                  const variable_type<ContainerT, EContainerT>& current,
                                                  boost::iterator_range<CodeIterator>& code) {
-//    std::clog << "[";
-//    for(auto&& c : code) {
-//        std::clog << static_cast<byte_code>(c) << ", ";
-//    }
-//    std::clog << "]" << std::endl;
+    //    std::clog << "[";
+    //    for(auto&& c : code) {
+    //        std::clog << static_cast<byte_code>(c) << ", ";
+    //    }
+    //    std::clog << "]" << std::endl;
 
     try {
         eval_context<ContainerT, EContainerT> context{root, current, code};
 
         return context.exec();
-    }
-    catch(...) {
+    } catch(...) {
         return std::vector<basic_element<EContainerT>>{};
     }
 }

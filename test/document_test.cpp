@@ -17,71 +17,82 @@ using namespace jbson;
 #include <gtest/gtest.h>
 
 struct find_by_element_name_impl {
-    template <typename SetT, typename NameT>
-    auto operator()(SetT&& set, NameT&& name) const {
-        return std::find_if(set.begin(), set.end(), [&](auto&& el) {
-            return el.name() == name;
-        });
+    template <typename SetT, typename NameT> auto operator()(SetT&& set, NameT&& name) const {
+        return std::find_if(set.begin(), set.end(), [&](auto&& el) { return el.name() == name; });
     }
 } find_by_element_name;
 
 // copmile-time tests
-static_assert(std::is_constructible<std::vector<element>, array>::value,"");
-static_assert(std::is_same<decltype(std::declval<document>().data()), std::vector<char>&&>::value,"");
-static_assert(std::is_same<decltype(std::declval<document&>().data()), const std::vector<char>&>::value,"");
-static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value,"");
+static_assert(std::is_constructible<std::vector<element>, array>::value, "");
+static_assert(std::is_same<decltype(std::declval<document>().data()), std::vector<char>&&>::value, "");
+static_assert(std::is_same<decltype(std::declval<document&>().data()), const std::vector<char>&>::value, "");
+static_assert(std::is_same<decltype(std::declval<document&&>().data()), std::vector<char>&&>::value, "");
 #ifndef JBSON_NO_CONST_RVALUE_THIS
-static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value,"");
-#endif //JBSON_NO_CONST_RVALUE_THIS
+static_assert(std::is_same<decltype(std::declval<const document&&>().data()), std::vector<char>>::value, "");
+#endif // JBSON_NO_CONST_RVALUE_THIS
 
 static_assert(std::is_nothrow_move_assignable<basic_document<std::vector<char>>>::value, "");
 static_assert(std::is_nothrow_move_constructible<basic_document<std::vector<char>>>::value, "");
 
 static_assert(std::is_nothrow_move_assignable<basic_document<std::deque<char>>>::value, "");
-//static_assert(std::is_nothrow_move_constructible<basic_document<std::deque<char>>>::value, "");
+// static_assert(std::is_nothrow_move_constructible<basic_document<std::deque<char>>>::value, "");
 
 // vector
 static_assert(std::is_default_constructible<document>::value, "");
 static_assert(std::is_constructible<document, builder>::value, "");
 static_assert(!std::is_constructible<document, array_builder>::value, "");
-static_assert(std::is_constructible<document, std::array<char,12>>::value, "");
-static_assert(!std::is_constructible<document, std::array<char,2>>::value, "");
+static_assert(std::is_constructible<document, std::array<char, 12>>::value, "");
+static_assert(!std::is_constructible<document, std::array<char, 2>>::value, "");
 static_assert(!std::is_constructible<document, char[12]>::value, "");
 static_assert(!std::is_constructible<document, char[2]>::value, "");
 static_assert(std::is_constructible<document, std::deque<char>>::value, "");
 static_assert(std::is_constructible<document, std::list<char>>::value, "");
-static_assert(std::is_constructible<document, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(std::is_constructible<document, std::list<char>::const_iterator, std::list<char>::const_iterator>::value,
+              "");
 static_assert(std::is_constructible<document, document_set::const_iterator, document_set::const_iterator>::value, "");
 static_assert(std::is_constructible<document, document::const_iterator, document::const_iterator>::value, "");
 static_assert(std::is_constructible<document, boost::iterator_range<char*>>::value, "");
 static_assert(std::is_constructible<document, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
 static_assert(std::is_constructible<document, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
-static_assert(std::is_constructible<document, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(
+    std::is_constructible<document, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value,
+    "");
 static_assert(std::is_constructible<document, basic_document<std::deque<char>>>::value, "");
-static_assert(std::is_constructible<document, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+static_assert(
+    std::is_constructible<document, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value,
+    "");
 
 // iterator_range<vector>
 using document_range = basic_document<boost::iterator_range<std::vector<char>::const_iterator>>;
-//static_assert(!std::is_default_constructible<document_range>::value, "");
-//static_assert(!std::is_constructible<document_range, builder>::value, "");
-//static_assert(!std::is_constructible<std::vector<char>::const_iterator, char*>::value, "");
+// static_assert(!std::is_default_constructible<document_range>::value, "");
+// static_assert(!std::is_constructible<document_range, builder>::value, "");
+// static_assert(!std::is_constructible<std::vector<char>::const_iterator, char*>::value, "");
 static_assert(!std::is_constructible<document_range, array_builder>::value, "");
-//static_assert(!std::is_constructible<document_range, std::array<char,12>>::value, "");
-static_assert(!std::is_constructible<document_range, std::array<char,2>>::value, "");
+// static_assert(!std::is_constructible<document_range, std::array<char,12>>::value, "");
+static_assert(!std::is_constructible<document_range, std::array<char, 2>>::value, "");
 static_assert(!std::is_constructible<document_range, std::deque<char>>::value, "");
 static_assert(!std::is_constructible<document_range, std::list<char>>::value, "");
-static_assert(!std::is_constructible<document_range, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
-static_assert(!std::is_constructible<document_range, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(
+    !std::is_constructible<document_range, std::list<char>::const_iterator, std::list<char>::const_iterator>::value,
+    "");
+static_assert(!std::is_constructible<document_range, document_set::const_iterator, document_set::const_iterator>::value,
+              "");
 static_assert(!std::is_constructible<document_range, document::const_iterator, document::const_iterator>::value, "");
-static_assert(!std::is_constructible<document_range, document_range::const_iterator, document_range::const_iterator>::value, "");
-//static_assert(!std::is_constructible<document_range, boost::iterator_range<char*>>::value, "");
-static_assert(std::is_constructible<document_range, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
-static_assert(!std::is_constructible<document_range, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
-static_assert(std::is_constructible<document_range, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(
+    !std::is_constructible<document_range, document_range::const_iterator, document_range::const_iterator>::value, "");
+// static_assert(!std::is_constructible<document_range, boost::iterator_range<char*>>::value, "");
+static_assert(std::is_constructible<document_range, boost::iterator_range<std::vector<char>::const_iterator>>::value,
+              "");
+static_assert(!std::is_constructible<document_range, boost::iterator_range<std::list<char>::const_iterator>>::value,
+              "");
+static_assert(std::is_constructible<document_range,
+                                    basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value,
+              "");
 static_assert(std::is_constructible<document_range, document>::value, "");
 static_assert(std::is_convertible<document, document_range>::value, "");
-//static_assert(!std::is_constructible<document_range, basic_document<std::deque<char>>>::value, "");
-//static_assert(!std::is_constructible<document_range, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+// static_assert(!std::is_constructible<document_range, basic_document<std::deque<char>>>::value, "");
+// static_assert(!std::is_constructible<document_range,
+// basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
 static_assert(std::is_convertible<document_range, document>::value, "");
 
 // deque
@@ -89,60 +100,84 @@ using document_deque = basic_document<std::deque<char>>;
 static_assert(std::is_default_constructible<document_deque>::value, "");
 static_assert(std::is_constructible<document_deque, builder>::value, "");
 static_assert(!std::is_constructible<document_deque, array_builder>::value, "");
-static_assert(std::is_constructible<document_deque, std::array<char,12>>::value, "");
-static_assert(!std::is_constructible<document_deque, std::array<char,2>>::value, "");
+static_assert(std::is_constructible<document_deque, std::array<char, 12>>::value, "");
+static_assert(!std::is_constructible<document_deque, std::array<char, 2>>::value, "");
 static_assert(std::is_constructible<document_deque, std::deque<char>>::value, "");
 static_assert(std::is_constructible<document_deque, std::list<char>>::value, "");
-static_assert(std::is_constructible<document_deque, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
-static_assert(std::is_constructible<document_deque, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(
+    std::is_constructible<document_deque, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(std::is_constructible<document_deque, document_set::const_iterator, document_set::const_iterator>::value,
+              "");
 static_assert(std::is_constructible<document_deque, document::const_iterator, document::const_iterator>::value, "");
 static_assert(std::is_constructible<document_deque, boost::iterator_range<char*>>::value, "");
-static_assert(std::is_constructible<document_deque, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document_deque, boost::iterator_range<std::vector<char>::const_iterator>>::value,
+              "");
 static_assert(std::is_constructible<document_deque, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
-static_assert(std::is_constructible<document_deque, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_deque,
+                                    basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value,
+              "");
 static_assert(std::is_constructible<document_deque, basic_document<std::deque<char>>>::value, "");
-static_assert(std::is_constructible<document_deque, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_deque,
+                                    basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value,
+              "");
 
 // list
 using document_list = basic_document<std::list<char>>;
 static_assert(std::is_default_constructible<document_list>::value, "");
 static_assert(std::is_constructible<document_list, builder>::value, "");
 static_assert(!std::is_constructible<document_list, array_builder>::value, "");
-static_assert(std::is_constructible<document_list, std::array<char,12>>::value, "");
-static_assert(!std::is_constructible<document_list, std::array<char,2>>::value, "");
+static_assert(std::is_constructible<document_list, std::array<char, 12>>::value, "");
+static_assert(!std::is_constructible<document_list, std::array<char, 2>>::value, "");
 static_assert(std::is_constructible<document_list, std::deque<char>>::value, "");
 static_assert(std::is_constructible<document_list, std::list<char>>::value, "");
-static_assert(std::is_constructible<document_list, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
-static_assert(std::is_constructible<document_list, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(
+    std::is_constructible<document_list, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
+static_assert(std::is_constructible<document_list, document_set::const_iterator, document_set::const_iterator>::value,
+              "");
 static_assert(std::is_constructible<document_list, document::const_iterator, document::const_iterator>::value, "");
 static_assert(std::is_constructible<document_list, boost::iterator_range<char*>>::value, "");
-static_assert(std::is_constructible<document_list, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document_list, boost::iterator_range<std::vector<char>::const_iterator>>::value,
+              "");
 static_assert(std::is_constructible<document_list, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
-static_assert(std::is_constructible<document_list, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_list,
+                                    basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value,
+              "");
 static_assert(std::is_constructible<document_list, basic_document<std::deque<char>>>::value, "");
-static_assert(std::is_constructible<document_list, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+static_assert(std::is_constructible<document_list,
+                                    basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value,
+              "");
 
 // iterator_range<list>
 using document_list_range = basic_document<boost::iterator_range<std::list<char>::const_iterator>>;
-//static_assert(!std::is_default_constructible<document_list_range>::value, "");
-//static_assert(!std::is_constructible<document_range, builder>::value, "");
+// static_assert(!std::is_default_constructible<document_list_range>::value, "");
+// static_assert(!std::is_constructible<document_range, builder>::value, "");
 static_assert(!std::is_constructible<document_list_range, array_builder>::value, "");
-static_assert(!std::is_constructible<document_list_range, std::array<char,12>>::value, "");
-static_assert(!std::is_constructible<document_list_range, std::array<char,2>>::value, "");
+static_assert(!std::is_constructible<document_list_range, std::array<char, 12>>::value, "");
+static_assert(!std::is_constructible<document_list_range, std::array<char, 2>>::value, "");
 static_assert(!std::is_constructible<document_list_range, std::deque<char>>::value, "");
 static_assert(std::is_constructible<document_list_range, std::list<char>>::value, "");
-static_assert(std::is_constructible<document_list_range, std::list<char>::const_iterator, std::list<char>::const_iterator>::value, "");
-static_assert(!std::is_constructible<document_list_range, document_set::const_iterator, document_set::const_iterator>::value, "");
-static_assert(!std::is_constructible<document_list_range, document::const_iterator, document::const_iterator>::value, "");
-static_assert(!std::is_constructible<document_list_range, document_list_range::const_iterator, document_list_range::const_iterator>::value, "");
+static_assert(
+    std::is_constructible<document_list_range, std::list<char>::const_iterator, std::list<char>::const_iterator>::value,
+    "");
+static_assert(
+    !std::is_constructible<document_list_range, document_set::const_iterator, document_set::const_iterator>::value, "");
+static_assert(!std::is_constructible<document_list_range, document::const_iterator, document::const_iterator>::value,
+              "");
+static_assert(!std::is_constructible<document_list_range, document_list_range::const_iterator,
+                                     document_list_range::const_iterator>::value,
+              "");
 static_assert(!std::is_constructible<document_list_range, boost::iterator_range<char*>>::value, "");
-static_assert(!std::is_constructible<document_list_range, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
-static_assert(std::is_constructible<document_list_range, boost::iterator_range<std::list<char>::const_iterator>>::value, "");
-//static_assert(!std::is_constructible<document_list_range, basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
-//static_assert(!std::is_constructible<document_list_range, document>::value, "");
+static_assert(
+    !std::is_constructible<document_list_range, boost::iterator_range<std::vector<char>::const_iterator>>::value, "");
+static_assert(std::is_constructible<document_list_range, boost::iterator_range<std::list<char>::const_iterator>>::value,
+              "");
+// static_assert(!std::is_constructible<document_list_range,
+// basic_document<boost::iterator_range<std::vector<char>::const_iterator>>>::value, "");
+// static_assert(!std::is_constructible<document_list_range, document>::value, "");
 static_assert(std::is_convertible<document_list, document_list_range>::value, "");
-//static_assert(!std::is_constructible<document_list_range, basic_document<std::deque<char>>>::value, "");
-//static_assert(!std::is_constructible<document_list_range, basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
+// static_assert(!std::is_constructible<document_list_range, basic_document<std::deque<char>>>::value, "");
+// static_assert(!std::is_constructible<document_list_range,
+// basic_document<boost::iterator_range<std::deque<char>::const_iterator>>>::value, "");
 static_assert(std::is_convertible<document_list_range, document>::value, "");
 
 TEST(DocumentTest, EmptyDocumentTest) {
@@ -151,7 +186,8 @@ TEST(DocumentTest, EmptyDocumentTest) {
 
     EXPECT_ANY_THROW(EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<const char*>>())));
 
-    EXPECT_ANY_THROW(EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<std::vector<char>::const_iterator>>())));
+    EXPECT_ANY_THROW(
+        EXPECT_EQ(0, boost::distance(basic_document<boost::iterator_range<std::vector<char>::const_iterator>>())));
 
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(array())));
     EXPECT_NO_THROW(EXPECT_EQ(0, boost::distance(basic_array<std::array<char, 5>>())));
@@ -188,7 +224,7 @@ TEST(DocumentTest, DocumentParseTest2) {
 }
 
 TEST(DocumentTest, DocumentParseTest3) {
-    std::ifstream ifs{JBSON_FILES"/test.bson", std::ios::binary};
+    std::ifstream ifs{JBSON_FILES "/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -209,7 +245,8 @@ TEST(DocumentTest, DocumentParseTest3) {
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto arr = get<element_type::array_element>(arr_el);
     static_assert(detail::is_document<decltype(arr)>::value, "");
-    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+    static_assert(
+        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
 
     auto i = int32_t{0};
     for(auto&& e : arr) {
@@ -236,7 +273,7 @@ TEST(DocumentTest, DocumentParseTest3) {
 }
 
 TEST(DocumentTest, DocumentParseTest4) {
-    std::ifstream ifs{JBSON_FILES"/test.bson", std::ios::binary};
+    std::ifstream ifs{JBSON_FILES "/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -257,7 +294,8 @@ TEST(DocumentTest, DocumentParseTest4) {
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto arr = get<element_type::array_element>(arr_el);
     static_assert(detail::is_document<decltype(arr)>::value, "");
-    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+    static_assert(
+        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
 
     it = arr.find(0);
     end = arr.end();
@@ -280,7 +318,7 @@ TEST(DocumentTest, DocumentParseTest4) {
 }
 
 TEST(DocumentTest, ArrayTest1) {
-    std::ifstream ifs{JBSON_FILES"/test.bson", std::ios::binary};
+    std::ifstream ifs{JBSON_FILES "/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -301,7 +339,8 @@ TEST(DocumentTest, ArrayTest1) {
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto arr = get<element_type::array_element>(arr_el);
     static_assert(detail::is_document<decltype(arr)>::value, "");
-    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+    static_assert(
+        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
 
     static_assert(std::is_constructible<std::vector<element>, decltype(arr)>::value, "");
     static_assert(std::is_constructible<std::deque<element>, decltype(arr)>::value, "");
@@ -329,7 +368,7 @@ TEST(DocumentTest, ArrayTest1) {
 }
 
 TEST(DocumentTest, VectorToDocTest1) {
-    std::ifstream ifs{JBSON_FILES"/test.bson", std::ios::binary};
+    std::ifstream ifs{JBSON_FILES "/test.bson", std::ios::binary};
     ASSERT_FALSE(ifs.fail());
     ifs.seekg(0, std::ios::end);
     auto n = static_cast<std::streamoff>(ifs.tellg());
@@ -352,7 +391,8 @@ TEST(DocumentTest, VectorToDocTest1) {
     EXPECT_EQ(element_type::array_element, arr_el.type());
     auto arr = get<element_type::array_element>(arr_el);
     static_assert(detail::is_document<decltype(arr)>::value, "");
-    static_assert(std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
+    static_assert(
+        std::is_same<basic_array<boost::iterator_range<std::vector<char>::const_iterator>>, decltype(arr)>::value, "");
     EXPECT_GE(&*arr.data().begin(), binstring.data());
     EXPECT_LT(&*arr.data().begin(), binstring.data() + binstring.size());
     auto arr_size = arr.size();
@@ -386,12 +426,8 @@ TEST(DocumentTest, VectorToDocTest1) {
 }
 
 TEST(DocumentTest, SetTest1) {
-    auto doc = static_cast<document>(
-                       builder
-                       ("first name", element_type::string_element, "Chris")
-                       ("surname", element_type::string_element, "Manning")
-                       ("yob", element_type::int32_element, 1991)
-                    );
+    auto doc = static_cast<document>(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     static_assert(std::is_same<decltype(doc), document>::value, "");
     auto set = static_cast<document_set>(doc);
     ASSERT_EQ(3, set.size());
@@ -400,10 +436,10 @@ TEST(DocumentTest, SetTest1) {
     EXPECT_EQ(1991, it->value<int32_t>());
     it = find_by_element_name(set, "first name");
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("Chris", it->value<std::string_view>());
+    EXPECT_EQ("Chris", it->value<std::experimental::string_view>());
     it = find_by_element_name(set, "surname");
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("Manning", it->value<std::string_view>());
+    EXPECT_EQ("Manning", it->value<std::experimental::string_view>());
 }
 
 TEST(DocumentTest, SetTest2) {
@@ -417,10 +453,10 @@ TEST(DocumentTest, SetTest2) {
     EXPECT_EQ(1991, it->value<int32_t>());
     it = doc.find("first name");
     ASSERT_NE(doc.end(), it);
-    EXPECT_EQ("Chris", it->value<std::string_view>());
+    EXPECT_EQ("Chris", it->value<std::experimental::string_view>());
     it = doc.find("surname");
     ASSERT_NE(doc.end(), it);
-    EXPECT_EQ("Manning", it->value<std::string_view>());
+    EXPECT_EQ("Manning", it->value<std::experimental::string_view>());
 }
 
 TEST(DocumentTest, SetTest3) {
@@ -432,19 +468,19 @@ TEST(DocumentTest, SetTest3) {
     set.emplace("key", element_type::string_element, "ââ");
     auto it = set.begin();
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("aa", it->value<std::string_view>());
+    EXPECT_EQ("aa", it->value<std::experimental::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ââ", it->value<std::string_view>());
+    EXPECT_EQ("ââ", it->value<std::experimental::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ää", it->value<std::string_view>());
+    EXPECT_EQ("ää", it->value<std::experimental::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("ææ", it->value<std::string_view>());
+    EXPECT_EQ("ææ", it->value<std::experimental::string_view>());
     it++;
     ASSERT_NE(set.end(), it);
-    EXPECT_EQ("bb", it->value<std::string_view>());
+    EXPECT_EQ("bb", it->value<std::experimental::string_view>());
     it++;
     ASSERT_EQ(set.end(), it);
 }
@@ -457,11 +493,8 @@ TEST(DocumentTest, DocumentContainerTest1) {
 }
 
 TEST(DocumentTest, DocumentInsertTest1) {
-    document doc = document(builder
-                            ("first name", element_type::string_element, "Chris")
-                            ("surname", element_type::string_element, "Manning")
-                            ("yob", element_type::int32_element, 1991)
-                           );
+    document doc = document(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.insert(doc.begin(), element{"country", "United Kingdom"});
@@ -501,11 +534,8 @@ TEST(DocumentTest, DocumentInsertTest1) {
 }
 
 TEST(DocumentTest, DocumentInsertTest2) {
-    document doc = document(builder
-                            ("first name", element_type::string_element, "Chris")
-                            ("surname", element_type::string_element, "Manning")
-                            ("yob", element_type::int32_element, 1991)
-                           );
+    document doc = document(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.insert(doc.end(), element{"country", "United Kingdom"});
@@ -546,11 +576,8 @@ TEST(DocumentTest, DocumentInsertTest2) {
 }
 
 TEST(DocumentTest, DocumentEmplaceTest1) {
-    document doc = document(builder
-                            ("first name", element_type::string_element, "Chris")
-                            ("surname", element_type::string_element, "Manning")
-                            ("yob", element_type::int32_element, 1991)
-                           );
+    document doc = document(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.emplace(doc.begin(), "country", "United Kingdom");
@@ -590,11 +617,8 @@ TEST(DocumentTest, DocumentEmplaceTest1) {
 }
 
 TEST(DocumentTest, DocumentEmplaceTest2) {
-    document doc = document(builder
-                            ("first name", element_type::string_element, "Chris")
-                            ("surname", element_type::string_element, "Manning")
-                            ("yob", element_type::int32_element, 1991)
-                           );
+    document doc = document(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.emplace(doc.end(), "country", "United Kingdom");
@@ -635,11 +659,8 @@ TEST(DocumentTest, DocumentEmplaceTest2) {
 }
 
 TEST(DocumentTest, DocumentEraseTest1) {
-    document doc = document(builder
-                            ("first name", element_type::string_element, "Chris")
-                            ("surname", element_type::string_element, "Manning")
-                            ("yob", element_type::int32_element, 1991)
-                           );
+    document doc = document(builder("first name", element_type::string_element, "Chris")(
+        "surname", element_type::string_element, "Manning")("yob", element_type::int32_element, 1991));
     ASSERT_EQ(3, boost::distance(doc));
 
     auto it = doc.erase(doc.begin());

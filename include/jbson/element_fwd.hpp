@@ -35,7 +35,7 @@ using element = basic_element<std::vector<char>>;
  */
 enum class element_type : uint8_t {
     double_element = 0x01,                      //!< double
-    string_element = 0x02,                      //!< std::string or std::string_view (string_type)
+    string_element = 0x02,                      //!< std::string or std::experimental::string_view (string_type)
     document_element = 0x03,                    //!< basic_document<boost::iterator_range<...>> (document_type)
     array_element = 0x04,                       //!< basic_array<boost::iterator_range<...>>
     binary_element = 0x05,                      //!< \unimplemented binary data storage

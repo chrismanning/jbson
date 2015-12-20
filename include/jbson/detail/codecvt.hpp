@@ -22,30 +22,26 @@ namespace detail {
 #ifndef BOOST_NO_CXX11_HDR_CODECVT
 using state_t = std::mbstate_t;
 
-template <typename /*CharT*/>
-inline state_t create_state() {
+template <typename /*CharT*/> inline state_t create_state() {
     return state_t{};
 }
 
-inline bool state_test(const state_t* (ps)) {
+inline bool state_test(const state_t*(ps)) {
     assert(ps);
     return std::mbsinit(ps);
 }
 #elif defined(BOOST_GNU_STDLIB)
 using state_t = std::encoding_state;
 
-template <typename CharT>
-inline state_t create_state() {
+template <typename CharT> inline state_t create_state() {
     return state_t{};
 }
 
-template <>
-inline state_t create_state<char16_t>() {
+template <> inline state_t create_state<char16_t>() {
     return state_t{"UTF-16", "UTF-8"};
 }
 
-template <>
-inline state_t create_state<char32_t>() {
+template <> inline state_t create_state<char32_t>() {
     return state_t{"UTF-32", "UTF-8"};
 }
 

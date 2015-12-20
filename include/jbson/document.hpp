@@ -30,7 +30,9 @@ namespace jbson {
  * \brief Exception thrown when an document's data size differs from that reported.
  */
 struct invalid_document_size : jbson_error {
-    const char* what() const noexcept override { return "invalid_document_size"; }
+    const char* what() const noexcept override {
+        return "invalid_document_size";
+    }
 };
 
 namespace detail {
@@ -93,13 +95,13 @@ struct document_iter
 
     void increment() {
         if(m_start == m_end) {
-            m_cur = std::nullopt;
+            m_cur = std::experimental::nullopt;
             return;
         }
 
         std::advance(m_start, m_cur->size());
         if(m_start == m_end)
-            m_cur = std::nullopt;
+            m_cur = std::experimental::nullopt;
         else
             m_cur = element_type{m_start, m_end};
     }
@@ -118,7 +120,7 @@ struct document_iter
   private:
     BaseIterator m_start;
     BaseIterator m_end;
-    std::optional<std::remove_const_t<element_type>> m_cur;
+    std::experimental::optional<std::remove_const_t<element_type>> m_cur;
 };
 
 #ifdef DOXYGEN_SHOULD_SKIP_THIS
@@ -140,9 +142,11 @@ void init_empty(Container& c,
     c = arr;
 }
 
-template <typename IteratorT> void init_empty(boost::iterator_range<IteratorT>&) {}
+template <typename IteratorT> void init_empty(boost::iterator_range<IteratorT>&) {
+}
 
-inline void init_empty(...) {}
+inline void init_empty(...) {
+}
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
@@ -170,7 +174,9 @@ inline bool operator<(validity_level a, validity_level b) {
 }
 
 //! Allow more than (>) comparison for validity_level.
-inline bool operator>(validity_level a, validity_level b) { return b < a; }
+inline bool operator>(validity_level a, validity_level b) {
+    return b < a;
+}
 
 //! Allow bitwise-and (&) for validity_level.
 inline validity_level operator&(validity_level a, validity_level b) {
@@ -210,7 +216,9 @@ struct basic_object_base {
      * \note When container_type is able to own data, this results in a valid, empty document.
      * \note Otherwise (e.g. is boost::iterator_range<>), results in an invalid document.
      */
-    basic_object_base() { init_empty(m_data); }
+    basic_object_base() {
+        init_empty(m_data);
+    }
 
     /*!
      * \brief Constructs a document with an existing container of data.
@@ -226,7 +234,7 @@ struct basic_object_base {
      */
     template <typename SomeType>
     explicit basic_object_base(SomeType&& c,
-                            std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
+                               std::enable_if_t<std::is_same<container_type, std::decay_t<SomeType>>::value>* = nullptr)
         : m_data(std::forward<SomeType>(c)) {
         if(!valid(validity_level::data_size))
             BOOST_THROW_EXCEPTION(invalid_document_size{} << detail::actual_size(boost::distance(m_data))
@@ -245,9 +253,10 @@ struct basic_object_base {
      */
     template <typename OtherContainer>
     basic_object_base(const basic_object_base<OtherContainer>& other,
-                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
-                       nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
-        : m_data(other.m_data) {}
+                      std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                          nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+        : m_data(other.m_data) {
+    }
 
     /*!
      * \brief Copy constructor from a basic_document with a different `container_type`.
@@ -255,12 +264,14 @@ struct basic_object_base {
      * \tparam OtherContainer basic_document container from whose iterator_type `container_type` can be constructed.
      */
     template <typename OtherContainer>
-    basic_object_base(const basic_object_base<OtherContainer>& other,
-                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
-                                    detail::container_has_push_back<container_type>::value &&
-                                    std::is_constructible<container_type, typename OtherContainer::const_iterator,
-                                                          typename OtherContainer::const_iterator>::value>* = nullptr)
-        : m_data(other.m_data.begin(), other.m_data.end()) {}
+    basic_object_base(
+        const basic_object_base<OtherContainer>& other,
+        std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
+                         detail::container_has_push_back<container_type>::value &&
+                         std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                               typename OtherContainer::const_iterator>::value>* = nullptr)
+        : m_data(other.m_data.begin(), other.m_data.end()) {
+    }
 
     //! \brief Disallows construction from arrays of invalid document size.
     template <size_t N> explicit basic_object_base(std::array<char, N>, std::enable_if_t<(N < 5)>* = nullptr) = delete;
@@ -278,12 +289,13 @@ struct basic_object_base {
                                detail::is_range_of_iterator<
                                    ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>,
                                                                   typename container_type::iterator, boost::mpl::_1>>,
-                               std::true_type>::value> * = nullptr,
+                               std::true_type>::value>* = nullptr,
         std::enable_if_t<!std::is_same<container_type, std::decay_t<ForwardRange>>::value &&
                          detail::is_range_of_iterator<
                              ForwardRange, boost::mpl::bind<detail::quote<std::is_constructible>, container_type,
-                                                            boost::mpl::_1, boost::mpl::_1>>::value> * = nullptr)
-        : basic_object_base(container_type(std::begin(rng), std::end(rng))) {}
+                                                            boost::mpl::_1, boost::mpl::_1>>::value>* = nullptr)
+        : basic_object_base(container_type(std::begin(rng), std::end(rng))) {
+    }
 
     /*!
      * \brief Constructs a document from a range of `basic_element`.
@@ -318,10 +330,12 @@ struct basic_object_base {
      * \brief Constructs a document from two iterators. Forwards to the range-based constructors.
      */
     template <typename ForwardIterator>
-    basic_object_base(ForwardIterator first, ForwardIterator last,
-                   std::enable_if_t<
-                       std::is_constructible<basic_object_base, boost::iterator_range<ForwardIterator>>::value>* = nullptr)
-        : basic_object_base(boost::make_iterator_range(first, last)) {}
+    basic_object_base(
+        ForwardIterator first, ForwardIterator last,
+        std::enable_if_t<std::is_constructible<basic_object_base, boost::iterator_range<ForwardIterator>>::value>* =
+            nullptr)
+        : basic_object_base(boost::make_iterator_range(first, last)) {
+    }
 
     /*!
      * \brief Returns an iterator to the first element of the container.
@@ -351,7 +365,7 @@ struct basic_object_base {
      * \param elem_name Name of required element.
      * \return const_iterator to item with specified name, or end().
      */
-    const_iterator find(std::string_view elem_name) const {
+    const_iterator find(std::experimental::string_view elem_name) const {
         return std::find_if(begin(), end(), [&elem_name](auto&& elem) { return elem.name() == elem_name; });
     }
 
@@ -367,7 +381,7 @@ struct basic_object_base {
      */
     const_iterator erase(const const_iterator& it) {
         assert(it != end());
-        auto pos = m_data.erase(it.m_start, std::next(it.m_start, it.m_cur->size()));
+        auto pos = m_data.erase(it.m_start, std::next(it.m_start, it->size()));
 
         auto size = jbson::detail::native_to_little_endian(static_cast<int32_t>(m_data.size()));
         static_assert(4 == std::tuple_size<decltype(size)>::value, "");
@@ -441,17 +455,23 @@ struct basic_object_base {
         std::distance(doc.begin(), doc.end());
        \endcode
      */
-    int32_t size() const noexcept { return boost::distance(m_data); }
+    int32_t size() const noexcept {
+        return boost::distance(m_data);
+    }
 
     //! Returns reference to BSON data.
     //! \note const lvalue overload
-    const container_type& data() const& noexcept { return m_data; }
+    const container_type& data() const& noexcept {
+        return m_data;
+    }
 
 #ifndef JBSON_NO_CONST_RVALUE_THIS
     //! Returns copy of BSON data.
     //! \note const rvalue overload
-    container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) { return m_data; }
-#endif //JBSON_NO_CONST_RVALUE_THIS
+    container_type data() const&& noexcept(std::is_nothrow_copy_constructible<container_type>::value) {
+        return m_data;
+    }
+#endif // JBSON_NO_CONST_RVALUE_THIS
 
     //! Returns rvalue reference to BSON data.
     //! \note rvalue overload
@@ -544,15 +564,17 @@ struct basic_object_base {
     template <typename, typename> friend class basic_document;
     template <typename, typename> friend class basic_array;
     template <typename, typename> friend struct basic_object_base;
-protected:
-  container_type m_data;
+
+  protected:
+    container_type m_data;
 };
 
 } // namespace detail
 
-template <class Container, class ElementContainer> class basic_document :
-        public detail::basic_object_base<Container, ElementContainer> {
+template <class Container, class ElementContainer>
+class basic_document : public detail::basic_object_base<Container, ElementContainer> {
     using base = detail::basic_object_base<Container, ElementContainer>;
+
   public:
     using typename base::container_type;
     using typename base::element_type;
@@ -560,7 +582,8 @@ template <class Container, class ElementContainer> class basic_document :
     using typename base::const_iterator;
     using typename base::value_type;
 
-    basic_document() : base() {}
+    basic_document() : base() {
+    }
 
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
@@ -568,35 +591,39 @@ template <class Container, class ElementContainer> class basic_document :
                                     detail::container_has_push_back<container_type>::value &&
                                     std::is_constructible<container_type, typename OtherContainer::const_iterator,
                                                           typename OtherContainer::const_iterator>::value>* = nullptr)
-        : base(other.m_data.begin(), other.m_data.end()) {}
+        : base(other.m_data.begin(), other.m_data.end()) {
+    }
 
     template <typename OtherContainer>
     basic_document(const basic_document<OtherContainer>& other,
-                std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
-                    nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
-        : base(other.m_data) {}
+                   std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
+                       nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
+        : base(other.m_data) {
+    }
 
     template <typename Arg>
     explicit basic_document(
         Arg&& arg,
         std::enable_if_t<std::is_constructible<base, Arg&&>::value && !std::is_convertible<Arg&&, base>::value>* =
             nullptr) noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
-        : base(std::forward<Arg>(arg)) {}
+        : base(std::forward<Arg>(arg)) {
+    }
 
     template <typename Arg1, typename Arg2>
     basic_document(Arg1&& arg1, Arg2&& arg2,
-                std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* =
-                    nullptr) noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
-        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
+                   std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* =
+                       nullptr) noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
+        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {
+    }
 
-//    using base::basic_object_base;
+    //    using base::basic_object_base;
 
     template <typename, typename> friend class basic_document;
     template <typename, typename> friend class basic_array;
 };
 
-template <class Container, class ElementContainer> class basic_array :
-        public detail::basic_object_base<Container, ElementContainer> {
+template <class Container, class ElementContainer>
+class basic_array : public detail::basic_object_base<Container, ElementContainer> {
     using base = detail::basic_object_base<Container, ElementContainer>;
     template <typename, typename> friend class basic_array;
 
@@ -607,36 +634,43 @@ template <class Container, class ElementContainer> class basic_array :
     using typename base::const_iterator;
     using typename base::value_type;
 
-    basic_array() : base() {}
+    basic_array() : base() {
+    }
 
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
-                   std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
-                                    detail::container_has_push_back<container_type>::value &&
-                                    std::is_constructible<container_type, typename OtherContainer::const_iterator,
-                                                          typename OtherContainer::const_iterator>::value>* = nullptr)
-        : base(other.m_data.begin(), other.m_data.end()) {}
+                std::enable_if_t<!std::is_constructible<container_type, OtherContainer>::value &&
+                                 detail::container_has_push_back<container_type>::value &&
+                                 std::is_constructible<container_type, typename OtherContainer::const_iterator,
+                                                       typename OtherContainer::const_iterator>::value>* = nullptr)
+        : base(other.m_data.begin(), other.m_data.end()) {
+    }
 
     template <typename OtherContainer>
     basic_array(const basic_array<OtherContainer>& other,
                 std::enable_if_t<std::is_constructible<container_type, OtherContainer>::value>* =
                     nullptr) noexcept(std::is_nothrow_constructible<container_type, OtherContainer>::value)
-        : base(other.m_data) {}
+        : base(other.m_data) {
+    }
 
     template <typename Arg>
     explicit basic_array(
         Arg&& arg,
         std::enable_if_t<std::is_constructible<base, Arg&&>::value && !std::is_convertible<Arg&&, base>::value>* =
             nullptr) noexcept(std::is_nothrow_constructible<base, Arg&&>::value)
-        : base(std::forward<Arg>(arg)) {}
+        : base(std::forward<Arg>(arg)) {
+    }
 
     template <typename Arg1, typename Arg2>
     basic_array(Arg1&& arg1, Arg2&& arg2,
                 std::enable_if_t<std::is_constructible<base, Arg1&&, Arg2&&>::value>* =
                     nullptr) noexcept(std::is_nothrow_constructible<base, Arg1&&, Arg2&&>::value)
-        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {}
+        : base(std::forward<Arg1>(arg1), std::forward<Arg2>(arg2)) {
+    }
 
-    const_iterator find(int32_t idx) const { return base::find(std::to_string(idx)); }
+    const_iterator find(int32_t idx) const {
+        return base::find(std::to_string(idx));
+    }
 
     bool valid(const validity_level lvl = validity_level::bson_size, const bool recurse = true) const {
         bool ret = base::valid(lvl, recurse);

@@ -24,22 +24,30 @@ template <element_type EType, typename ForwardIterator, typename = ForwardIterat
 
 template <typename ForwardIterator>
 struct size_func<element_type::null_element, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const {
+        return 0;
+    }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::min_key, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const {
+        return 0;
+    }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::max_key, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const {
+        return 0;
+    }
 };
 
 template <typename ForwardIterator>
 struct size_func<element_type::undefined_element, ForwardIterator> : std::integral_constant<int, 0> {
-    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const { return 0; }
+    template <typename... Args> constexpr ptrdiff_t operator()(Args&&...) const {
+        return 0;
+    }
 };
 
 template <typename ForwardIterator> struct size_func<element_type::string_element, ForwardIterator> {
